@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=65.5.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-onto-merger"
+version = "0.1.0"
+description = "Ontology merging CLI using Microsoft Agent Framework and Foundry."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "Your Name" }
+]
+dependencies = [
+  "agent-framework",
+  "pydantic-settings",
+  "pydantic"
+]
+
+[project.scripts]
+llm-onto-merger = "llm_onto_merger.main:main"

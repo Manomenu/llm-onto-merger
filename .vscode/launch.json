@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Ontology Merger",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "console": "integratedTerminal",
+            "args": ["--base", "base.owl", "--candidate", "candidate.owl", "--mappings", "mappings.txt", "--output", "merged.owl"]
+        }
+    ]
+}
