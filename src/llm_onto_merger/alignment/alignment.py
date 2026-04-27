@@ -13,5 +13,5 @@ class AlignmentModule(ABC):
 
 
 alignment_modules_dict = {
-    "amk": AlignmentModule,
+    "aml": AlignmentModule,
 }

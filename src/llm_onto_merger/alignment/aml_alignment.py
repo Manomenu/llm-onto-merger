@@ -9,10 +9,10 @@ log = get_logger(__name__)
 ALIGNMENT_OUTPUT = Path("artifacts") / "tmp_alignment.owl"
 
 
-class AmkAlignmentModule(AlignmentModule):
+class AmlAlignmentModule(AlignmentModule):
     def __init__(
         self,
-        jar_path: Path = Path("thirdparty/amk/AgreementMakerLight.jar"),
+        jar_path: Path = Path("thirdparty/aml/AgreementMakerLight.jar"),
     ):
         self.jar_path = jar_path
 
@@ -31,7 +31,7 @@ class AmkAlignmentModule(AlignmentModule):
             "-a",
         ]
 
-        log.info("Running AMK: %s", " ".join(cmd))
+        log.info("Running AML: %s", " ".join(cmd))
 
         process = await asyncio.create_subprocess_exec(
             *cmd,
@@ -43,7 +43,7 @@ class AmkAlignmentModule(AlignmentModule):
 
         if process.returncode != 0:
             raise RuntimeError(
-                f"AMK failed with return code {process.returncode}.\n"
+                f"AML failed with return code {process.returncode}.\n"
                 f"stdout: {stdout.decode()}\nstderr: {stderr.decode()}"
             )
 
