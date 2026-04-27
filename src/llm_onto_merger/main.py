@@ -1,35 +1,29 @@
-from agent_framework import AgentExecutor, WorkflowBuilder
+from llm_onto_merger.alignment import AlignmentModule, alignment_modules_dict
 
 from .load_arguments import load_arguments
+
+
+class LLMOntologyMerger:
+    @staticmethod
+    async def run(
+        base_ontology_path: str,
+        candidate_ontology_path: str,
+        alignment_module: AlignmentModule,
+    ) -> None:
+        await alignment_module.create_alignment(
+            base_ontology_path,
+            candidate_ontology_path,
+        )
 
 
 async def _main():
     loaded_args = load_arguments()
 
-    input_data = (
-        f"Base Ontology:\n{loaded_args.base_content}\n\n"
-        f"Candidate Ontology:\n{loaded_args.candidate_content}\n\n"
-        f"Mappings:\n{loaded_args.mappings_content}"
+    await LLMOntologyMerger.run(
+        loaded_args.base_path,
+        loaded_args.candidate_path,
+        alignment_modules_dict[loaded_args.alignment_tool](),
     )
-
-    executor_executor = AgentExecutor(executor_agent, context_mode="last_agent")
-    merge_executor = AgentExecutor(merge_agent, context_mode="last_agent")
-
-    workflow_agent = (
-        WorkflowBuilder(
-            start_executor=executor_executor,
-            output_executors=[merge_executor],
-        )
-        .add_edge(executor_executor, merge_executor)
-        .build()
-        .as_agent()
-    )
-
-    async with workflow_agent as agent:
-        response = await agent.run(input_data)
-        with open(loaded_args.output_path, "w") as f:
-            f.write(response.text)
-        print(f"Merged ontology saved to {loaded_args.output_path}")
 
 
 def main():

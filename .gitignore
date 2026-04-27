@@ -6,3 +6,10 @@
 *.egg-info/
 dist/
 build/
+
+tests/outputs/
+artifacts/*
+!artifacts/.gitkeep
+logs/
+
+uv.lock
