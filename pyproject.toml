@@ -15,7 +15,7 @@ dependencies = [
   "agent-framework",
   "pydantic-settings",
   "pydantic",
-  "owlready2"
+  "rdflib"
 ]
 
 [project.scripts]
