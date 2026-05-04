@@ -14,7 +14,8 @@ authors = [
 dependencies = [
   "agent-framework",
   "pydantic-settings",
-  "pydantic"
+  "pydantic",
+  "owlready2"
 ]
 
 [project.scripts]

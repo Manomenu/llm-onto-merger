@@ -9,6 +9,7 @@ class LoadedArguments(BaseModel):
     candidate_path: str
     alignment_tool: str = "aml"
     output_path: str
+    merge_env_max_chars: int = 10_000
 
 
 def load_arguments() -> LoadedArguments:
@@ -34,6 +35,12 @@ def load_arguments() -> LoadedArguments:
     parser.add_argument(
         "--output", default="merged_ontology.owl", help="Output file path"
     )
+    parser.add_argument(
+        "--max-env-chars",
+        type=int,
+        default=10_000,
+        help="Max characters per MergeEnvironment string (default: 10000)",
+    )
     args = parser.parse_args()
 
     # Validation
@@ -49,4 +56,5 @@ def load_arguments() -> LoadedArguments:
         candidate_path=args.candidate,
         alignment_tool=args.alignment_tool,
         output_path=args.output,
+        merge_env_max_chars=args.max_env_chars,
     )
