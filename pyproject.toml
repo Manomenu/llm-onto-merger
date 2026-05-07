@@ -15,7 +15,8 @@ dependencies = [
   "agent-framework",
   "pydantic-settings",
   "pydantic",
-  "rdflib"
+  "rdflib",
+  "pyvis>=0.3.2",
 ]
 
 [project.scripts]

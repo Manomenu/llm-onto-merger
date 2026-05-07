@@ -10,6 +10,12 @@ class Alignment(BaseModel):
     measure: float
     relation: str
 
+    def to_string(self) -> str:
+        def _ln(uri: str) -> str:
+            return uri.split("#")[-1] if "#" in uri else uri.rsplit("/", 1)[-1]
+
+        return f"{_ln(self.entity1)} ↔ {_ln(self.entity2)} (relation={self.relation})"
+
 
 class AlignmentModule(ABC):
     @abstractmethod

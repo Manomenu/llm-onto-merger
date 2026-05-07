@@ -2,6 +2,15 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Visualize Merge Environment",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/tests/visualize.py",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
+        },
+        {
             "name": "Debug Ontology Merger",
             "type": "debugpy",
             "request": "launch",
