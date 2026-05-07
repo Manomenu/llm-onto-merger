@@ -16,18 +16,24 @@ def local_name(uri: URIRef | str) -> str:
 # Preamble included once at the top of a prompt that uses KG2Code representation.
 # Tuple format: (subject, relation, object) — only outgoing triples are stored,
 # so subject is always the entity itself.
-KG2CODE_PREAMBLE = (
-    "An OWL ontology entity is defined as follows: "
-    "class Entity: "
-    "   def __init__(self, uri, name, tuples=[]): "
-    "       self.uri = uri; self.name = name; self.tuples = tuples; "
-    "   def get_neighbors(self): "
-    "       neighbors = set(); "
-    "   for subject, relation, obj in self.tuples: neighbors.add(obj); "
-    "       return list(neighbors) "
-    "   def get_relation_information(self): "
-    "       return [relation for subject, relation, obj in self.tuples] "
-)
+KG2CODE_PREAMBLE = """
+An OWL ontology entity is defined as follows:
+
+class Entity:
+    def __init__(self, uri, name, tuples=[]):
+        self.uri = uri
+        self.name = name
+        self.tuples = tuples
+
+    def get_neighbors(self):
+        neighbors = set()
+        for subject, relation, obj in self.tuples:
+            neighbors.add(obj)
+            return list(neighbors)
+
+    def get_relation_information(self):
+        return [relation for subject, relation, obj in self.tuples]
+"""
 
 
 def graph_to_string(graph: Graph) -> str:

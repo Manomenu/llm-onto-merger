@@ -43,9 +43,9 @@ class MergeEnvironment:
         alignments_str = "\n".join(al.to_string() for al in self.alignments)
         return (
             f"{KG2CODE_PREAMBLE}\n\n"
-            f"Ontology_1:\n{graph_to_string(self.onto_1)}\n"
+            f"Ontology_1:\n{graph_to_string(self.onto_1)}\n\n"
             f"Entities that need to keep their names and exist in Merged_Ontology: {border1_str}\n"
-            f"\nOntology_2:\n{graph_to_string(self.onto_2)}\n"
+            f"\nOntology_2:\n{graph_to_string(self.onto_2)}\n\n"
             f"Entities that need to keep their names and exist in Merged_Ontology: {border2_str}\n"
             f"\nAlignments:\n{alignments_str}"
         )
