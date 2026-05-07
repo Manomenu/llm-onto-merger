@@ -3,7 +3,7 @@ from pathlib import Path
 from rdflib import Graph
 
 from llm_onto_merger.alignment.aml_alignment import AmlAlignmentModule
-from llm_onto_merger.extract_environments import MergeEnvironmentConfig, extract_environments
+from llm_onto_merger.extract_environments import ExtractEnvironmentsModule, MergeEnvironmentConfig
 
 _HERE = Path(__file__).parent
 _OUTPUTS = _HERE / "outputs"
@@ -14,8 +14,8 @@ if __name__ == "__main__":
     onto_2 = Graph().parse(_HERE / "inputs/edas.owl")
     alignments = AmlAlignmentModule()._load_alignments(_OUTPUTS / "alignment.owl")
 
-    config = MergeEnvironmentConfig(max_chars=4000)
-    envs, _, _ = extract_environments(onto_1, onto_2, alignments, config)
+    extractor = ExtractEnvironmentsModule(MergeEnvironmentConfig(max_chars=4000))
+    envs, _, _ = extractor.extract(onto_1, onto_2, alignments)
     print(f"Extracted {len(envs)} environments")
 
     for i, env in enumerate(envs):

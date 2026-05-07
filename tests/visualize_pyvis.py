@@ -69,9 +69,9 @@ from rdflib import Graph, URIRef
 
 from llm_onto_merger.alignment.aml_alignment import AmlAlignmentModule
 from llm_onto_merger.extract_environments import (
+    ExtractEnvironmentsModule,
     MergeEnvironment,
     MergeEnvironmentConfig,
-    extract_environments,
 )
 from llm_onto_merger.ontology import local_name
 
@@ -202,8 +202,8 @@ if __name__ == "__main__":
     visualize_graph(onto_1, onto_2, str(_HERE / "outputs/full.html"))
 
     config = MergeEnvironmentConfig(max_chars=4000)
-    envs, leftover_1, leftover_2 = extract_environments(
-        onto_1, onto_2, alignments, config
+    envs, leftover_1, leftover_2 = ExtractEnvironmentsModule(config).extract(
+        onto_1, onto_2, alignments
     )
     print(f"Extracted {len(envs)} environments")
 

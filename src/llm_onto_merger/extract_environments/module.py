@@ -4,51 +4,9 @@ from collections.abc import Callable
 
 from rdflib import Graph, URIRef
 
-from .alignment.alignment import Alignment
-from .ontology import KG2CODE_PREAMBLE, graph_to_string, local_name, move_entity_triples
-
-_AVG_WORD = 6  # avg English word length excluding stopwords
-
-
-class MergeEnvironmentConfig:
-    def __init__(self, max_chars: int = 10_000) -> None:
-        self.max_chars = max_chars
-
-
-class MergeEnvironment:
-    def __init__(
-        self,
-        onto_1: Graph,
-        onto_2: Graph,
-        alignments: list[Alignment],
-        border1: deque[URIRef] | None = None,
-        border2: deque[URIRef] | None = None,
-    ) -> None:
-        self.onto_1 = onto_1
-        self.onto_2 = onto_2
-        self.alignments = alignments
-        self.border1: deque[URIRef] = border1 if border1 is not None else deque()
-        self.border2: deque[URIRef] = border2 if border2 is not None else deque()
-
-    @property
-    def chars_count(self) -> int:
-        onto_chars = (len(self.onto_1) + len(self.onto_2)) * 3 * _AVG_WORD
-        border_chars = (len(self.border1) + len(self.border2)) * _AVG_WORD
-        alignment_chars = len(self.alignments) * 2 * _AVG_WORD
-        return onto_chars + border_chars + alignment_chars
-
-    def to_string(self) -> str:
-        border1_str = ", ".join(local_name(u) for u in self.border1)
-        border2_str = ", ".join(local_name(u) for u in self.border2)
-        alignments_str = "\n".join(al.to_string() for al in self.alignments)
-        return (
-            f"{KG2CODE_PREAMBLE}\n\n"
-            f"Ontology_1:\n{graph_to_string(self.onto_1)}\n\n"
-            f"Entities that need to keep their names and exist in Merged_Ontology: {border1_str}\n"
-            f"\nOntology_2:\n{graph_to_string(self.onto_2)}\n\n"
-            f"Entities that need to keep their names and exist in Merged_Ontology: {border2_str}\n"
-            f"\nAlignments:\n{alignments_str}"
-        )
+from ..alignment.alignment import Alignment
+from ..ontology import move_entity_triples
+from .merge_environment import MergeEnvironment, MergeEnvironmentConfig
 
 
 class _AlignmentPool:
@@ -197,31 +155,34 @@ def _build_merge_environment(
     return env
 
 
-def extract_environments(
-    onto_1: Graph,
-    onto_2: Graph,
-    alignments: list[Alignment],
-    config: MergeEnvironmentConfig,
-) -> tuple[list[MergeEnvironment], Graph, Graph]:
-    """Extract merge environments and return leftover graphs.
+class ExtractEnvironmentsModule:
+    def __init__(self, config: MergeEnvironmentConfig) -> None:
+        self.config = config
 
-    Returns:
-        (environments, leftover_1, leftover_2) where leftover_* are the triples
-        from onto_1/onto_2 that were not absorbed into any MergeEnvironment.
-    """
-    # Work on copies — consumed triples are removed as environments are built
-    source_1 = Graph()
-    source_2 = Graph()
-    for triple in onto_1:
-        source_1.add(triple)
-    for triple in onto_2:
-        source_2.add(triple)
+    def extract(
+        self,
+        onto_1: Graph,
+        onto_2: Graph,
+        alignments: list[Alignment],
+    ) -> tuple[list[MergeEnvironment], Graph, Graph]:
+        """Extract merge environments from two ontologies.
 
-    alignment_pool = _AlignmentPool(alignments)
-    environments: list[MergeEnvironment] = []
+        Returns:
+            (environments, leftover_1, leftover_2) where leftover_* are the triples
+            from onto_1/onto_2 that were not absorbed into any MergeEnvironment.
+        """
+        source_1 = Graph()
+        source_2 = Graph()
+        for triple in onto_1:
+            source_1.add(triple)
+        for triple in onto_2:
+            source_2.add(triple)
 
-    while not alignment_pool.is_empty():
-        env = _build_merge_environment(source_1, source_2, alignment_pool, config)
-        environments.append(env)
+        alignment_pool = _AlignmentPool(alignments)
+        environments: list[MergeEnvironment] = []
 
-    return environments, source_1, source_2
+        while not alignment_pool.is_empty():
+            env = _build_merge_environment(source_1, source_2, alignment_pool, self.config)
+            environments.append(env)
+
+        return environments, source_1, source_2

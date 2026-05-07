@@ -1,10 +1,7 @@
 from pathlib import Path
 
 from llm_onto_merger.alignment.alignment import AlignmentModule
-from llm_onto_merger.extract_environments import (
-    MergeEnvironmentConfig,
-    extract_environments,
-)
+from llm_onto_merger.extract_environments import ExtractEnvironmentsModule, MergeEnvironmentConfig
 from llm_onto_merger.load_arguments import LoadedArguments
 from llm_onto_merger.ontology import create_ontology
 
@@ -22,5 +19,7 @@ class LLMOntologyMerger:
             args.base_path, args.candidate_path
         )
 
-        config = MergeEnvironmentConfig(max_chars=args.merge_env_max_chars)
-        extract_environments(onto_1, onto_2, alignments, config)
+        extractor = ExtractEnvironmentsModule(
+            MergeEnvironmentConfig(max_chars=args.merge_env_max_chars)
+        )
+        extractor.extract(onto_1, onto_2, alignments)
