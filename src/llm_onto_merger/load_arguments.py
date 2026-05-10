@@ -3,6 +3,10 @@ import os
 
 from pydantic import BaseModel
 
+from .logger import get_logger
+
+log = get_logger(__name__)
+
 
 class LoadedArguments(BaseModel):
     base_path: str
@@ -51,10 +55,20 @@ def load_arguments() -> LoadedArguments:
         if not os.path.isfile(path):
             parser.error(f"Path for --{path_attr} is not a file: {path}")
 
-    return LoadedArguments(
+    loaded = LoadedArguments(
         base_path=args.base,
         candidate_path=args.candidate,
         alignment_tool=args.alignment_tool,
         output_path=args.output,
         merge_env_max_chars=args.max_env_chars,
     )
+    log.info(
+        "Arguments loaded | base: %s | candidate: %s | alignment_tool: %s (default: aml)"
+        " | output: %s | max_env_chars: %d (default: 10000)",
+        loaded.base_path,
+        loaded.candidate_path,
+        loaded.alignment_tool,
+        loaded.output_path,
+        loaded.merge_env_max_chars,
+    )
+    return loaded

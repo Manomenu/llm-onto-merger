@@ -5,8 +5,11 @@ from collections.abc import Callable
 from rdflib import Graph, URIRef
 
 from ..alignment.alignment import Alignment
+from ..logger import get_logger
 from ..ontology import move_entity_triples
 from .merge_environment import MergeEnvironment, MergeEnvironmentConfig
+
+log = get_logger(__name__)
 
 
 class _AlignmentPool:
@@ -181,8 +184,17 @@ class ExtractEnvironmentsModule:
         alignment_pool = _AlignmentPool(alignments)
         environments: list[MergeEnvironment] = []
 
+        log.info(
+            "Extracting environments | alignments: %d | max_chars: %d",
+            len(alignments),
+            self.config.max_chars,
+        )
+
         while not alignment_pool.is_empty():
-            env = _build_merge_environment(source_1, source_2, alignment_pool, self.config)
+            env = _build_merge_environment(
+                source_1, source_2, alignment_pool, self.config
+            )
             environments.append(env)
 
+        log.info("Extracted %d environments", len(environments))
         return environments, source_1, source_2
