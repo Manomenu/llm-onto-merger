@@ -121,6 +121,24 @@ def entities_to_graph(entities: list[Entity]) -> Graph:
     return graph
 
 
+def save_ontology(graph: Graph, save_location: Path | None = None) -> Path:
+    """Serialize *graph* as OWL (RDF/XML) to *save_location*/merged_ontology.owl.
+
+    Falls back to settings.save_location when save_location is not provided.
+    Returns the path of the written file.
+    """
+    from .settings import settings  # local import to avoid circular at module level
+
+    location = (
+        Path(save_location) if save_location is not None else settings.save_location
+    )
+    location.mkdir(parents=True, exist_ok=True)
+    out = location / "merged_ontology.owl"
+    graph.serialize(destination=str(out), format="xml")
+    log.info("Saved merged ontology to %s (%d triples)", out, len(graph))
+    return out
+
+
 def create_ontology(ontology_path: Path) -> Graph:
     """Load an OWL/RDF ontology from the given path."""
     g = Graph()

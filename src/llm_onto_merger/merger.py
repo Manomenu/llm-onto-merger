@@ -8,12 +8,12 @@ from llm_onto_merger.extract_environments import (
 from llm_onto_merger.integrate_environments import integrate_environments
 from llm_onto_merger.load_arguments import LoadedArguments
 from llm_onto_merger.merge_environments.module import MergeEnvironmentsModule
-from llm_onto_merger.ontology import create_ontology
+from llm_onto_merger.ontology import create_ontology, save_ontology
 
 
 class LLMOntologyMerger:
     @staticmethod
-    async def run(
+    async def merge(
         args: LoadedArguments,
         alignment_module: AlignmentModule,
     ) -> None:
@@ -40,3 +40,5 @@ class LLMOntologyMerger:
         merged_onto = integrate_environments(
             merged_environments, onto_1_leftover, onto_2_leftover
         )
+
+        save_ontology(merged_onto)
