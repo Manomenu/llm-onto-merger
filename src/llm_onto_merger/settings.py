@@ -8,7 +8,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    model_name: str
+    ollama_model: str
     ollama_host: str = "http://localhost:11434"
 
 

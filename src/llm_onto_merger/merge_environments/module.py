@@ -1,10 +1,16 @@
+from typing import List
+
 from rdflib import Graph
 
 from llm_onto_merger.extract_environments.merge_environment import MergeEnvironment
+from llm_onto_merger.ontology import Entity, entities_to_graph
 
 from .agent import merge_agent
 
 
 class MergeEnvironmentsModule:
     async def merge(self, merge_environment: MergeEnvironment) -> Graph:
-        response = await merge_agent.run(merge_environment.to_string())
+        response = await merge_agent.run(
+            merge_environment.to_string(), options={"response_format": List[Entity]}
+        )
+        return entities_to_graph(response.value)
