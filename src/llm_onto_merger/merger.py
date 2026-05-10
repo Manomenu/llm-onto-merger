@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 from llm_onto_merger.alignment.alignment import AlignmentModule
@@ -7,8 +8,12 @@ from llm_onto_merger.extract_environments import (
 )
 from llm_onto_merger.integrate_environments import integrate_environments
 from llm_onto_merger.load_arguments import LoadedArguments
+from llm_onto_merger.logger import get_logger
 from llm_onto_merger.merge_environments.module import MergeEnvironmentsModule
 from llm_onto_merger.ontology import create_ontology, save_ontology
+from llm_onto_merger.settings import settings
+
+log = get_logger(__name__)
 
 
 class LLMOntologyMerger:
@@ -31,14 +36,28 @@ class LLMOntologyMerger:
             onto_1, onto_2, alignments
         )
 
-        merged_environments = []
+        total = len(merge_environments)
+        semaphore = asyncio.Semaphore(settings.max_concurrent_merges)
         merger = MergeEnvironmentsModule()
-        for merge_environment in merge_environments:
-            merged_onto = await merger.merge(merge_environment)
-            merged_environments.append(merged_onto)
+
+        log.info(
+            "Merging %d environments | max_concurrent: %d",
+            total,
+            settings.max_concurrent_merges,
+        )
+
+        async def _merge_one(env, idx):
+            async with semaphore:
+                result = await merger.merge(env)
+                log.info("Merged environment %d/%d", idx + 1, total)
+                return result
+
+        merged_environments = await asyncio.gather(
+            *[_merge_one(env, i) for i, env in enumerate(merge_environments)]
+        )
 
         merged_onto = integrate_environments(
-            merged_environments, onto_1_leftover, onto_2_leftover
+            list(merged_environments), onto_1_leftover, onto_2_leftover
         )
 
         save_ontology(merged_onto)

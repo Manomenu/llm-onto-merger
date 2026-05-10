@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     ollama_model: str
     ollama_host: str = "http://localhost:11434"
     save_location: Path = Path("tests/outputs")
+    max_concurrent_merges: int = 12
 
 
 settings = Settings()
