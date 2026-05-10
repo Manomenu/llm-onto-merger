@@ -5,7 +5,9 @@ from llm_onto_merger.extract_environments import (
     ExtractEnvironmentsModule,
     MergeEnvironmentConfig,
 )
+from llm_onto_merger.integrate_environments import integrate_environments
 from llm_onto_merger.load_arguments import LoadedArguments
+from llm_onto_merger.merge_environments.module import MergeEnvironmentsModule
 from llm_onto_merger.ontology import create_ontology
 
 
@@ -27,4 +29,14 @@ class LLMOntologyMerger:
         )
         merge_environments, onto_1_leftover, onto_2_leftover = extractor.extract(
             onto_1, onto_2, alignments
+        )
+
+        merged_environments = []
+        merger = MergeEnvironmentsModule()
+        for merge_environment in merge_environments:
+            merged_onto = await merger.merge(merge_environment)
+            merged_environments.append(merged_onto)
+
+        merged_onto = integrate_environments(
+            merged_environments, onto_1_leftover, onto_2_leftover
         )
