@@ -2,10 +2,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Visualize Merge Environment",
+            "name": "Visualize Merge Environments",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/tests/visualize.py",
+            "module": "tests.visualize_pyvis",
             "python": "${workspaceFolder}/.venv/bin/python",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}"
@@ -14,10 +14,20 @@
             "name": "Debug Ontology Merger",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/main.py",
+            "module": "llm_onto_merger.main",
             "python": "${workspaceFolder}/.venv/bin/python",
             "console": "integratedTerminal",
-            "args": ["--base", "base.owl", "--candidate", "candidate.owl", "--mappings", "mappings.txt", "--output", "merged.owl"]
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "--base", "tests/inputs/cmt.owl",
+                "--candidate", "tests/inputs/edas.owl",
+                "--alignment-tool", "aml",
+                "--output", "tests/outputs/merged_ontology.owl",
+                "--max-env-chars", "4000"
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            }
         }
     ]
 }
