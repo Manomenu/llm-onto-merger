@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     )
 
     model_name: str
+    ollama_host: str = "http://localhost:11434"
 
 
 settings = Settings()
