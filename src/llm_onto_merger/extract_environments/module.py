@@ -198,3 +198,9 @@ class ExtractEnvironmentsModule:
 
         log.info("Extracted %d environments", len(environments))
         return environments, source_1, source_2
+
+
+# TODO change extraction, so it is forbidded to extract border into another environment,
+# Also forbid a node from alignment pair to be a part of border.
+# It should either be outside of all environments or fully inside one environment.
+# It means, that if a node is added to the border, immediatelly add its peer fro alignment pair and add all their triple to the environment, no matter the limit.
