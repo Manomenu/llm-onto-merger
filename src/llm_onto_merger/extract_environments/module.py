@@ -13,6 +13,24 @@ log = get_logger(__name__)
 
 _AVG_WORD = 6  # must match merge_environment.py
 
+# Namespaces whose nodes are infrastructure/vocabulary, not domain entities.
+# They may appear as border references but must never be pulled into env interior.
+_WELL_KNOWN_NS: tuple[str, ...] = (
+    "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "http://www.w3.org/2001/XMLSchema#",
+    "http://www.w3.org/2000/01/rdf-schema#",
+    "http://www.w3.org/2002/07/owl#",
+    "http://www.w3.org/2003/11/swrl#",
+    "http://www.w3.org/2003/11/swrlb#",
+    "http://www.owl-ontologies.com/2005/08/07/xsp.owl#",
+    "http://protege.stanford.edu/plugins/owl/protege#",
+)
+
+
+def _is_well_known(uri: URIRef) -> bool:
+    s = str(uri)
+    return s.startswith(_WELL_KNOWN_NS)
+
 
 # ---------------------------------------------------------------------------
 # Pre-rename
@@ -209,6 +227,12 @@ def _build_merge_environment(
     ) -> bool:
         """Process one border candidate. Returns True if building should stop."""
         nonlocal env_alignments
+
+        # Well-known namespace nodes (owl, rdf, rdfs, xsd, swrl, …) are vocabulary,
+        # not domain entities — keep as border reference, never expand into interior.
+        if _is_well_known(candidate):
+            border_set.add(candidate)
+            return False
 
         # REQ: global_frozen node → border only, never expand
         if candidate in global_frozen:
