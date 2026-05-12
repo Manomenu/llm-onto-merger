@@ -8,7 +8,7 @@ from llm_onto_merger.extract_environments import (
 )
 from llm_onto_merger.integrate_environments import integrate_environments
 from llm_onto_merger.load_arguments import LoadedArguments
-from llm_onto_merger.debug_viz import save_post_merge_debug, save_pre_merge_debug
+from llm_onto_merger.debug import save_diff_debug, save_post_merge_debug, save_pre_merge_debug
 from llm_onto_merger.logger import get_logger
 from llm_onto_merger.merge_environments.module import MergeEnvironmentsModule
 from llm_onto_merger.ontology import create_ontology, save_ontology
@@ -64,6 +64,10 @@ class LLMOntologyMerger:
             )
             save_post_merge_debug(
                 list(merged_environments), onto_1_leftover, onto_2_leftover,
+                settings.save_location,
+            )
+            save_diff_debug(
+                merge_environments, list(merged_environments),
                 settings.save_location,
             )
 

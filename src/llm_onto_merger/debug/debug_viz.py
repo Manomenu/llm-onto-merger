@@ -27,9 +27,9 @@ from pathlib import Path
 from pyvis.network import Network
 from rdflib import Graph, URIRef
 
-from llm_onto_merger.extract_environments.merge_environment import MergeEnvironment
-from llm_onto_merger.logger import get_logger
-from llm_onto_merger.ontology import local_name
+from ..extract_environments.merge_environment import MergeEnvironment
+from ..logger import get_logger
+from ..ontology import local_name
 
 log = get_logger(__name__)
 
