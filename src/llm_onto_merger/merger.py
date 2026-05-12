@@ -61,6 +61,7 @@ class LLMOntologyMerger:
             save_pre_merge_debug(
                 merge_environments, onto_1_leftover, onto_2_leftover,
                 settings.save_location,
+                original_alignments=alignments,
             )
             save_post_merge_debug(
                 list(merged_environments), onto_1_leftover, onto_2_leftover,
