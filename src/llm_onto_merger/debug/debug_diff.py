@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from rdflib import Graph, URIRef
+from rdflib import BNode, Graph, URIRef
 
 from ..extract_environments.merge_environment import MergeEnvironment
 from ..logger import get_logger
@@ -50,17 +50,23 @@ def save_diff_debug(
     before comparison so the diff reflects semantic changes, not just URI renaming.
     """
     for i, (env, merged) in enumerate(zip(merge_environments, merged_graphs)):
-        # Build pre-merge triple set: onto1 + normalized onto2
+        # Build pre-merge triple set: onto1 + normalized onto2.
+        # Blank nodes (BNode) are OWL-internal anonymous nodes with graph-local
+        # random IDs — they can never match across graphs, so we skip them.
         normalized_onto2 = _normalize_onto2(env)
         pre: set[tuple[str, str, str]] = set()
         for s, p, o in env.onto_1:
-            pre.add((str(s), str(p), str(o)))
+            if not isinstance(s, BNode) and not isinstance(o, BNode):
+                pre.add((str(s), str(p), str(o)))
         for s, p, o in normalized_onto2:
-            pre.add((str(s), str(p), str(o)))
+            if not isinstance(s, BNode) and not isinstance(o, BNode):
+                pre.add((str(s), str(p), str(o)))
 
-        # Build post-merge triple set
+        # Build post-merge triple set (same blank-node filter)
         post: set[tuple[str, str, str]] = {
-            (str(s), str(p), str(o)) for s, p, o in merged
+            (str(s), str(p), str(o))
+            for s, p, o in merged
+            if not isinstance(s, BNode) and not isinstance(o, BNode)
         }
 
         deleted = sorted(pre - post)
