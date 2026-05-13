@@ -1,34 +1,12 @@
 from pathlib import Path
 
-from rdflib import BNode, Graph, URIRef
+from rdflib import Graph, URIRef
 
 from ..extract_environments.merge_environment import MergeEnvironment
 from ..logger import get_logger
 from ..ontology import local_name
 
 log = get_logger(__name__)
-
-
-def _normalize_onto2(env: MergeEnvironment) -> Graph:
-    """Substitute entity2 → entity1 in onto2 for '=' alignments before diffing.
-
-    This makes the pre-merge triples comparable to post-merge output, where the
-    LLM was instructed to use entity1 as the canonical URI.
-    """
-    uri_map = {
-        al.entity2: al.entity1
-        for al in env.alignments
-        if al.relation == "=" and al.entity2 != al.entity1
-    }
-    if not uri_map:
-        return env.onto_2
-
-    normalized = Graph()
-    for s, p, o in env.onto_2:
-        new_s = URIRef(uri_map[str(s)]) if isinstance(s, URIRef) and str(s) in uri_map else s
-        new_o = URIRef(uri_map[str(o)]) if isinstance(o, URIRef) and str(o) in uri_map else o
-        normalized.add((new_s, p, new_o))
-    return normalized
 
 
 def save_diff_debug(
@@ -46,28 +24,21 @@ def save_diff_debug(
           (SubjectLocalName, PredicateLocalName, ObjectLocalName)
           ...
 
-    Pre-merge onto2 triples are normalized (entity2 → entity1 for '=' alignments)
-    before comparison so the diff reflects semantic changes, not just URI renaming.
+    Triples are compared by local name (URI-agnostic) so that a different
+    namespace prefix for the same concept still matches correctly.
+    Blank nodes and non-URIRef triples are excluded.
     """
     for i, (env, merged) in enumerate(zip(merge_environments, merged_graphs)):
-        # Build pre-merge triple set: onto1 + normalized onto2.
-        # Blank nodes (BNode) are OWL-internal anonymous nodes with graph-local
-        # random IDs — they can never match across graphs, so we skip them.
-        normalized_onto2 = _normalize_onto2(env)
-        pre: set[tuple[str, str, str]] = set()
-        for s, p, o in env.onto_1:
-            if not isinstance(s, BNode) and not isinstance(o, BNode):
-                pre.add((str(s), str(p), str(o)))
-        for s, p, o in normalized_onto2:
-            if not isinstance(s, BNode) and not isinstance(o, BNode):
-                pre.add((str(s), str(p), str(o)))
+        def _names(graph: Graph) -> set[tuple[str, str, str]]:
+            return {
+                (local_name(str(s)), local_name(str(p)), local_name(str(o)))
+                for s, p, o in graph
+                if isinstance(s, URIRef) and isinstance(o, URIRef)
+            }
 
-        # Build post-merge triple set (same blank-node filter)
-        post: set[tuple[str, str, str]] = {
-            (str(s), str(p), str(o))
-            for s, p, o in merged
-            if not isinstance(s, BNode) and not isinstance(o, BNode)
-        }
+        # env.onto_2 already has entity2 → entity1 renaming from pre-extraction step.
+        pre = _names(env.onto_1) | _names(env.onto_2)
+        post = _names(merged)
 
         deleted = sorted(pre - post)
         added = sorted(post - pre)
@@ -76,10 +47,10 @@ def save_diff_debug(
         with path.open("w") as f:
             f.write("[Deleted]\n")
             for s, p, o in deleted:
-                f.write(f"  ({local_name(s)}, {local_name(p)}, {local_name(o)})\n")
+                f.write(f"  ({s}, {p}, {o})\n")
             f.write("[Added]\n")
             for s, p, o in added:
-                f.write(f"  ({local_name(s)}, {local_name(p)}, {local_name(o)})\n")
+                f.write(f"  ({s}, {p}, {o})\n")
 
         log.info(
             "[debug] %s  deleted: %d  added: %d", path.name, len(deleted), len(added)

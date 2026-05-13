@@ -139,13 +139,18 @@ def _add_graph_edges(net: Network, graph: Graph) -> None:
             )
 
 
-def _uri_edges(graph: Graph) -> set[tuple[str, str, str]]:
-    """Return (s, p, o) string tuples for every URIRef-to-URIRef edge."""
-    return {
-        (str(s), str(p), str(o))
-        for s, p, o in graph
-        if isinstance(s, URIRef) and isinstance(o, URIRef)
-    }
+def _name_edges(graph: Graph) -> dict[tuple[str, str, str], tuple[str, str, str]]:
+    """Map (local_s, local_p, local_o) → (uri_s, uri_p, uri_o).
+
+    Compares triples by local name so a different namespace prefix for the same
+    concept still matches correctly.  On local-name collision the last URI wins.
+    """
+    result: dict[tuple[str, str, str], tuple[str, str, str]] = {}
+    for s, p, o in graph:
+        if isinstance(s, URIRef) and isinstance(o, URIRef):
+            key = (local_name(str(s)), local_name(str(p)), local_name(str(o)))
+            result[key] = (str(s), str(p), str(o))
+    return result
 
 
 def _draw_diff_edges(
@@ -237,16 +242,13 @@ def save_pre_merge_debug(
         display_env = _restore_env_for_display(env, reverse_map)
 
         # Edges that exist in pre-merge but not in post-merge → will be deleted.
+        # Compare by local name (URI-agnostic); draw with display_env URIs so
+        # edge endpoints match the already-restored nodes in the visualization.
         deleted_edges: set[tuple[str, str, str]] = set()
         if merged_graphs and i < len(merged_graphs):
-            pre = _uri_edges(env.onto_1) | _uri_edges(env.onto_2)
-            post = _uri_edges(merged_graphs[i])
-            raw_deleted = pre - post
-            # Apply reverse_map so deleted edge URIs match the restored display URIs.
-            deleted_edges = {
-                (reverse_map.get(s, s), p, reverse_map.get(o, o))
-                for s, p, o in raw_deleted
-            }
+            pre_map = _name_edges(display_env.onto_1) | _name_edges(display_env.onto_2)
+            post_names = set(_name_edges(merged_graphs[i]).keys())
+            deleted_edges = {pre_map[k] for k in pre_map.keys() - post_names}
 
         _add_env(combined, display_env, combined_seen)
         _draw_diff_edges(combined, deleted_edges, combined_seen)
@@ -302,12 +304,13 @@ def save_post_merge_debug(
         _add_graph_edges(combined, graph)
 
         # Edges in post-merge that were not present in pre-merge → added (pink).
+        # Compare by local name; draw with post-merge URIs.
         added_edges: set[tuple[str, str, str]] = set()
         if merge_environments and i < len(merge_environments):
             env = merge_environments[i]
-            pre = _uri_edges(env.onto_1) | _uri_edges(env.onto_2)
-            post = _uri_edges(graph)
-            added_edges = post - pre
+            pre_names = set((_name_edges(env.onto_1) | _name_edges(env.onto_2)).keys())
+            post_map = _name_edges(graph)
+            added_edges = {post_map[k] for k in post_map.keys() - pre_names}
         _draw_diff_edges(combined, added_edges, combined_seen)
 
         single = _net()
