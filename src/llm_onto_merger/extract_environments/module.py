@@ -259,7 +259,7 @@ def _build_merge_environment(
             # REQ: estimate size for BOTH candidate + partner BEFORE committing
             delta_c = _estimate_delta(candidate, source, seen)
             delta_p = 0 if partner_in_seen else _estimate_delta(partner, other_source, other_seen)
-            alignment_delta = 2 * _AVG_WORD  # one more Alignment entry
+            alignment_delta = 2 * _CHARS_PER_TRIPLE_TERM  # one more Alignment entry
 
             cur = _current_size(sub1, sub2, border_set1, border_set2, len(env_alignments))
 
