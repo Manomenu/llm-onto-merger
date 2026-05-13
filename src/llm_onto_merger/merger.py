@@ -38,13 +38,13 @@ class LLMOntologyMerger:
         )
 
         total = len(merge_environments)
-        semaphore = asyncio.Semaphore(settings.max_concurrent_merges)
+        semaphore = asyncio.Semaphore(settings.parallel_llm_request_count)
         merger = MergeEnvironmentsModule()
 
         log.info(
-            "Merging %d environments | max_concurrent: %d",
+            "Merging %d environments | parallel_llm_requests: %d",
             total,
-            settings.max_concurrent_merges,
+            settings.parallel_llm_request_count,
         )
 
         async def _merge_one(env, idx):
