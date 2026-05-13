@@ -5,7 +5,14 @@ from rdflib import Graph, URIRef
 from ..alignment.alignment import Alignment
 from ..ontology import KG2CODE_PREAMBLE, graph_to_string, local_name
 
-_AVG_WORD = 6  # avg English word length excluding stopwords
+# Calibrated against observed KG2Code serialisation sizes.
+# Each triple serialises as a Python tuple with three quoted local names:
+#   ('Subject', 'relation', 'Object')  →  ~44 chars/tuple
+# Plus an Entity() header per unique subject  →  ~72 chars/entity
+# Together this averages to ~72 chars per triple (3 terms × 24).
+# Border nodes appear as comma-separated local names  →  ~12 chars each.
+_CHARS_PER_TRIPLE_TERM = 24   # chars per URI/literal position inside a KG2Code tuple
+_CHARS_PER_BORDER_NODE = 12   # avg local-name length + separator in the border list
 
 
 class MergeEnvironmentConfig:
@@ -30,9 +37,9 @@ class MergeEnvironment:
 
     @property
     def chars_count(self) -> int:
-        onto_chars = (len(self.onto_1) + len(self.onto_2)) * 3 * _AVG_WORD
-        border_chars = (len(self.border1) + len(self.border2)) * _AVG_WORD
-        alignment_chars = len(self.alignments) * 2 * _AVG_WORD
+        onto_chars = (len(self.onto_1) + len(self.onto_2)) * 3 * _CHARS_PER_TRIPLE_TERM
+        border_chars = (len(self.border1) + len(self.border2)) * _CHARS_PER_BORDER_NODE
+        alignment_chars = len(self.alignments) * 2 * _CHARS_PER_TRIPLE_TERM
         return onto_chars + border_chars + alignment_chars
 
     def to_string(self) -> str:

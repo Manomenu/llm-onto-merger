@@ -7,11 +7,14 @@ from rdflib import Graph, URIRef
 from ..alignment.alignment import Alignment
 from ..logger import get_logger
 from ..ontology import local_name, move_entity_triples
-from .merge_environment import MergeEnvironment, MergeEnvironmentConfig
+from .merge_environment import (
+    MergeEnvironment,
+    MergeEnvironmentConfig,
+    _CHARS_PER_BORDER_NODE,
+    _CHARS_PER_TRIPLE_TERM,
+)
 
 log = get_logger(__name__)
-
-_AVG_WORD = 6  # must match merge_environment.py
 
 # Namespaces whose nodes are infrastructure/vocabulary, not domain entities.
 # They may appear as border references but must never be pulled into env interior.
@@ -157,7 +160,7 @@ def _estimate_delta(entity: URIRef, source: Graph, seen: set[URIRef]) -> int:
         for node in (s, o)
         if isinstance(node, URIRef) and node not in seen
     }
-    return len(triples) * 3 * _AVG_WORD + len(new_border) * _AVG_WORD
+    return len(triples) * 3 * _CHARS_PER_TRIPLE_TERM + len(new_border) * _CHARS_PER_BORDER_NODE
 
 
 def _current_size(
@@ -168,9 +171,9 @@ def _current_size(
     n_alignments: int,
 ) -> int:
     return (
-        (len(sub1) + len(sub2)) * 3 * _AVG_WORD
-        + (len(border1) + len(border2)) * _AVG_WORD
-        + n_alignments * 2 * _AVG_WORD
+        (len(sub1) + len(sub2)) * 3 * _CHARS_PER_TRIPLE_TERM
+        + (len(border1) + len(border2)) * _CHARS_PER_BORDER_NODE
+        + n_alignments * 2 * _CHARS_PER_TRIPLE_TERM
     )
 
 
