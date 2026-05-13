@@ -1,5 +1,4 @@
 import bisect
-import random
 from collections import deque
 
 from rdflib import Graph, URIRef
@@ -132,15 +131,32 @@ class _AlignmentPool:
 # ---------------------------------------------------------------------------
 
 def _new_border_candidates(triples: list[tuple], seen: set[URIRef]) -> list[URIRef]:
-    """Extract unseen URIRef nodes from subject and object positions, shuffled."""
-    candidates = {
-        node
-        for (s, _, o) in triples
-        for node in (s, o)
-        if isinstance(node, URIRef) and node not in seen
-    }
-    result = list(candidates)
-    random.shuffle(result)
+    """Extract unseen URIRef nodes from subject and object positions.
+
+    Sorted by URI for determinism, then interleaved front-to-back so BFS
+    explores both ends of the alphabet rather than crawling one direction.
+    """
+    candidates = sorted(
+        {
+            node
+            for (s, _, o) in triples
+            for node in (s, o)
+            if isinstance(node, URIRef) and node not in seen
+        },
+        key=str,
+    )
+    # Interleave: take alternately from front and back.
+    result: list[URIRef] = []
+    lo, hi = 0, len(candidates) - 1
+    take_front = True
+    while lo <= hi:
+        if take_front:
+            result.append(candidates[lo])
+            lo += 1
+        else:
+            result.append(candidates[hi])
+            hi -= 1
+        take_front = not take_front
     return result
 
 

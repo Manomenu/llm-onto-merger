@@ -23,7 +23,7 @@
                 "--candidate", "tests/inputs/edas.owl",
                 "--alignment-tool", "aml",
                 "--output", "tests/outputs/merged_ontology.owl",
-                "--max-env-chars", "4000"
+                "--max-env-chars", "10000"
             ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src"
