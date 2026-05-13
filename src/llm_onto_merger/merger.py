@@ -23,6 +23,9 @@ class LLMOntologyMerger:
         args: LoadedArguments,
         alignment_module: AlignmentModule,
     ) -> None:
+        out_dir = Path(args.output_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+
         onto_1 = create_ontology(Path(args.base_path))
         onto_2 = create_ontology(Path(args.candidate_path))
 
@@ -60,22 +63,22 @@ class LLMOntologyMerger:
         if settings.debug:
             save_pre_merge_debug(
                 merge_environments, onto_1_leftover, onto_2_leftover,
-                settings.save_location,
+                out_dir,
                 original_alignments=alignments,
                 merged_graphs=list(merged_environments),
             )
             save_post_merge_debug(
                 list(merged_environments), onto_1_leftover, onto_2_leftover,
-                settings.save_location,
+                out_dir,
                 merge_environments=merge_environments,
             )
             save_diff_debug(
                 merge_environments, list(merged_environments),
-                settings.save_location,
+                out_dir,
             )
 
         merged_onto = integrate_environments(
             list(merged_environments), onto_1_leftover, onto_2_leftover
         )
 
-        save_ontology(merged_onto)
+        save_ontology(merged_onto, out_dir)

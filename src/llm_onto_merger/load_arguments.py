@@ -12,7 +12,7 @@ class LoadedArguments(BaseModel):
     base_path: str
     candidate_path: str
     alignment_tool: str = "aml"
-    output_path: str
+    output_dir: str
     merge_env_max_chars: int = 10_000
 
 
@@ -37,7 +37,7 @@ def load_arguments() -> LoadedArguments:
         help="Alignment tool to use (default: aml)",
     )
     parser.add_argument(
-        "--output", default="merged_ontology.owl", help="Output file path"
+        "--output", default="tests/outputs", help="Output directory (merged_ontology.owl and debug files are saved here)"
     )
     parser.add_argument(
         "--max-env-chars",
@@ -59,16 +59,16 @@ def load_arguments() -> LoadedArguments:
         base_path=args.base,
         candidate_path=args.candidate,
         alignment_tool=args.alignment_tool,
-        output_path=args.output,
+        output_dir=args.output,
         merge_env_max_chars=args.max_env_chars,
     )
     log.info(
         "Arguments loaded | base: %s | candidate: %s | alignment_tool: %s (default: aml)"
-        " | output: %s | max_env_chars: %d (default: 10000)",
+        " | output_dir: %s | max_env_chars: %d (default: 10000)",
         loaded.base_path,
         loaded.candidate_path,
         loaded.alignment_tool,
-        loaded.output_path,
+        loaded.output_dir,
         loaded.merge_env_max_chars,
     )
     return loaded

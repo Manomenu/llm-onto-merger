@@ -62,10 +62,17 @@ class Entity(BaseModel):
     tuples: list[tuple[str, str, str]]
 
 
-def graph_to_string(graph: Graph) -> str:
+def graph_to_string(
+    graph: Graph,
+    uri_to_code: dict[str, str] | None = None,
+) -> str:
     """Render all entities in *graph* as KG2Code-style Entity(...) declarations.
 
     Does NOT include KG2CODE_PREAMBLE — prepend it once at the prompt level.
+
+    uri_to_code — when provided, each subject URI is replaced with its short
+    code (e.g. 'aa', 'ab') to reduce prompt size.  The caller is responsible
+    for restoring full URIs from the reverse mapping after the LLM responds.
     """
     subjects = sorted(
         {s for s, _, _ in graph if isinstance(s, URIRef)},
@@ -73,12 +80,14 @@ def graph_to_string(graph: Graph) -> str:
     )
     lines = []
     for subj in subjects:
+        subj_str = str(subj)
+        uri_repr = uri_to_code[subj_str] if uri_to_code and subj_str in uri_to_code else subj_str
         tuple_strs = [
             f"('{local_name(subj)}', '{local_name(p)}', '{str(o) if isinstance(o, Literal) else local_name(o)}')"
             for _, p, o in graph.triples((subj, None, None))
         ]
         lines.append(
-            f"Entity('{subj}', name='{local_name(subj)}',"
+            f"Entity('{uri_repr}', name='{local_name(subj)}',"
             f" tuples=[{', '.join(tuple_strs)}])"
         )
     return "\n".join(lines)
@@ -121,19 +130,10 @@ def entities_to_graph(entities: list[Entity]) -> Graph:
     return graph
 
 
-def save_ontology(graph: Graph, save_location: Path | None = None) -> Path:
-    """Serialize *graph* as OWL (RDF/XML) to *save_location*/merged_ontology.owl.
-
-    Falls back to settings.save_location when save_location is not provided.
-    Returns the path of the written file.
-    """
-    from .settings import settings  # local import to avoid circular at module level
-
-    location = (
-        Path(save_location) if save_location is not None else settings.save_location
-    )
-    location.mkdir(parents=True, exist_ok=True)
-    out = location / "merged_ontology.owl"
+def save_ontology(graph: Graph, out_dir: Path) -> Path:
+    """Serialize *graph* as OWL (RDF/XML) to *out_dir*/merged_ontology.owl."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out = out_dir / "merged_ontology.owl"
     graph.serialize(destination=str(out), format="xml")
     log.info("Saved merged ontology to %s (%d triples)", out, len(graph))
     return out

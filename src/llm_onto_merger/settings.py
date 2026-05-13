@@ -12,7 +12,6 @@ class Settings(BaseSettings):
 
     ollama_model: str
     ollama_host: str = "http://localhost:11434"
-    save_location: Path = Path("tests/outputs")
     parallel_llm_request_count: int = 4
     debug: bool = False
 

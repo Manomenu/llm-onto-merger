@@ -11,7 +11,7 @@
             "cwd": "${workspaceFolder}"
         },
         {
-            "name": "Debug Ontology Merger",
+            "name": "Merge: conference (cmt + edas)",
             "type": "debugpy",
             "request": "launch",
             "module": "llm_onto_merger.main",
@@ -19,11 +19,49 @@
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
             "args": [
-                "--base", "tests/inputs/cmt.owl",
-                "--candidate", "tests/inputs/edas.owl",
+                "--base", "tests/inputs/conference/cmt.owl",
+                "--candidate", "tests/inputs/conference/edas.owl",
                 "--alignment-tool", "aml",
-                "--output", "tests/outputs/merged_ontology.owl",
+                "--output", "tests/outputs/conference",
                 "--max-env-chars", "10000"
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            }
+        },
+        {
+            "name": "Merge: human-mouse",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "llm_onto_merger.main",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "--base", "tests/inputs/human-mouse/human.owl",
+                "--candidate", "tests/inputs/human-mouse/mouse.owl",
+                "--alignment-tool", "aml",
+                "--output", "tests/outputs/human-mouse",
+                "--max-env-chars", "60000"
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            }
+        },
+        {
+            "name": "Merge: hp-mp",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "llm_onto_merger.main",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "--base", "tests/inputs/hp-mp/hp.owl",
+                "--candidate", "tests/inputs/hp-mp/mp.owl",
+                "--alignment-tool", "aml",
+                "--output", "tests/outputs/hp-mp",
+                "--max-env-chars", "60000"
             ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src"

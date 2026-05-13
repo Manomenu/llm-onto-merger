@@ -20,7 +20,7 @@ _INSTRUCTION_LEN = len(merge_agent.default_options.get("instructions") or "")
 
 class MergeEnvironmentsModule:
     async def merge(self, merge_environment: MergeEnvironment) -> Graph:
-        request = merge_environment.to_string()
+        request, code_to_uri = merge_environment.to_string()
         log.info(
             "Sending merge request | instruction: %d chars | request: %d chars | total: %d chars",
             _INSTRUCTION_LEN,
@@ -33,4 +33,12 @@ class MergeEnvironmentsModule:
         )
         merged = MergedOntology.model_validate(response.value)
         log.info("Received %d entities in merged ontology", len(merged.Merged_Ontology))
-        return entities_to_graph(merged.Merged_Ontology)
+        # Restore full URIs: LLM returns namespace codes (e.g. 'aa') as entity.uri.
+        # Reconstruction: code_to_ns[code] + entity.name  e.g. 'aa' + 'Person'
+        # → 'http://cmt#Person'.  Falls back to e.uri as-is for unknown codes.
+        entities = [
+            e.model_copy(update={"uri": code_to_uri[e.uri] + e.name})
+            if e.uri in code_to_uri else e
+            for e in merged.Merged_Ontology
+        ]
+        return entities_to_graph(entities)
