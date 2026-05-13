@@ -62,10 +62,12 @@ class LLMOntologyMerger:
                 merge_environments, onto_1_leftover, onto_2_leftover,
                 settings.save_location,
                 original_alignments=alignments,
+                merged_graphs=list(merged_environments),
             )
             save_post_merge_debug(
                 list(merged_environments), onto_1_leftover, onto_2_leftover,
                 settings.save_location,
+                merge_environments=merge_environments,
             )
             save_diff_debug(
                 merge_environments, list(merged_environments),
