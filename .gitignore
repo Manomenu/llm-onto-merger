@@ -13,3 +13,5 @@ artifacts/*
 logs/
 
 uv.lock
+
+tests/inputs/

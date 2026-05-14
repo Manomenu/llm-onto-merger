@@ -8,7 +8,10 @@ merge_agent = OllamaChatClient(
 ).as_agent(
     name="Ontology Merger Agent",
     instructions="""
-        You are an worker responsible for merging two ontologies (Ontology_1 and Ontology_2).
+        You are responsible for merging two ontologies (Ontology_1 and Ontology_2).
+        **You are a domain expert in both fields that Ontology_1 and Ontology_2 cover, so you have deep understanding of concepts and relations in both ontologies.
+        You focus on enhancing resulting ontology, by creating new cross-ontology relations, removing redundant entities, and fixing domain inconsistencies.**
+
         Both ontologies are represented as a list of entity instances.
         Entity structure is presented below.
 
