@@ -132,6 +132,12 @@ def _schema_metrics(g: Graph) -> dict[str, float]:
     obj  = {p for p in prop if (p, RDF.type, _OWL_OBJ)  in g}
     dat  = {p for p in prop if (p, RDF.type, _OWL_DATA) in g}
 
+    # subClassOf triples between named classes (excluding owl:Thing as parent)
+    subclassof_n = sum(
+        1 for _, _, o in g.triples((None, _SUB, None))
+        if isinstance(o, URIRef) and o != _OWL_THING
+    )
+
     par, chi = _hierarchy(g, cls)
     dep      = _depths(cls, par)
 
@@ -146,10 +152,22 @@ def _schema_metrics(g: Graph) -> dict[str, float]:
     arc = sum(1 for c in cls if not par.get(c))   # no named parent → root
     alc = sum(1 for c in cls if not chi.get(c))   # no children → leaf
 
+    n_cls = len(cls)
+    n_obj = len(obj)
+    n_dat = len(dat)
+
+    # OntoQA metrics (Tartir et al.)
+    # Relationship Richness: object properties / (object properties + subClassOf)
+    rr = n_obj / (n_obj + subclassof_n) if (n_obj + subclassof_n) > 0 else 0.0
+    # Inheritance Richness: subClassOf triples / classes
+    ir = subclassof_n / n_cls if n_cls > 0 else 0.0
+    # Attribute Richness: data properties / classes
+    ar = n_dat / n_cls if n_cls > 0 else 0.0
+
     return {
-        "num_classes":              float(len(cls)),
-        "num_object_properties":    float(len(obj)),
-        "num_datatype_properties":  float(len(dat)),
+        "num_classes":              float(n_cls),
+        "num_object_properties":    float(n_obj),
+        "num_datatype_properties":  float(n_dat),
         "num_triples":              float(len(g)),
         "avg_depth":                round(avg_depth,   4),
         "max_depth":                float(max_depth),
@@ -157,6 +175,9 @@ def _schema_metrics(g: Graph) -> dict[str, float]:
         "max_breadth":              float(max_breadth),
         "ARC":                      float(arc),
         "ALC":                      float(alc),
+        "relationship_richness":    round(rr, 4),
+        "inheritance_richness":     round(ir, 4),
+        "attribute_richness":       round(ar, 4),
     }
 
 

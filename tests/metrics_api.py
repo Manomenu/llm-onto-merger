@@ -1,0 +1,622 @@
+#!/usr/bin/env python3
+"""
+Compute ontology metrics via the public OntoMetrics API (schema metrics)
+and self-implemented formulas (KB metrics).
+
+API:  https://ontometrics.informatik.uni-rostock.de/ontologymetrics/
+      (University of Rostock, public, no auth required)
+      Note: by calling this API you agree that the ontology may be stored
+      on the server for research purposes.
+
+Usage:
+    python tests/metrics_api.py <folder_name>
+
+Reads:
+    tests/inputs/<folder_name>/*.owl   — two input ontologies
+    tests/outputs/<folder_name>/merged_ontology.owl
+
+Writes:
+    tests/outputs/<folder_name>/metrics_api.csv
+    Columns: graf, metryka, wartosc, zrodlo, interpretacja
+
+Metrics (12 total):
+    Schema: average_depth, max_depth, average_breadth, max_breadth, ARC, ALC
+    KB:     integrity, accuracy, cohesion, completeness, understandability, conciseness
+"""
+
+import csv
+import re
+import sys
+import time
+from collections import defaultdict
+from pathlib import Path
+
+import requests
+from rdflib import OWL, RDF, RDFS, Graph, URIRef
+
+_OWL_DISJOINT_WITH = OWL.disjointWith
+
+
+def _load_graph(path: str) -> Graph:
+    """Load OWL file and strip owl:disjointWith triples (same preprocessing as main pipeline)."""
+    g = Graph()
+    g.parse(path)
+    disjoint = list(g.triples((None, _OWL_DISJOINT_WITH, None)))
+    for triple in disjoint:
+        g.remove(triple)
+    if disjoint:
+        print(f"  stripped {len(disjoint)} disjointWith triples from {path}")
+    return g
+
+ONTOMETRICS_URL = (
+    "https://ontometrics.informatik.uni-rostock.de"
+    "/ontologymetrics/ServletController"
+)
+
+# Seconds to wait between consecutive API calls (polite use of public service)
+_DELAY_S = 3
+
+# ── Metric registry ────────────────────────────────────────────────────────────
+
+# api_key: substring to match in the parsed API response key; None = self-implemented only.
+_REGISTRY: dict[str, dict] = {
+    "average_depth": {
+        "api_key":       "average_depth",
+        "zrodlo":        "ontometrics_api",
+        "interpretacja": (
+            "Srednia glebokosc hierarchii klas (srednia liczba krawedzi od korzenia "
+            "do kazdej klasy). Wyzszy wynik = bogatsza, bardziej szczegolowa hierarchia; "
+            "zbyt wysoki moze utrudniac nawigacje."
+        ),
+    },
+    "max_depth": {
+        "api_key":       "maximum_depth",
+        "zrodlo":        "ontometrics_api",
+        "interpretacja": (
+            "Maksymalna glebokosc drzewa klas (najdluzsza sciezka od korzenia do liscia). "
+            "Wieksza wartosc = obecnosc wysoce wyspecjalizowanych pojec."
+        ),
+    },
+    "average_breadth": {
+        "api_key":       "average_breadth",
+        "zrodlo":        "ontometrics_api",
+        "interpretacja": (
+            "Srednia liczba bezposrednich podklas przypadajaca na wezel posiadajacy dzieci. "
+            "Wyzszy wynik = szerzej rozgalezione ontologie."
+        ),
+    },
+    "max_breadth": {
+        "api_key":       "maximum_breadth",
+        "zrodlo":        "ontometrics_api",
+        "interpretacja": (
+            "Maksymalna liczba bezposrednich podklas jednej klasy. "
+            "Wysoka wartosc moze wskazywac na brak posrednich poziomow hierarchii."
+        ),
+    },
+    "ARC": {
+        "api_key":       "absolute_root_cardinality",
+        "zrodlo":        "ontometrics_api",
+        "interpretacja": (
+            "Liczba klas bez nazwanego rodzica (korzenie hierarchii). "
+            "Wartosc 1 oznacza spójna, jednolita hierarchie z jednym punktem wejscia."
+        ),
+    },
+    "ALC": {
+        "api_key":       "absolute_leaf_cardinality",
+        "zrodlo":        "ontometrics_api",
+        "interpretacja": (
+            "Liczba klas bez zadnej podklasy (liscie). "
+            "Wyzszy = wiecej wyspecjalizowanych, atomowych pojec w ontologii."
+        ),
+    },
+    "integrity": {
+        "api_key":       None,
+        "zrodlo":        "self-implemented",
+        "interpretacja": (
+            "Ulamek trojek ze zbioru wejsciowego (po lokalnych nazwach S/P/O) "
+            "zachowanych w merged (dla unii = 1.0). "
+            "Blizej 1.0 = mniej informacji stracono podczas scalania."
+        ),
+    },
+    "accuracy": {
+        "api_key":       None,
+        "zrodlo":        "self-implemented",
+        "interpretacja": (
+            "Sredni ulamek nazw lokalnych klas i wlasciwosci ze zbioru wejsciowego "
+            "obecnych w merged (dla unii = 1.0). "
+            "Blizej 1.0 = lepsze pokrycie oryginalnego slownika pojec."
+        ),
+    },
+    "cohesion": {
+        "api_key":       None,
+        "zrodlo":        "self-implemented",
+        "interpretacja": (
+            "Ulamek wlasciwosci posiadajacych zdefiniowana jednoczesnie domene i zakres. "
+            "Wyzszy = lepiej opisane relacje miedzy klasami."
+        ),
+    },
+    "completeness": {
+        "api_key":       None,
+        "zrodlo":        "self-implemented",
+        "interpretacja": (
+            "Ulamek par subClassOf (po lokalnych nazwach klasy nadrzednej i podrzednej) "
+            "ze zbioru wejsciowego zachowanych w merged (dla unii = 1.0). "
+            "Blizej 1.0 = lepsza zachowanosc struktury hierarchicznej."
+        ),
+    },
+    "understandability": {
+        "api_key":       None,
+        "zrodlo":        "self-implemented",
+        "interpretacja": (
+            "Ulamek klas i wlasciwosci posiadajacych rdfs:label lub rdfs:comment. "
+            "Wyzszy = ontologia latwiejsza do zrozumienia przez czlowieka."
+        ),
+    },
+    "conciseness": {
+        "api_key":       None,
+        "zrodlo":        "self-implemented",
+        "interpretacja": (
+            "Stosunek unikalnych nazw lokalnych klas do calkowitej liczby URI klas. "
+            "Wartosc 1.0 = brak redundancji nazw; ponizej 1.0 = kolizje nazw "
+            "miedzy roznymi przestrzeniami nazw."
+        ),
+    },
+}
+
+# ── OntoMetrics API ────────────────────────────────────────────────────────────
+
+def _query_api(owl_bytes: bytes, label: str) -> dict[str, float]:
+    """POST an OWL file (as bytes) to OntoMetrics and return parsed metrics."""
+    print(f"  → OntoMetrics API [{label}] …", end=" ", flush=True)
+    resp = requests.post(
+        ONTOMETRICS_URL,
+        data={
+            "text":             owl_bytes.decode("utf-8", errors="replace"),
+            "base":             "on",
+            "schema":           "on",
+            "knowledge":        "on",
+            "graph":            "on",
+            "store_aggreement": "on",
+        },
+        timeout=120,
+    )
+    resp.raise_for_status()
+    metrics = _parse_html(resp.text)
+    print(f"{len(metrics)} metrics")
+    return metrics
+
+
+# Ordered list of section markers as they appear in the response HTML.
+_SECTIONS = [
+    ("base",   "Base metrics"),
+    ("base",   "Class axioms"),
+    ("base",   "Object property axioms"),
+    ("base",   "Data property axioms"),
+    ("base",   "Individual axioms"),
+    ("base",   "Annotation axioms"),
+    ("schema", "Schema metrics"),
+    ("kb",     "Knowledgebase metrics"),
+    ("graph",  "Graph metrics"),
+]
+
+_SKIP_ANYWHERE = frozenset(["show", "hide", "more", "details", "powered", "copyright"])
+_SKIP_FIRST    = frozenset([
+    "home", "result", "faq", "wiki", "contact", "impressum",
+    "results", "ontologyid", "optional", "created",
+])
+
+
+def _parse_html(html: str) -> dict[str, float]:
+    """Extract numeric metric values from the OntoMetrics result page."""
+    text = re.sub(r"<[^>]+>", " ", html)
+    text = re.sub(r"&nbsp;", " ", text)
+    text = re.sub(r"\s+", " ", text)
+
+    idx = text.find("Results")
+    if idx >= 0:
+        text = text[idx:]
+
+    section_spans: list[tuple[int, str]] = []
+    for prefix, marker in _SECTIONS:
+        pos = text.find(marker)
+        if pos >= 0:
+            section_spans.append((pos, prefix))
+    section_spans.sort()
+
+    def _section_at(pos: int) -> str:
+        label = "base"
+        for sp, sl in section_spans:
+            if sp <= pos:
+                label = sl
+        return label
+
+    metrics: dict[str, float] = {}
+    pattern = re.compile(
+        r"([A-Z][A-Za-z /()\-]+?):\s*(-?\d+\.?\d*(?:e[+-]?\d+)?)"
+    )
+    for m in pattern.finditer(text):
+        raw_name = m.group(1).strip()
+        if len(raw_name) > 55:
+            continue
+        lower = raw_name.lower()
+        if any(w in lower for w in _SKIP_ANYWHERE):
+            continue
+        if lower.split()[0] in _SKIP_FIRST:
+            continue
+        try:
+            value = float(m.group(2))
+        except ValueError:
+            continue
+
+        section = _section_at(m.start())
+        key = (
+            raw_name.lower()
+            .replace(" ", "_")
+            .replace("/", "_per_")
+            .replace("(", "")
+            .replace(")", "")
+            .replace("-", "_")
+        )
+        full_key = f"{section}/{key}"
+        if full_key not in metrics:
+            metrics[full_key] = value
+
+    return metrics
+
+
+# ── rdflib helpers ─────────────────────────────────────────────────────────────
+
+_OWL_CLASS = OWL.Class
+_OWL_OBJ   = OWL.ObjectProperty
+_OWL_DATA  = OWL.DatatypeProperty
+_OWL_ANN   = OWL.AnnotationProperty
+_OWL_FP    = OWL.FunctionalProperty
+_OWL_IFP   = OWL.InverseFunctionalProperty
+_OWL_THING = OWL.Thing
+_SUB       = RDFS.subClassOf
+_LABEL     = RDFS.label
+_COMMENT   = RDFS.comment
+_DOMAIN    = RDFS.domain
+_RANGE     = RDFS.range
+
+_PROP_TYPES = (_OWL_OBJ, _OWL_DATA, _OWL_ANN, _OWL_FP, _OWL_IFP)
+
+
+def _local(uri: URIRef) -> str:
+    s = str(uri)
+    return s.split("#")[-1] if "#" in s else s.rsplit("/", 1)[-1]
+
+
+def _classes(g: Graph) -> set[URIRef]:
+    result: set[URIRef] = set()
+    for s in g.subjects(RDF.type, _OWL_CLASS):
+        if isinstance(s, URIRef) and s != _OWL_THING:
+            result.add(s)
+    for s, _, o in g.triples((None, _SUB, None)):
+        if isinstance(s, URIRef) and s != _OWL_THING:
+            result.add(s)
+        if isinstance(o, URIRef) and o != _OWL_THING:
+            result.add(o)
+    return result
+
+
+def _properties(g: Graph) -> set[URIRef]:
+    result: set[URIRef] = set()
+    for ptype in _PROP_TYPES:
+        for s in g.subjects(RDF.type, ptype):
+            if isinstance(s, URIRef):
+                result.add(s)
+    return result
+
+
+def _hierarchy(g: Graph, classes: set[URIRef]) -> tuple[dict, dict]:
+    parents:  dict[URIRef, set[URIRef]] = defaultdict(set)
+    children: dict[URIRef, set[URIRef]] = defaultdict(set)
+    for s, _, o in g.triples((None, _SUB, None)):
+        if (
+            isinstance(s, URIRef) and isinstance(o, URIRef)
+            and s in classes and o in classes
+        ):
+            parents[s].add(o)
+            children[o].add(s)
+    return parents, children
+
+
+def _depths(classes: set[URIRef], parents: dict) -> dict[URIRef, int]:
+    memo: dict[URIRef, int] = {}
+    in_progress: set[URIRef] = set()
+
+    def depth(c: URIRef) -> int:
+        if c in memo:
+            return memo[c]
+        if c in in_progress:
+            return 0
+        in_progress.add(c)
+        p_set = parents.get(c) or set()
+        d = (1 + max(depth(p) for p in p_set)) if p_set else 0
+        in_progress.discard(c)
+        memo[c] = d
+        return d
+
+    for c in classes:
+        depth(c)
+    return memo
+
+
+# ── Self-implemented metric computation ────────────────────────────────────────
+
+def _schema_self(g: Graph) -> dict[str, float]:
+    """Fallback schema metrics computed locally (used when API is unavailable)."""
+    cls = _classes(g)
+    if not cls:
+        return {
+            "average_depth": 0.0, "max_depth": 0.0,
+            "average_breadth": 0.0, "max_breadth": 0.0,
+            "ARC": 0.0, "ALC": 0.0,
+        }
+    par, chi = _hierarchy(g, cls)
+    dep = _depths(cls, par)
+
+    depth_vals   = list(dep.values())
+    child_counts = [len(chi[c]) for c in cls if chi.get(c)]
+
+    avg_depth   = sum(depth_vals)   / len(depth_vals)   if depth_vals   else 0.0
+    max_depth   = max(depth_vals)                        if depth_vals   else 0
+    avg_breadth = sum(child_counts) / len(child_counts) if child_counts else 0.0
+    max_breadth = max(child_counts)                      if child_counts else 0
+
+    arc = float(sum(1 for c in cls if not par.get(c)))
+    alc = float(sum(1 for c in cls if not chi.get(c)))
+
+    return {
+        "average_depth":   round(avg_depth,   4),
+        "max_depth":       float(max_depth),
+        "average_breadth": round(avg_breadth, 4),
+        "max_breadth":     float(max_breadth),
+        "ARC":             arc,
+        "ALC":             alc,
+    }
+
+
+def _kb_self(
+    g: Graph,
+    union: Graph | None = None,
+    union_classes: set[URIRef] | None = None,
+    union_props:   set[URIRef] | None = None,
+) -> dict[str, float]:
+    """KB metrics computed locally (always self-implemented)."""
+    cls  = _classes(g)
+    prop = _properties(g)
+    n_c  = len(cls)
+    n_p  = len(prop)
+
+    # Integrity: fraction of union triples (by local-name tuples S/P/O) present in g
+    if union is not None:
+        def _triple_key(s, p, o) -> tuple[str, str, str]:
+            return (
+                _local(s),
+                _local(p),
+                _local(o) if isinstance(o, URIRef) else str(o),
+            )
+        union_triples = {
+            _triple_key(s, p, o) for s, p, o in union if isinstance(s, URIRef)
+        }
+        g_triples = {
+            _triple_key(s, p, o) for s, p, o in g if isinstance(s, URIRef)
+        }
+        integrity = (
+            len(g_triples & union_triples) / len(union_triples)
+            if union_triples else 1.0
+        )
+    else:
+        integrity = 1.0  # union itself
+
+    # Accuracy: mean of class-name coverage and property-name coverage vs union
+    if union_classes is not None and union_props is not None:
+        u_cls_names  = {_local(c) for c in union_classes}
+        u_prop_names = {_local(p) for p in union_props}
+        m_cls_names  = {_local(c) for c in cls}
+        m_prop_names = {_local(p) for p in prop}
+        acc_c = len(m_cls_names & u_cls_names) / len(u_cls_names) if u_cls_names else 1.0
+        acc_p = len(m_prop_names & u_prop_names) / len(u_prop_names) if u_prop_names else 1.0
+        accuracy = (acc_c + acc_p) / 2
+    else:
+        accuracy = 1.0  # union itself
+
+    # Cohesion: fraction of properties with both domain AND range defined
+    with_domain = {p for p in prop if any(True for _ in g.objects(p, _DOMAIN))}
+    with_range  = {p for p in prop if any(True for _ in g.objects(p, _RANGE))}
+    cohesion = len(with_domain & with_range) / n_p if n_p else 0.0
+
+    # Completeness: fraction of subClassOf pairs (local names) from union in g
+    if union is not None:
+        def _sub_pairs(src: Graph) -> set[tuple[str, str]]:
+            return {
+                (_local(s), _local(o))
+                for s, _, o in src.triples((None, _SUB, None))
+                if isinstance(s, URIRef) and isinstance(o, URIRef) and o != _OWL_THING
+            }
+        union_pairs = _sub_pairs(union)
+        g_pairs     = _sub_pairs(g)
+        completeness = (
+            len(g_pairs & union_pairs) / len(union_pairs)
+            if union_pairs else 1.0
+        )
+    else:
+        completeness = 1.0  # union itself
+
+    # Understandability: fraction of classes+properties with rdfs:label or rdfs:comment
+    entities = cls | prop
+    n_e = len(entities)
+    annotated = sum(
+        1 for e in entities
+        if any(True for _ in g.objects(e, _LABEL))
+        or any(True for _ in g.objects(e, _COMMENT))
+    )
+    understandability = annotated / n_e if n_e else 0.0
+
+    # Conciseness: unique local class names / total number of class URIs
+    unique_local = len({_local(c) for c in cls})
+    conciseness = unique_local / n_c if n_c else 1.0
+
+    return {
+        "integrity":         round(integrity,         4),
+        "accuracy":          round(accuracy,          4),
+        "cohesion":          round(cohesion,          4),
+        "completeness":      round(completeness,      4),
+        "understandability": round(understandability, 4),
+        "conciseness":       round(conciseness,       4),
+    }
+
+
+# ── Main ──────────────────────────────────────────────────────────────────────
+
+def main() -> None:
+    if len(sys.argv) != 2:
+        print(f"Usage: {sys.argv[0]} <folder_name>", file=sys.stderr)
+        sys.exit(1)
+
+    folder     = sys.argv[1]
+    repo_root  = Path(__file__).parent.parent
+    input_dir  = repo_root / "tests" / "inputs"  / folder
+    output_dir = repo_root / "tests" / "outputs" / folder
+    out_csv    = output_dir / "metrics_api.csv"
+
+    if not input_dir.exists():
+        print(f"Input directory not found: {input_dir}", file=sys.stderr)
+        sys.exit(1)
+
+    input_files = sorted(input_dir.glob("*.owl"))
+    if len(input_files) != 2:
+        print(
+            f"Expected exactly 2 .owl files in {input_dir}, "
+            f"found {len(input_files)}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    merged_path = output_dir / "merged_ontology.owl"
+    if not merged_path.exists():
+        print(f"merged_ontology.owl not found in {output_dir}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"Loading ontologies for: {folder}")
+    onto1  = _load_graph(str(input_files[0]))
+    onto2  = _load_graph(str(input_files[1]))
+    union  = Graph()
+    for t in onto1: union.add(t)
+    for t in onto2: union.add(t)
+    merged = _load_graph(str(merged_path))
+    print(f"  onto1:  {len(onto1)} triples")
+    print(f"  onto2:  {len(onto2)} triples")
+    print(f"  union:  {len(union)} triples")
+    print(f"  merged: {len(merged)} triples")
+
+    union_bytes  = union.serialize(format="xml").encode("utf-8")
+    merged_bytes = merged_path.read_bytes()
+
+    u_cls  = _classes(union)
+    u_prop = _properties(union)
+
+    # ── API calls ──────────────────────────────────────────────────────────────
+    print("\nQuerying OntoMetrics API …")
+    api_results: dict[str, dict[str, float]] = {}
+    for i, (graf_name, owl_bytes) in enumerate(
+        [("unia_input", union_bytes), ("merged_ontology", merged_bytes)]
+    ):
+        if i > 0:
+            time.sleep(_DELAY_S)
+        try:
+            api_results[graf_name] = _query_api(owl_bytes, graf_name)
+        except Exception as exc:
+            print(f"  ERROR for {graf_name}: {exc}", file=sys.stderr)
+            api_results[graf_name] = {}
+
+    # ── Self-implemented metrics ───────────────────────────────────────────────
+    self_schema = {
+        "unia_input":      _schema_self(union),
+        "merged_ontology": _schema_self(merged),
+    }
+    self_kb = {
+        "unia_input":      _kb_self(union),
+        "merged_ontology": _kb_self(merged, union, u_cls, u_prop),
+    }
+
+    # ── Assemble rows ──────────────────────────────────────────────────────────
+    rows: list[dict] = []
+    for graf_name in ("unia_input", "merged_ontology"):
+        api_raw = api_results.get(graf_name, {})
+        for metric_name, meta in _REGISTRY.items():
+            api_key = meta["api_key"]
+            zrodlo  = meta["zrodlo"]
+            interp  = meta["interpretacja"]
+            value: float | None = None
+
+            if api_key is not None:
+                # Find a key in the API response that contains the expected substring
+                matched = next(
+                    (v for k, v in api_raw.items() if api_key in k),
+                    None,
+                )
+                if matched is not None:
+                    value = matched
+                else:
+                    # API did not return this metric — fall back to self-implementation
+                    value  = self_schema[graf_name].get(metric_name)
+                    zrodlo = "self-implemented (api-fallback)"
+            else:
+                value = self_kb[graf_name].get(metric_name)
+
+            if value is None:
+                continue
+
+            rows.append({
+                "graf":          graf_name,
+                "metryka":       metric_name,
+                "wartosc":       value,
+                "zrodlo":        zrodlo,
+                "interpretacja": interp,
+            })
+
+    if not rows:
+        print("No metrics collected — API may be unavailable.", file=sys.stderr)
+        sys.exit(1)
+
+    # ── Write CSV ──────────────────────────────────────────────────────────────
+    out_csv.parent.mkdir(parents=True, exist_ok=True)
+    with out_csv.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=["graf", "metryka", "wartosc", "zrodlo", "interpretacja"],
+        )
+        writer.writeheader()
+        writer.writerows(rows)
+
+    print(f"\nMetrics written to {out_csv}\n")
+
+    # ── Console summary ────────────────────────────────────────────────────────
+    by_metric: dict[str, dict[str, float]] = defaultdict(dict)
+    by_source: dict[str, str] = {}
+    for r in rows:
+        by_metric[r["metryka"]][r["graf"]] = r["wartosc"]
+        by_source.setdefault(r["metryka"], r["zrodlo"])
+
+    col = max(len(m) for m in _REGISTRY)
+    src_col = max(len(s) for s in by_source.values()) if by_source else 20
+    print(
+        f"{'metryka':<{col}}  {'unia_input':>15}  {'merged_ontology':>16}"
+        f"  {'zrodlo'}"
+    )
+    print("─" * (col + 35 + 2 + src_col))
+    for metric_name in _REGISTRY:
+        vals = by_metric.get(metric_name, {})
+        u = vals.get("unia_input")
+        m = vals.get("merged_ontology")
+        u_s = f"{u:>15.4f}" if u is not None else f"{'—':>15}"
+        m_s = f"{m:>16.4f}" if m is not None else f"{'—':>16}"
+        src = by_source.get(metric_name, "")
+        print(f"{metric_name:<{col}}{u_s}{m_s}  {src}")
+
+
+if __name__ == "__main__":
+    main()
