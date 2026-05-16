@@ -139,11 +139,27 @@ def save_ontology(graph: Graph, out_dir: Path) -> Path:
     return out
 
 
+_OWL_DISJOINT_WITH = URIRef("http://www.w3.org/2002/07/owl#disjointWith")
+
+
 def create_ontology(ontology_path: Path) -> Graph:
-    """Load an OWL/RDF ontology from the given path."""
+    """Load an OWL/RDF ontology from the given path.
+
+    disjointWith triples are stripped on load — they are structural symmetry
+    constraints that add O(N²) noise and confuse the LLM merge step.
+    """
     g = Graph()
     g.parse(str(ontology_path))
-    log.info("Ontology loaded from %s (%d triples)", ontology_path, len(g))
+    disjoint_triples = list(g.triples((None, _OWL_DISJOINT_WITH, None)))
+    for triple in disjoint_triples:
+        g.remove(triple)
+    if disjoint_triples:
+        log.info(
+            "Ontology loaded from %s (%d triples, %d disjointWith removed)",
+            ontology_path, len(g), len(disjoint_triples),
+        )
+    else:
+        log.info("Ontology loaded from %s (%d triples)", ontology_path, len(g))
     return g
 
 

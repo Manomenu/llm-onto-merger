@@ -23,7 +23,7 @@
                 "--candidate", "tests/inputs/conference/edas.owl",
                 "--alignment-tool", "aml",
                 "--output", "tests/outputs/conference",
-                "--max-env-chars", "10000"
+                "--max-env-chars", "7000"
             ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src"

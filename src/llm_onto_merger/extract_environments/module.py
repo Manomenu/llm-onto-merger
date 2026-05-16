@@ -3,6 +3,10 @@ from collections import deque
 
 from rdflib import Graph, URIRef
 
+from collections import defaultdict
+
+from rdflib import Literal
+
 from ..alignment.alignment import Alignment
 from ..logger import get_logger
 from ..ontology import local_name, move_entity_triples
@@ -11,6 +15,7 @@ from .merge_environment import (
     MergeEnvironmentConfig,
     _CHARS_PER_BORDER_NODE,
     _CHARS_PER_TRIPLE_TERM,
+    _build_namespace_codec,
 )
 
 log = get_logger(__name__)
@@ -163,8 +168,8 @@ def _new_border_candidates(triples: list[tuple], seen: set[URIRef]) -> list[URIR
 def _estimate_delta(entity: URIRef, source: Graph, seen: set[URIRef]) -> int:
     """REQ: estimate the chars increase from expanding entity, WITHOUT moving triples.
 
-    Mirrors the chars_count formula in MergeEnvironment:
-        triples * 3 * AVG_WORD  +  new_border_nodes * AVG_WORD
+    Heuristic — used for pre-commit size checks where triples haven't moved yet.
+    After committing, tracker.size gives the exact serialised size (O(1) read).
     """
     triples = (
         list(source.triples((entity, None, None)))
@@ -179,18 +184,102 @@ def _estimate_delta(entity: URIRef, source: Graph, seen: set[URIRef]) -> int:
     return len(triples) * 3 * _CHARS_PER_TRIPLE_TERM + len(new_border) * _CHARS_PER_BORDER_NODE
 
 
-def _current_size(
-    sub1: Graph,
-    sub2: Graph,
-    border1: set[URIRef],
-    border2: set[URIRef],
-    n_alignments: int,
-) -> int:
-    return (
-        (len(sub1) + len(sub2)) * 3 * _CHARS_PER_TRIPLE_TERM
-        + (len(border1) + len(border2)) * _CHARS_PER_BORDER_NODE
-        + n_alignments * 2 * _CHARS_PER_TRIPLE_TERM
-    )
+class _EnvSizeTracker:
+    """Exact running char count for the env's KG2Code serialisation.
+
+    Only the variable sections are tracked (onto1, onto2, borders, alignments).
+    The fixed template (KG2CODE_PREAMBLE, section labels, whitespace) is constant
+    per env, so it does not affect size-limit comparisons.
+
+    ``size`` is always O(1) — it reads a single int updated incrementally.
+    """
+
+    def __init__(self, uri_to_code: dict[str, str]) -> None:
+        self._uri_to_code = uri_to_code
+        self._size: int = 0
+        self._onto1_n_subjects: int = 0
+        self._onto2_n_subjects: int = 0
+        self._border1_n: int = 0
+        self._border2_n: int = 0
+        self._al_n: int = 0
+
+    @property
+    def size(self) -> int:
+        return self._size
+
+    def add_onto_triples(self, moved: list, sub: Graph, side: int) -> None:
+        """Incorporate the exact char delta from triples just moved into sub.
+
+        ``sub`` must already contain the moved triples when this is called so
+        that ``sub.triples((subj, None, None))`` reflects the post-move state.
+        """
+        if not moved:
+            return
+
+        by_subj: dict[URIRef, list] = defaultdict(list)
+        for s, p, o in moved:
+            if isinstance(s, URIRef):
+                by_subj[s].append((s, p, o))
+
+        n_subjects_before = (
+            self._onto1_n_subjects if side == 1 else self._onto2_n_subjects
+        )
+        delta = 0
+        n_new = 0
+
+        for subj, new_trips in by_subj.items():
+            # Sub already has the moved triples; count how many outgoing existed before.
+            total_after = sum(1 for _ in sub.triples((subj, None, None)))
+            existing_before = total_after - len(new_trips)
+            is_new = existing_before == 0
+
+            if is_new:
+                n_new += 1
+                code = self._uri_to_code.get(str(subj), str(subj))
+                name = local_name(str(subj))
+                # Entity('CODE', name='NAME', tuples=[...])
+                # "Entity('" (8) + "', name='" (9) + "'," (2) + " tuples=[" (9) + "])" (2) = 30
+                delta += 30 + len(code) + len(name)
+
+            for i, (s, p, o) in enumerate(new_trips):
+                s_name = local_name(str(s))
+                p_name = local_name(str(p))
+                o_repr = str(o) if isinstance(o, Literal) else local_name(str(o))
+                # "('s', 'p', 'o')" = "('" (2) + s + "', '" (4) + p + "', '" (4) + o + "')" (2) = 12
+                delta += 12 + len(s_name) + len(p_name) + len(o_repr)
+                if existing_before + i > 0:
+                    delta += 2  # ", " separator before this tuple
+
+        # "\n".join adds one \n per new subject (graph_to_string joins entity lines)
+        if n_subjects_before > 0:
+            delta += n_new
+        else:
+            delta += max(0, n_new - 1)
+
+        if side == 1:
+            self._onto1_n_subjects += n_new
+        else:
+            self._onto2_n_subjects += n_new
+
+        self._size += delta
+
+    def add_border(self, u: URIRef, side: int) -> None:
+        """Incorporate the char delta for a node added to border1 (side=1) or border2."""
+        name = local_name(str(u))
+        n = self._border1_n if side == 1 else self._border2_n
+        # ", ".join: first node → len(name); subsequent → 2 + len(name) for the separator
+        self._size += (2 + len(name)) if n > 0 else len(name)
+        if side == 1:
+            self._border1_n += 1
+        else:
+            self._border2_n += 1
+
+    def add_alignment(self, al: Alignment) -> None:
+        """Incorporate the char delta for a new alignment entry."""
+        s = al.to_string()
+        # "\n".join: first → len(s); subsequent → 1 + len(s) for the newline separator
+        self._size += (1 + len(s)) if self._al_n > 0 else len(s)
+        self._al_n += 1
 
 
 # ---------------------------------------------------------------------------
@@ -204,6 +293,8 @@ def _build_merge_environment(
     config: MergeEnvironmentConfig,
     env_idx: int,
     global_frozen: set[URIRef],
+    uri_to_code: dict[str, str],
+    code_to_ns: dict[str, str],
 ) -> MergeEnvironment:
     # REQ: seed from the most relevant (highest-measure) alignment pair
     seed_al = alignment_pool.pop()
@@ -215,6 +306,8 @@ def _build_merge_environment(
         env_idx, local_name(seed_al.entity1), local_name(seed_al.entity2), seed_al.measure,
     )
 
+    tracker = _EnvSizeTracker(uri_to_code)
+
     sub1, sub2 = Graph(), Graph()
     seen1: set[URIRef] = {seed1}
     seen2: set[URIRef] = {seed2}
@@ -224,7 +317,10 @@ def _build_merge_environment(
 
     # REQ: move seed triples into the env; their neighbors become the initial border
     seed_triples1 = move_entity_triples(seed1, source_1, sub1)
+    tracker.add_onto_triples(seed_triples1, sub1, side=1)
     seed_triples2 = move_entity_triples(seed2, source_2, sub2)
+    tracker.add_onto_triples(seed_triples2, sub2, side=2)
+    tracker.add_alignment(seed_al)
 
     init1 = _new_border_candidates(seed_triples1, seen1)
     init2 = _new_border_candidates(seed_triples2, seen2)
@@ -251,11 +347,13 @@ def _build_merge_environment(
         # not domain entities — keep as border reference, never expand into interior.
         if _is_well_known(candidate):
             border_set.add(candidate)
+            tracker.add_border(candidate, side)
             return False
 
         # REQ: global_frozen node → border only, never expand
         if candidate in global_frozen:
             border_set.add(candidate)
+            tracker.add_border(candidate, side)
             log.info(
                 "  env #%d  %s (onto%d) frozen — keeping as border",
                 env_idx, local_name(str(candidate)), side,
@@ -277,7 +375,8 @@ def _build_merge_environment(
             delta_p = 0 if partner_in_seen else _estimate_delta(partner, other_source, other_seen)
             alignment_delta = 2 * _CHARS_PER_TRIPLE_TERM  # one more Alignment entry
 
-            cur = _current_size(sub1, sub2, border_set1, border_set2, len(env_alignments))
+            # O(1) — reads the running int maintained by tracker
+            cur = tracker.size
 
             # REQ: if paired expansion exceeds limit → re-insert alignment, add to border, stop
             if cur + delta_c + delta_p + alignment_delta > config.max_chars:
@@ -287,10 +386,12 @@ def _build_merge_environment(
                 )
                 alignment_pool.push(al)  # REQ: re-insert so it can seed its own env later
                 border_set.add(candidate)
+                tracker.add_border(candidate, side)
                 return True  # stop building
 
             # REQ: commit — expand candidate
             triples_c = move_entity_triples(candidate, source, sub)
+            tracker.add_onto_triples(triples_c, sub, side)
             new_cands_c = _new_border_candidates(triples_c, seen)
             seen.update(new_cands_c)
             queue.extend(new_cands_c)
@@ -299,12 +400,14 @@ def _build_merge_environment(
             if not partner_in_seen:
                 other_seen.add(partner)
                 triples_p = move_entity_triples(partner, other_source, other_sub)
+                tracker.add_onto_triples(triples_p, other_sub, 3 - side)
                 new_cands_p = _new_border_candidates(triples_p, other_seen)
                 other_seen.update(new_cands_p)
                 other_queue.extend(new_cands_p)
 
             # REQ: pop from pool was done above; record the alignment
             env_alignments.append(al)
+            tracker.add_alignment(al)
             log.info(
                 "  env #%d  pulled in aligned pair: %s ↔ %s  measure=%.3f",
                 env_idx, local_name(str(candidate)), local_name(str(partner)), al.measure,
@@ -317,9 +420,11 @@ def _build_merge_environment(
         # Edge case: no triples in source (absorbed by an earlier env via another path)
         if delta == 0:
             border_set.add(candidate)
+            tracker.add_border(candidate, side)
             return False
 
-        cur = _current_size(sub1, sub2, border_set1, border_set2, len(env_alignments))
+        # O(1) — reads the running int maintained by tracker
+        cur = tracker.size
 
         # REQ: if expansion would exceed limit → reject this node, stop building
         if cur + delta > config.max_chars:
@@ -328,10 +433,12 @@ def _build_merge_environment(
                 env_idx, local_name(str(candidate)), side,
             )
             border_set.add(candidate)
+            tracker.add_border(candidate, side)
             return True  # stop building
 
         # REQ: commit expansion
         triples = move_entity_triples(candidate, source, sub)
+        tracker.add_onto_triples(triples, sub, side)
         new_cands = _new_border_candidates(triples, seen)
         seen.update(new_cands)
         queue.extend(new_cands)
@@ -354,14 +461,20 @@ def _build_merge_environment(
             )
 
     # REQ: nodes left in queues after stop/natural end → border (not expanded)
-    border_set1.update(expand_queue1)
-    border_set2.update(expand_queue2)
+    for node in expand_queue1:
+        border_set1.add(node)
+        tracker.add_border(node, side=1)
+    for node in expand_queue2:
+        border_set2.add(node)
+        tracker.add_border(node, side=2)
 
     log.info(
         "env #%d  done  |  onto1: %d triples  onto2: %d triples"
-        "  |  alignments: %d  |  border1: %d  border2: %d  |  stopped early: %s",
+        "  |  alignments: %d  |  border1: %d  border2: %d  |  stopped early: %s"
+        "  |  tracked_size: %d chars",
         env_idx, len(sub1), len(sub2), len(env_alignments),
         len(border_set1), len(border_set2), "YES" if stopped else "no",
+        tracker.size,
     )
 
     return MergeEnvironment(
@@ -370,6 +483,9 @@ def _build_merge_environment(
         alignments=env_alignments,
         border1=deque(border_set1),
         border2=deque(border_set2),
+        uri_to_code=uri_to_code,
+        code_to_ns=code_to_ns,
+        tracked_size=tracker.size,
     )
 
 
@@ -403,6 +519,10 @@ class ExtractEnvironmentsModule:
         for triple in renamed_onto_2:
             source_2.add(triple)
 
+        # Build namespace codec once — namespace prefixes don't change as entities
+        # move between source and env sub-graphs during extraction.
+        uri_to_code, code_to_ns = _build_namespace_codec(source_1, source_2)
+
         alignment_pool = _AlignmentPool(alignments)
         environments: list[MergeEnvironment] = []
         global_frozen: set[URIRef] = set()
@@ -416,6 +536,7 @@ class ExtractEnvironmentsModule:
         while not alignment_pool.is_empty():
             env = _build_merge_environment(
                 source_1, source_2, alignment_pool, self.config, idx, global_frozen,
+                uri_to_code, code_to_ns,
             )
             environments.append(env)
 

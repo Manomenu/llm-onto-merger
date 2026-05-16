@@ -31,8 +31,8 @@ merge_agent = OllamaChatClient(
         merged ontology should not allow for an entity to be both a "Person" and a "Car" at the same time, because it would lead to domain inconsistency.
         Anoter example would be removing is-a relation between "Surgery" intance and "Plant" class.
 
-        Semantic source integrity
-        - Merged_Ontology should not introduce new relations between entities from the same ontology if they do not exist in the original ontology.
+        Cross-ontology and intra-ontology relations
+        - Merged_Ontology can introduce new relations between entities from the same ontology. We do this to enhance the quality of the ontology, by making implicit relations explicit and fixing domain inconsistencies.
         For example, if in Ontology_1 we had "Cat" and "Dog" without is-a relation between them, merged ontology should not introduce is-a relation between "Cat" and "Dog".
         - We allow to introduce new relations between entities from different ontologies (cross-ontology relations).
         For example if we have "Animal" class in Ontology_1 and "Cat" class in Ontology_2, we can introduce is-a relation between "Cat" and "Animal" in merged ontology.

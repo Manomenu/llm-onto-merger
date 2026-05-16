@@ -80,19 +80,21 @@ class MergeEnvironment:
         alignments: list[Alignment],
         border1: deque[URIRef] | None = None,
         border2: deque[URIRef] | None = None,
+        uri_to_code: dict[str, str] | None = None,
+        code_to_ns: dict[str, str] | None = None,
+        tracked_size: int = 0,
     ) -> None:
         self.onto_1 = onto_1
         self.onto_2 = onto_2
         self.alignments = alignments
         self.border1: deque[URIRef] = border1 if border1 is not None else deque()
         self.border2: deque[URIRef] = border2 if border2 is not None else deque()
-
-    @property
-    def chars_count(self) -> int:
-        onto_chars = (len(self.onto_1) + len(self.onto_2)) * 3 * _CHARS_PER_TRIPLE_TERM
-        border_chars = (len(self.border1) + len(self.border2)) * _CHARS_PER_BORDER_NODE
-        alignment_chars = len(self.alignments) * 2 * _CHARS_PER_TRIPLE_TERM
-        return onto_chars + border_chars + alignment_chars
+        # Pre-built namespace codec — avoids rebuilding on every to_string() call.
+        # When None, to_string() falls back to building it from the env graphs.
+        self._uri_to_code: dict[str, str] = uri_to_code or {}
+        self._code_to_ns: dict[str, str] = code_to_ns or {}
+        # Exact serialised char count maintained incrementally during build.
+        self.tracked_size: int = tracked_size
 
     def to_string(self) -> tuple[str, dict[str, str]]:
         """Serialise the environment as a KG2Code prompt string.
@@ -101,7 +103,11 @@ class MergeEnvironment:
         size.  Returns (prompt_string, code_to_uri) so the caller can restore
         full URIs from the LLM response.
         """
-        uri_to_code, code_to_uri = _build_namespace_codec(self.onto_1, self.onto_2)
+        if self._uri_to_code:
+            uri_to_code = self._uri_to_code
+            code_to_uri = self._code_to_ns
+        else:
+            uri_to_code, code_to_uri = _build_namespace_codec(self.onto_1, self.onto_2)
         border1_str = ", ".join(local_name(u) for u in self.border1)
         border2_str = ", ".join(local_name(u) for u in self.border2)
         alignments_str = "\n".join(al.to_string() for al in self.alignments)
