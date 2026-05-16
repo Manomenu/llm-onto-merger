@@ -130,12 +130,12 @@ def entities_to_graph(entities: list[Entity]) -> Graph:
     return graph
 
 
-def save_ontology(graph: Graph, out_dir: Path) -> Path:
-    """Serialize *graph* as OWL (RDF/XML) to *out_dir*/merged_ontology.owl."""
+def save_ontology(graph: Graph, out_dir: Path, name: str = "merged_ontology") -> Path:
+    """Serialize *graph* as OWL (RDF/XML) to *out_dir*/<name>.owl."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    out = out_dir / "merged_ontology.owl"
+    out = out_dir / f"{name}.owl"
     graph.serialize(destination=str(out), format="xml")
-    log.info("Saved merged ontology to %s (%d triples)", out, len(graph))
+    log.info("Saved %s to %s (%d triples)", name, out, len(graph))
     return out
 
 

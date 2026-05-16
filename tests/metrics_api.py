@@ -62,8 +62,8 @@ _DELAY_S = 3
 _REGISTRY: dict[str, dict] = {
     "average_depth": {
         "api_key":       "average_depth",
-        "zrodlo":        "ontometrics_api",
-        "interpretacja": (
+        "source":        "ontometrics_api",
+        "interpretation": (
             "Srednia glebokosc hierarchii klas (srednia liczba krawedzi od korzenia "
             "do kazdej klasy). Wyzszy wynik = bogatsza, bardziej szczegolowa hierarchia; "
             "zbyt wysoki moze utrudniac nawigacje."
@@ -71,48 +71,48 @@ _REGISTRY: dict[str, dict] = {
     },
     "max_depth": {
         "api_key":       "maximum_depth",
-        "zrodlo":        "ontometrics_api",
-        "interpretacja": (
+        "source":        "ontometrics_api",
+        "interpretation": (
             "Maksymalna glebokosc drzewa klas (najdluzsza sciezka od korzenia do liscia). "
             "Wieksza wartosc = obecnosc wysoce wyspecjalizowanych pojec."
         ),
     },
     "average_breadth": {
         "api_key":       "average_breadth",
-        "zrodlo":        "ontometrics_api",
-        "interpretacja": (
+        "source":        "ontometrics_api",
+        "interpretation": (
             "Srednia liczba bezposrednich podklas przypadajaca na wezel posiadajacy dzieci. "
             "Wyzszy wynik = szerzej rozgalezione ontologie."
         ),
     },
     "max_breadth": {
         "api_key":       "maximum_breadth",
-        "zrodlo":        "ontometrics_api",
-        "interpretacja": (
+        "source":        "ontometrics_api",
+        "interpretation": (
             "Maksymalna liczba bezposrednich podklas jednej klasy. "
             "Wysoka wartosc moze wskazywac na brak posrednich poziomow hierarchii."
         ),
     },
     "ARC": {
         "api_key":       "absolute_root_cardinality",
-        "zrodlo":        "ontometrics_api",
-        "interpretacja": (
+        "source":        "ontometrics_api",
+        "interpretation": (
             "Liczba klas bez nazwanego rodzica (korzenie hierarchii). "
             "Wartosc 1 oznacza spójna, jednolita hierarchie z jednym punktem wejscia."
         ),
     },
     "ALC": {
         "api_key":       "absolute_leaf_cardinality",
-        "zrodlo":        "ontometrics_api",
-        "interpretacja": (
+        "source":        "ontometrics_api",
+        "interpretation": (
             "Liczba klas bez zadnej podklasy (liscie). "
             "Wyzszy = wiecej wyspecjalizowanych, atomowych pojec w ontologii."
         ),
     },
     "integrity": {
         "api_key":       None,
-        "zrodlo":        "self-implemented",
-        "interpretacja": (
+        "source":        "self-implemented",
+        "interpretation": (
             "Ulamek trojek ze zbioru wejsciowego (po lokalnych nazwach S/P/O) "
             "zachowanych w merged (dla unii = 1.0). "
             "Blizej 1.0 = mniej informacji stracono podczas scalania."
@@ -120,8 +120,8 @@ _REGISTRY: dict[str, dict] = {
     },
     "accuracy": {
         "api_key":       None,
-        "zrodlo":        "self-implemented",
-        "interpretacja": (
+        "source":        "self-implemented",
+        "interpretation": (
             "Sredni ulamek nazw lokalnych klas i wlasciwosci ze zbioru wejsciowego "
             "obecnych w merged (dla unii = 1.0). "
             "Blizej 1.0 = lepsze pokrycie oryginalnego slownika pojec."
@@ -129,16 +129,16 @@ _REGISTRY: dict[str, dict] = {
     },
     "cohesion": {
         "api_key":       None,
-        "zrodlo":        "self-implemented",
-        "interpretacja": (
+        "source":        "self-implemented",
+        "interpretation": (
             "Ulamek wlasciwosci posiadajacych zdefiniowana jednoczesnie domene i zakres. "
             "Wyzszy = lepiej opisane relacje miedzy klasami."
         ),
     },
     "completeness": {
         "api_key":       None,
-        "zrodlo":        "self-implemented",
-        "interpretacja": (
+        "source":        "self-implemented",
+        "interpretation": (
             "Ulamek par subClassOf (po lokalnych nazwach klasy nadrzednej i podrzednej) "
             "ze zbioru wejsciowego zachowanych w merged (dla unii = 1.0). "
             "Blizej 1.0 = lepsza zachowanosc struktury hierarchicznej."
@@ -146,16 +146,16 @@ _REGISTRY: dict[str, dict] = {
     },
     "understandability": {
         "api_key":       None,
-        "zrodlo":        "self-implemented",
-        "interpretacja": (
+        "source":        "self-implemented",
+        "interpretation": (
             "Ulamek klas i wlasciwosci posiadajacych rdfs:label lub rdfs:comment. "
             "Wyzszy = ontologia latwiejsza do zrozumienia przez czlowieka."
         ),
     },
     "conciseness": {
         "api_key":       None,
-        "zrodlo":        "self-implemented",
-        "interpretacja": (
+        "source":        "self-implemented",
+        "interpretation": (
             "Stosunek unikalnych nazw lokalnych klas do calkowitej liczby URI klas. "
             "Wartosc 1.0 = brak redundancji nazw; ponizej 1.0 = kolizje nazw "
             "miedzy roznymi przestrzeniami nazw."
@@ -469,6 +469,116 @@ def _kb_self(
     }
 
 
+# ── HTML report ───────────────────────────────────────────────────────────────
+
+_HTML_TEMPLATE = """\
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ontology metrics — {folder}</title>
+<style>
+  body {{ font-family: system-ui, sans-serif; margin: 2rem; color: #1a1a1a; }}
+  h1   {{ font-size: 1.4rem; margin-bottom: 1.5rem; }}
+  table {{ border-collapse: collapse; width: 100%; font-size: 0.9rem; }}
+  th, td {{ padding: 0.55rem 0.8rem; text-align: left; vertical-align: top; border: 1px solid #d0d0d0; }}
+  th {{ background: #2c3e50; color: #fff; white-space: nowrap; }}
+  tr:nth-child(even) {{ background: #f7f7f7; }}
+  tr:hover {{ background: #eaf3fb; }}
+  td.num {{ text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }}
+  td.na  {{ text-align: center; color: #aaa; }}
+  td.src {{ font-size: 0.78rem; color: #555; white-space: nowrap; }}
+  td.interp {{ font-size: 0.82rem; color: #444; max-width: 340px; }}
+  .schema-row td {{ border-left: 3px solid #2980b9; }}
+  .kb-row    td {{ border-left: 3px solid #27ae60; }}
+  .legend {{ margin-top: 1rem; font-size: 0.8rem; display: flex; gap: 1.5rem; }}
+  .legend span {{ display: inline-flex; align-items: center; gap: 0.4rem; }}
+  .dot {{ width: 12px; height: 12px; border-radius: 2px; display: inline-block; }}
+</style>
+</head>
+<body>
+<h1>Ontology metrics &mdash; <code>{folder}</code></h1>
+<table>
+  <thead>
+    <tr>
+      <th>Metric</th>
+      <th>union_input_onto</th>
+      {applied_col_header}
+      <th>merged_onto</th>
+      <th>Source</th>
+      <th>Interpretation</th>
+    </tr>
+  </thead>
+  <tbody>
+{rows}
+  </tbody>
+</table>
+<div class="legend">
+  <span><span class="dot" style="background:#2980b9"></span> Schema metric</span>
+  <span><span class="dot" style="background:#27ae60"></span> KB metric</span>
+</div>
+</body>
+</html>
+"""
+
+_SCHEMA_METRICS = {"average_depth", "max_depth", "average_breadth", "max_breadth", "ARC", "ALC"}
+
+
+def _fmt(v: float | None) -> str:
+    if v is None:
+        return '<td class="na">N/A</td>'
+    return f'<td class="num">{v:.4f}</td>'
+
+
+def _write_html(
+    rows: list[dict],
+    out_path: Path,
+    folder: str,
+    has_applied: bool,
+) -> None:
+    # Pivot: metric → {graph → value}, metric → source, metric → interpretation
+    by_metric: dict[str, dict[str, float]] = defaultdict(dict)
+    by_source: dict[str, str] = {}
+    by_interp: dict[str, str] = {}
+    for r in rows:
+        by_metric[r["metric"]][r["graph"]] = r["value"]
+        by_source.setdefault(r["metric"], r["source"])
+        by_interp.setdefault(r["metric"], r["interpretation"])
+
+    html_rows: list[str] = []
+    for metric_name in _REGISTRY:
+        vals   = by_metric.get(metric_name, {})
+        src    = by_source.get(metric_name, "")
+        interp = by_interp.get(metric_name, "")
+        row_cls = "schema-row" if metric_name in _SCHEMA_METRICS else "kb-row"
+
+        u = vals.get("union_input")
+        m = vals.get("merged_ontology")
+        a = vals.get("applied_alignments") if has_applied else None
+
+        applied_cell = _fmt(a) if has_applied else ""
+
+        html_rows.append(
+            f'    <tr class="{row_cls}">\n'
+            f'      <td><strong>{metric_name}</strong></td>\n'
+            f'      {_fmt(u)}\n'
+            f'      {applied_cell}\n'
+            f'      {_fmt(m)}\n'
+            f'      <td class="src">{src}</td>\n'
+            f'      <td class="interp">{interp}</td>\n'
+            f'    </tr>'
+        )
+
+    applied_col_header = "<th>applied_alignments_onto</th>" if has_applied else ""
+
+    html = _HTML_TEMPLATE.format(
+        folder=folder,
+        applied_col_header=applied_col_header,
+        rows="\n".join(html_rows),
+    )
+    out_path.write_text(html, encoding="utf-8")
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -495,7 +605,9 @@ def main() -> None:
         )
         sys.exit(1)
 
-    merged_path = output_dir / "merged_ontology.owl"
+    merged_path  = output_dir / "merged_ontology.owl"
+    applied_path = output_dir / "applied_alignments.owl"
+
     if not merged_path.exists():
         print(f"merged_ontology.owl not found in {output_dir}", file=sys.stderr)
         sys.exit(1)
@@ -506,54 +618,69 @@ def main() -> None:
     union  = Graph()
     for t in onto1: union.add(t)
     for t in onto2: union.add(t)
-    merged = _load_graph(str(merged_path))
-    print(f"  onto1:  {len(onto1)} triples")
-    print(f"  onto2:  {len(onto2)} triples")
-    print(f"  union:  {len(union)} triples")
-    print(f"  merged: {len(merged)} triples")
-
-    union_bytes  = union.serialize(format="xml").encode("utf-8")
-    merged_bytes = merged_path.read_bytes()
+    merged  = _load_graph(str(merged_path))
+    applied = _load_graph(str(applied_path)) if applied_path.exists() else None
+    print(f"  onto1:              {len(onto1)} triples")
+    print(f"  onto2:              {len(onto2)} triples")
+    print(f"  union_input:        {len(union)} triples")
+    print(f"  merged_ontology:    {len(merged)} triples")
+    if applied is not None:
+        print(f"  applied_alignments: {len(applied)} triples")
+    else:
+        print("  applied_alignments: not found — skipped")
 
     u_cls  = _classes(union)
     u_prop = _properties(union)
 
     # ── API calls ──────────────────────────────────────────────────────────────
     print("\nQuerying OntoMetrics API …")
+    api_graphs: list[tuple[str, bytes]] = [
+        ("union_input",     union.serialize(format="xml").encode("utf-8")),
+        ("merged_ontology", merged_path.read_bytes()),
+    ]
+    if applied is not None:
+        api_graphs.append(
+            ("applied_alignments", applied.serialize(format="xml").encode("utf-8"))
+        )
+
     api_results: dict[str, dict[str, float]] = {}
-    for i, (graf_name, owl_bytes) in enumerate(
-        [("unia_input", union_bytes), ("merged_ontology", merged_bytes)]
-    ):
+    for i, (graph_name, owl_bytes) in enumerate(api_graphs):
         if i > 0:
             time.sleep(_DELAY_S)
         try:
-            api_results[graf_name] = _query_api(owl_bytes, graf_name)
+            api_results[graph_name] = _query_api(owl_bytes, graph_name)
         except Exception as exc:
-            print(f"  ERROR for {graf_name}: {exc}", file=sys.stderr)
-            api_results[graf_name] = {}
+            print(f"  ERROR for {graph_name}: {exc}", file=sys.stderr)
+            api_results[graph_name] = {}
 
     # ── Self-implemented metrics ───────────────────────────────────────────────
-    self_schema = {
-        "unia_input":      _schema_self(union),
+    self_schema: dict[str, dict[str, float]] = {
+        "union_input":     _schema_self(union),
         "merged_ontology": _schema_self(merged),
     }
-    self_kb = {
-        "unia_input":      _kb_self(union),
+    self_kb: dict[str, dict[str, float]] = {
+        "union_input":     _kb_self(union),
         "merged_ontology": _kb_self(merged, union, u_cls, u_prop),
     }
+    if applied is not None:
+        self_schema["applied_alignments"] = _schema_self(applied)
+        self_kb["applied_alignments"]     = _kb_self(applied, union, u_cls, u_prop)
 
     # ── Assemble rows ──────────────────────────────────────────────────────────
+    graph_names = ["union_input", "merged_ontology"] + (
+        ["applied_alignments"] if applied is not None else []
+    )
+
     rows: list[dict] = []
-    for graf_name in ("unia_input", "merged_ontology"):
-        api_raw = api_results.get(graf_name, {})
+    for graph_name in graph_names:
+        api_raw = api_results.get(graph_name, {})
         for metric_name, meta in _REGISTRY.items():
             api_key = meta["api_key"]
-            zrodlo  = meta["zrodlo"]
-            interp  = meta["interpretacja"]
+            source  = meta["source"]
+            interp  = meta["interpretation"]
             value: float | None = None
 
             if api_key is not None:
-                # Find a key in the API response that contains the expected substring
                 matched = next(
                     (v for k, v in api_raw.items() if api_key in k),
                     None,
@@ -561,21 +688,20 @@ def main() -> None:
                 if matched is not None:
                     value = matched
                 else:
-                    # API did not return this metric — fall back to self-implementation
-                    value  = self_schema[graf_name].get(metric_name)
-                    zrodlo = "self-implemented (api-fallback)"
+                    value  = self_schema[graph_name].get(metric_name)
+                    source = "self-implemented (api-fallback)"
             else:
-                value = self_kb[graf_name].get(metric_name)
+                value = self_kb[graph_name].get(metric_name)
 
             if value is None:
                 continue
 
             rows.append({
-                "graf":          graf_name,
-                "metryka":       metric_name,
-                "wartosc":       value,
-                "zrodlo":        zrodlo,
-                "interpretacja": interp,
+                "graph":          graph_name,
+                "metric":         metric_name,
+                "value":          value,
+                "source":         source,
+                "interpretation": interp,
             })
 
     if not rows:
@@ -587,35 +713,48 @@ def main() -> None:
     with out_csv.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(
             f,
-            fieldnames=["graf", "metryka", "wartosc", "zrodlo", "interpretacja"],
+            fieldnames=["graph", "metric", "value", "source", "interpretation"],
         )
         writer.writeheader()
         writer.writerows(rows)
 
-    print(f"\nMetrics written to {out_csv}\n")
+    print(f"Metrics written to {out_csv}")
+
+    # ── Write HTML ─────────────────────────────────────────────────────────────
+    out_html = out_csv.with_suffix(".html")
+    _write_html(rows, out_html, folder, applied is not None)
+    print(f"Report  written to {out_html}\n")
 
     # ── Console summary ────────────────────────────────────────────────────────
     by_metric: dict[str, dict[str, float]] = defaultdict(dict)
     by_source: dict[str, str] = {}
     for r in rows:
-        by_metric[r["metryka"]][r["graf"]] = r["wartosc"]
-        by_source.setdefault(r["metryka"], r["zrodlo"])
+        by_metric[r["metric"]][r["graph"]] = r["value"]
+        by_source.setdefault(r["metric"], r["source"])
 
-    col = max(len(m) for m in _REGISTRY)
-    src_col = max(len(s) for s in by_source.values()) if by_source else 20
-    print(
-        f"{'metryka':<{col}}  {'unia_input':>15}  {'merged_ontology':>16}"
-        f"  {'zrodlo'}"
+    col      = max(len(m) for m in _REGISTRY)
+    has_app  = applied is not None
+    hdr = (
+        f"{'metric':<{col}}  {'union_input':>15}  {'applied_alignments':>20}"
+        f"  {'merged_ontology':>16}  source"
+        if has_app else
+        f"{'metric':<{col}}  {'union_input':>15}  {'merged_ontology':>16}  source"
     )
-    print("─" * (col + 35 + 2 + src_col))
+    print(hdr)
+    print("─" * len(hdr))
     for metric_name in _REGISTRY:
         vals = by_metric.get(metric_name, {})
-        u = vals.get("unia_input")
+        u = vals.get("union_input")
         m = vals.get("merged_ontology")
         u_s = f"{u:>15.4f}" if u is not None else f"{'—':>15}"
         m_s = f"{m:>16.4f}" if m is not None else f"{'—':>16}"
         src = by_source.get(metric_name, "")
-        print(f"{metric_name:<{col}}{u_s}{m_s}  {src}")
+        if has_app:
+            a = vals.get("applied_alignments")
+            a_s = f"{a:>20.4f}" if a is not None else f"{'—':>20}"
+            print(f"{metric_name:<{col}}{u_s}{a_s}{m_s}  {src}")
+        else:
+            print(f"{metric_name:<{col}}{u_s}{m_s}  {src}")
 
 
 if __name__ == "__main__":
