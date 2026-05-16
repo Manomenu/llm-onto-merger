@@ -4,13 +4,17 @@ from pathlib import Path
 from rdflib import Graph, URIRef
 
 from llm_onto_merger.alignment.alignment import Alignment, AlignmentModule
+from llm_onto_merger.debug import (
+    save_diff_debug,
+    save_post_merge_debug,
+    save_pre_merge_debug,
+)
 from llm_onto_merger.extract_environments import (
     ExtractEnvironmentsModule,
     MergeEnvironmentConfig,
 )
 from llm_onto_merger.integrate_environments import integrate_environments
 from llm_onto_merger.load_arguments import LoadedArguments
-from llm_onto_merger.debug import save_diff_debug, save_post_merge_debug, save_pre_merge_debug
 from llm_onto_merger.logger import get_logger
 from llm_onto_merger.merge_environments.module import MergeEnvironmentsModule
 from llm_onto_merger.ontology import create_ontology, save_ontology
@@ -88,7 +92,7 @@ class LLMOntologyMerger:
 
         async def _merge_one(env, idx):
             async with semaphore:
-                result = await merger.merge(env)
+                result = await merger.merge(env, idx=idx + 1, total=total)
                 log.info("Merged environment %d/%d", idx + 1, total)
                 return result
 
@@ -98,18 +102,23 @@ class LLMOntologyMerger:
 
         if settings.debug:
             save_pre_merge_debug(
-                merge_environments, onto_1_leftover, onto_2_leftover,
+                merge_environments,
+                onto_1_leftover,
+                onto_2_leftover,
                 out_dir,
                 original_alignments=alignments,
                 merged_graphs=list(merged_environments),
             )
             save_post_merge_debug(
-                list(merged_environments), onto_1_leftover, onto_2_leftover,
+                list(merged_environments),
+                onto_1_leftover,
+                onto_2_leftover,
                 out_dir,
                 merge_environments=merge_environments,
             )
             save_diff_debug(
-                merge_environments, list(merged_environments),
+                merge_environments,
+                list(merged_environments),
                 out_dir,
             )
 

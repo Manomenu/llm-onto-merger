@@ -22,6 +22,7 @@ the same environment family read as visually related:
 Post-merge environments each get a unique colour from a rotating 12-colour
 palette; leftovers keep the same blue-grey tones as above.
 """
+
 from collections import deque
 from pathlib import Path
 
@@ -52,11 +53,13 @@ def _restore_env_for_display(
 
     restored_onto2 = Graph()
     for s, p, o in env.onto_2:
-        restored_onto2.add((
-            _sub(s) if isinstance(s, URIRef) else s,
-            p,
-            _sub(o) if isinstance(o, URIRef) else o,
-        ))
+        restored_onto2.add(
+            (
+                _sub(s) if isinstance(s, URIRef) else s,
+                p,
+                _sub(o) if isinstance(o, URIRef) else o,
+            )
+        )
 
     restored_border2 = deque(_sub(u) for u in env.border2)
 
@@ -76,12 +79,12 @@ def _restore_env_for_display(
 
 # ── pre-merge palette ────────────────────────────────────────────────────────
 # onto_1 → blue family, onto_2 → orange family, aligned → red, edges → purple
-_PRE_ONTO1      = "#e3f2fd"   # pale blue        — onto_1 interior nodes
-_PRE_ONTO2      = "#fff3e0"   # pale orange      — onto_2 interior nodes
-_PRE_BORDER1    = "#1565c0"   # strong blue      — border1 nodes
-_PRE_BORDER2    = "#e65100"   # strong orange    — border2 nodes
-_PRE_ALIGNED    = "#c62828"   # strong red       — aligned (seed) nodes
-_PRE_ALIGN_EDGE = "#6a1b9a"   # purple dashed    — alignment edges
+_PRE_ONTO1 = "#003b65"  # pale blue        — onto_1 interior nodes
+_PRE_ONTO2 = "#ae6b00"  # pale orange      — onto_2 interior nodes
+_PRE_BORDER1 = "#6aa1e0"  # strong blue      — border1 nodes
+_PRE_BORDER2 = "#ebb191"  # strong orange    — border2 nodes
+_PRE_ALIGNED = "#c62828"  # strong red       — aligned (seed) nodes
+_PRE_ALIGN_EDGE = "#6a1b9a"  # purple dashed    — alignment edges
 
 # ── post-merge: high-contrast cycling palette ────────────────────────────────
 # All 12 colours are distinct from each other and from the two leftover colours.
@@ -101,26 +104,29 @@ _POST_PALETTE = [
 ]
 
 # ── leftovers ─────────────────────────────────────────────────────────────────
-_LEFTOVER1 = "#cfd8dc"   # light blue-grey  — onto_1 leftovers
-_LEFTOVER2 = "#455a64"   # dark slate       — onto_2 leftovers
+_LEFTOVER1 = "#cfd8dc"  # light blue-grey  — onto_1 leftovers
+_LEFTOVER2 = "#455a64"  # dark slate       — onto_2 leftovers
 
-_DIFF_EDGE  = "#ff1493"  # deep pink — added/deleted edges
+_DIFF_EDGE = "#ff1493"  # deep pink — added/deleted edges
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
+
 def _net() -> Network:
     n = Network(
-        height="900px", width="100%", directed=True,
-        notebook=False, bgcolor="#ffffff", font_color="#222222",
+        height="900px",
+        width="100%",
+        directed=True,
+        notebook=False,
+        bgcolor="#ffffff",
+        font_color="#222222",
     )
     n.barnes_hut(gravity=-5000, central_gravity=0.3, spring_length=120)
     return n
 
 
-def _add_graph_nodes(
-    net: Network, graph: Graph, color: str, seen: set[str]
-) -> None:
+def _add_graph_nodes(net: Network, graph: Graph, color: str, seen: set[str]) -> None:
     for s, _, o in graph:
         for node in (s, o):
             uri = str(node)
@@ -133,9 +139,12 @@ def _add_graph_edges(net: Network, graph: Graph) -> None:
     for s, p, o in graph:
         if isinstance(s, URIRef) and isinstance(o, URIRef):
             net.add_edge(
-                str(s), str(o),
-                label=local_name(p), title=str(p),
-                color="#aaaaaa", arrows="to",
+                str(s),
+                str(o),
+                label=local_name(p),
+                title=str(p),
+                color="#aaaaaa",
+                arrows="to",
             )
 
 
@@ -165,9 +174,14 @@ def _draw_diff_edges(
                 net.add_node(uri, label=local_name(uri), color="#dddddd", title=uri)
                 seen.add(uri)
         net.add_edge(
-            s, o,
-            label=local_name(p), title=p,
-            color=_DIFF_EDGE, width=2, arrows="to", dashes=True,
+            s,
+            o,
+            label=local_name(p),
+            title=p,
+            color=_DIFF_EDGE,
+            width=2,
+            arrows="to",
+            dashes=True,
         )
 
 
@@ -191,7 +205,9 @@ def _add_env(net: Network, env: MergeEnvironment, seen: set[str]) -> None:
                     color, bw = _PRE_BORDER2, 2
                 else:
                     color, bw = base, 1
-                net.add_node(uri, label=local_name(uri), color=color, borderWidth=bw, title=uri)
+                net.add_node(
+                    uri, label=local_name(uri), color=color, borderWidth=bw, title=uri
+                )
 
     _nodes(env.onto_1, _PRE_ONTO1, _PRE_BORDER1)
     _nodes(env.onto_2, _PRE_ONTO2, _PRE_BORDER2)
@@ -199,10 +215,13 @@ def _add_env(net: Network, env: MergeEnvironment, seen: set[str]) -> None:
     _add_graph_edges(net, env.onto_2)
     for al in env.alignments:
         net.add_edge(
-            al.entity1, al.entity2,
+            al.entity1,
+            al.entity2,
             label=f"{al.measure:.2f}",
             title=f"alignment: {al.measure:.4f}",
-            color=_PRE_ALIGN_EDGE, dashes=True, width=2,
+            color=_PRE_ALIGN_EDGE,
+            dashes=True,
+            width=2,
         )
 
 
@@ -212,6 +231,7 @@ def _save(net: Network, path: Path) -> None:
 
 
 # ── public API ────────────────────────────────────────────────────────────────
+
 
 def save_pre_merge_debug(
     merge_environments: list[MergeEnvironment],
@@ -285,7 +305,9 @@ def save_post_merge_debug(
             global_border.update(str(u) for u in env.border1)
             global_border.update(str(u) for u in env.border2)
 
-    def _add_nodes_with_border(net: Network, graph: Graph, color: str, seen: set[str]) -> None:
+    def _add_nodes_with_border(
+        net: Network, graph: Graph, color: str, seen: set[str]
+    ) -> None:
         for s, _, o in graph:
             for node in (s, o):
                 uri = str(node)

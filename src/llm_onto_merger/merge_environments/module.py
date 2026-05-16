@@ -19,8 +19,13 @@ _INSTRUCTION_LEN = len(merge_agent.default_options.get("instructions") or "")
 
 
 class MergeEnvironmentsModule:
-    async def merge(self, merge_environment: MergeEnvironment) -> Graph:
+    async def merge(self, merge_environment: MergeEnvironment, idx: int = 0, total: int = 0) -> Graph:
         request, code_to_uri = merge_environment.to_string()
+        n_triples = len(merge_environment.onto_1) + len(merge_environment.onto_2)
+        log.info(
+            "Passing %d triples from merge environment %d/%d to agent",
+            n_triples, idx, total,
+        )
         log.info(
             "Sending merge request | instruction: %d chars | request: %d chars | total: %d chars",
             _INSTRUCTION_LEN,

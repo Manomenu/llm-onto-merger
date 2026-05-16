@@ -93,6 +93,22 @@ def graph_to_string(
     return "\n".join(lines)
 
 
+_INVALID_NAMES = frozenset({"", "merged", "ontology", "owl:Thing", "Thing"})
+
+
+def _is_valid_entity(e: "Entity") -> bool:
+    """Return False for placeholder/garbage entities the LLM sometimes emits."""
+    name = e.name.strip()
+    uri  = e.uri.strip()
+    if not name or not uri:
+        return False
+    if name in _INVALID_NAMES:
+        return False
+    if not uri.startswith("http"):
+        return False
+    return True
+
+
 def entities_to_graph(entities: list[Entity]) -> Graph:
     """Reconstruct an rdflib Graph from a list of Entity returned by the LLM.
 
@@ -101,8 +117,19 @@ def entities_to_graph(entities: list[Entity]) -> Graph:
     - subject   → entity.uri (authoritative full URI)
     - predicate → WELL_KNOWN_PREDICATES lookup, else entity namespace + local
     - object    → matched entity URI by name, else Literal
+
+    Entities with empty/invalid names or URIs are silently dropped.
     """
-    name_to_uri = {e.name: e.uri for e in entities}
+    valid_entities = [e for e in entities if _is_valid_entity(e)]
+    if len(valid_entities) < len(entities):
+        dropped = len(entities) - len(valid_entities)
+        log.warning(
+            "Dropped %d invalid/placeholder entities from LLM response "
+            "(empty name, non-http URI, or known placeholder)",
+            dropped,
+        )
+
+    name_to_uri = {e.name: e.uri for e in valid_entities}
 
     def _namespace(uri: str) -> str:
         return (
@@ -120,10 +147,12 @@ def entities_to_graph(entities: list[Entity]) -> Graph:
         return Literal(obj)
 
     graph = Graph()
-    for entity in entities:
+    for entity in valid_entities:
         subj = URIRef(entity.uri)
         ns = _namespace(entity.uri)
         for _, pred_local, obj_repr in entity.tuples:
+            if not pred_local.strip():
+                continue
             graph.add(
                 (subj, _resolve_predicate(pred_local, ns), _resolve_object(obj_repr))
             )
