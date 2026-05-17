@@ -81,7 +81,11 @@ def graph_to_string(
     lines = []
     for subj in subjects:
         subj_str = str(subj)
-        uri_repr = uri_to_code[subj_str] if uri_to_code and subj_str in uri_to_code else subj_str
+        uri_repr = (
+            uri_to_code[subj_str]
+            if uri_to_code and subj_str in uri_to_code
+            else subj_str
+        )
         tuple_strs = [
             f"('{local_name(subj)}', '{local_name(p)}', '{str(o) if isinstance(o, Literal) else local_name(o)}')"
             for _, p, o in graph.triples((subj, None, None))
@@ -93,13 +97,13 @@ def graph_to_string(
     return "\n".join(lines)
 
 
-_INVALID_NAMES = frozenset({"", "merged", "ontology", "owl:Thing", "Thing"})
+_INVALID_NAMES = frozenset({"", "merged"})
 
 
 def _is_valid_entity(e: "Entity") -> bool:
     """Return False for placeholder/garbage entities the LLM sometimes emits."""
     name = e.name.strip()
-    uri  = e.uri.strip()
+    uri = e.uri.strip()
     if not name or not uri:
         return False
     if name in _INVALID_NAMES:
@@ -185,7 +189,9 @@ def create_ontology(ontology_path: Path) -> Graph:
     if disjoint_triples:
         log.info(
             "Ontology loaded from %s (%d triples, %d disjointWith removed)",
-            ontology_path, len(g), len(disjoint_triples),
+            ontology_path,
+            len(g),
+            len(disjoint_triples),
         )
     else:
         log.info("Ontology loaded from %s (%d triples)", ontology_path, len(g))

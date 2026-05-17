@@ -9,49 +9,51 @@ from ..ontology import local_name
 log = get_logger(__name__)
 
 
+def _write_diff(
+    env: MergeEnvironment,
+    merged: Graph,
+    path: Path,
+) -> None:
+    def _names(graph: Graph) -> set[tuple[str, str, str]]:
+        return {
+            (local_name(str(s)), local_name(str(p)), local_name(str(o)))
+            for s, p, o in graph
+            if isinstance(s, URIRef) and isinstance(o, URIRef)
+        }
+
+    pre  = _names(env.onto_1) | _names(env.onto_2)
+    post = _names(merged)
+
+    deleted = sorted(pre - post)
+    added   = sorted(post - pre)
+
+    with path.open("w") as f:
+        f.write("[Deleted]\n")
+        for s, p, o in deleted:
+            f.write(f"  ({s}, {p}, {o})\n")
+        f.write("[Added]\n")
+        for s, p, o in added:
+            f.write(f"  ({s}, {p}, {o})\n")
+
+    log.info("[debug] %s  deleted: %d  added: %d", path.name, len(deleted), len(added))
+
+
 def save_diff_debug(
     merge_environments: list[MergeEnvironment],
     merged_graphs: list[Graph],
     out_dir: Path,
+    leftover_environments: list[MergeEnvironment] | None = None,
+    leftover_merged_graphs: list[Graph] | None = None,
 ) -> None:
-    """Write env_diff_0/1/…txt for each environment.
+    """Write env_diff_N.txt and leftover_env_diff_N.txt for each environment.
 
-    Format:
-        [Deleted]
-          (SubjectLocalName, PredicateLocalName, ObjectLocalName)
-          ...
-        [Added]
-          (SubjectLocalName, PredicateLocalName, ObjectLocalName)
-          ...
-
-    Triples are compared by local name (URI-agnostic) so that a different
-    namespace prefix for the same concept still matches correctly.
+    Triples are compared by local name (URI-agnostic).
     Blank nodes and non-URIRef triples are excluded.
     """
     for i, (env, merged) in enumerate(zip(merge_environments, merged_graphs)):
-        def _names(graph: Graph) -> set[tuple[str, str, str]]:
-            return {
-                (local_name(str(s)), local_name(str(p)), local_name(str(o)))
-                for s, p, o in graph
-                if isinstance(s, URIRef) and isinstance(o, URIRef)
-            }
+        _write_diff(env, merged, out_dir / f"env_diff_{i}.txt")
 
-        # env.onto_2 already has entity2 → entity1 renaming from pre-extraction step.
-        pre = _names(env.onto_1) | _names(env.onto_2)
-        post = _names(merged)
-
-        deleted = sorted(pre - post)
-        added = sorted(post - pre)
-
-        path = out_dir / f"env_diff_{i}.txt"
-        with path.open("w") as f:
-            f.write("[Deleted]\n")
-            for s, p, o in deleted:
-                f.write(f"  ({s}, {p}, {o})\n")
-            f.write("[Added]\n")
-            for s, p, o in added:
-                f.write(f"  ({s}, {p}, {o})\n")
-
-        log.info(
-            "[debug] %s  deleted: %d  added: %d", path.name, len(deleted), len(added)
-        )
+    for i, (env, merged) in enumerate(
+        zip(leftover_environments or [], leftover_merged_graphs or [])
+    ):
+        _write_diff(env, merged, out_dir / f"leftover_env_diff_{i}.txt")

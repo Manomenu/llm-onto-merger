@@ -233,19 +233,43 @@ def _save(net: Network, path: Path) -> None:
 # ── public API ────────────────────────────────────────────────────────────────
 
 
+def _save_env_html(
+    env: MergeEnvironment,
+    merged_graph: Graph | None,
+    reverse_map: dict[str, str],
+    path: Path,
+    combined: Network,
+    combined_seen: set[str],
+    is_leftover: bool = False,
+) -> None:
+    display_env = _restore_env_for_display(env, reverse_map) if not is_leftover else env
+
+    deleted_edges: set[tuple[str, str, str]] = set()
+    if merged_graph is not None:
+        pre_map = _name_edges(display_env.onto_1) | _name_edges(display_env.onto_2)
+        post_names = set(_name_edges(merged_graph).keys())
+        deleted_edges = {pre_map[k] for k in pre_map.keys() - post_names}
+
+    _add_env(combined, display_env, combined_seen)
+    _draw_diff_edges(combined, deleted_edges, combined_seen)
+
+    single = _net()
+    single_seen: set[str] = set()
+    _add_env(single, display_env, single_seen)
+    _draw_diff_edges(single, deleted_edges, single_seen)
+    _save(single, path)
+
+
 def save_pre_merge_debug(
     merge_environments: list[MergeEnvironment],
-    leftover_1: Graph,
-    leftover_2: Graph,
+    leftover_environments: list[MergeEnvironment],
     out_dir: Path,
     original_alignments: list[Alignment] | None = None,
     merged_graphs: list[Graph] | None = None,
+    leftover_merged_graphs: list[Graph] | None = None,
 ) -> None:
-    """Write debug_pre_merge.html and debug_merge_env_N.html.
-
-    original_alignments — restore entity2 URIs in onto_2 for display.
-    merged_graphs       — when provided, edges that will be deleted after merge
-                          are drawn in pink on the pre-merge graphs.
+    """Write debug_pre_merge.html, debug_merge_env_N.html,
+    and debug_leftover_merge_env_N.html.
     """
     reverse_map: dict[str, str] = {}
     if original_alignments:
@@ -259,49 +283,37 @@ def save_pre_merge_debug(
     combined_seen: set[str] = set()
 
     for i, env in enumerate(merge_environments):
-        display_env = _restore_env_for_display(env, reverse_map)
+        mg = merged_graphs[i] if merged_graphs and i < len(merged_graphs) else None
+        _save_env_html(
+            env, mg, reverse_map,
+            out_dir / f"debug_merge_env_{i}.html",
+            combined, combined_seen, is_leftover=False,
+        )
 
-        # Edges that exist in pre-merge but not in post-merge → will be deleted.
-        # Compare by local name (URI-agnostic); draw with display_env URIs so
-        # edge endpoints match the already-restored nodes in the visualization.
-        deleted_edges: set[tuple[str, str, str]] = set()
-        if merged_graphs and i < len(merged_graphs):
-            pre_map = _name_edges(display_env.onto_1) | _name_edges(display_env.onto_2)
-            post_names = set(_name_edges(merged_graphs[i]).keys())
-            deleted_edges = {pre_map[k] for k in pre_map.keys() - post_names}
+    for i, env in enumerate(leftover_environments):
+        mg = leftover_merged_graphs[i] if leftover_merged_graphs and i < len(leftover_merged_graphs) else None
+        _save_env_html(
+            env, mg, {},
+            out_dir / f"debug_leftover_merge_env_{i}.html",
+            combined, combined_seen, is_leftover=True,
+        )
 
-        _add_env(combined, display_env, combined_seen)
-        _draw_diff_edges(combined, deleted_edges, combined_seen)
-
-        single = _net()
-        single_seen: set[str] = set()
-        _add_env(single, display_env, single_seen)
-        _draw_diff_edges(single, deleted_edges, single_seen)
-        _save(single, out_dir / f"debug_merge_env_{i}.html")
-
-    _add_graph_nodes(combined, leftover_1, _LEFTOVER1, combined_seen)
-    _add_graph_nodes(combined, leftover_2, _LEFTOVER2, combined_seen)
-    _add_graph_edges(combined, leftover_1)
-    _add_graph_edges(combined, leftover_2)
     _save(combined, out_dir / "debug_pre_merge.html")
 
 
 def save_post_merge_debug(
     merged_environments: list[Graph],
-    leftover_1: Graph,
-    leftover_2: Graph,
+    leftover_merged_environments: list[Graph],
     out_dir: Path,
     merge_environments: list[MergeEnvironment] | None = None,
+    leftover_environments: list[MergeEnvironment] | None = None,
 ) -> None:
-    """Write debug_post_merge.html and debug_merged_env_N.html.
-
-    Pass merge_environments to paint all border nodes ultra-black regardless
-    of which merged env they belong to.
+    """Write debug_post_merge.html, debug_merged_env_N.html,
+    and debug_leftover_merged_env_N.html.
     """
-    # Collect global border: union of all border1 + border2 across all pre-merge envs.
     global_border: set[str] = set()
-    if merge_environments:
-        for env in merge_environments:
+    for env_list in (merge_environments or [], leftover_environments or []):
+        for env in env_list:
             global_border.update(str(u) for u in env.border1)
             global_border.update(str(u) for u in env.border2)
 
@@ -317,20 +329,20 @@ def save_post_merge_debug(
                 node_color = "#000000" if uri in global_border else color
                 net.add_node(uri, label=local_name(uri), color=node_color, title=uri)
 
-    combined = _net()
-    combined_seen: set[str] = set()
-
-    for i, graph in enumerate(merged_environments):
-        color = _POST_PALETTE[i % len(_POST_PALETTE)]
+    def _save_merged_env(
+        graph: Graph,
+        pre_env: MergeEnvironment | None,
+        color: str,
+        path: Path,
+        combined: Network,
+        combined_seen: set[str],
+    ) -> None:
         _add_nodes_with_border(combined, graph, color, combined_seen)
         _add_graph_edges(combined, graph)
 
-        # Edges in post-merge that were not present in pre-merge → added (pink).
-        # Compare by local name; draw with post-merge URIs.
         added_edges: set[tuple[str, str, str]] = set()
-        if merge_environments and i < len(merge_environments):
-            env = merge_environments[i]
-            pre_names = set((_name_edges(env.onto_1) | _name_edges(env.onto_2)).keys())
+        if pre_env is not None:
+            pre_names = set((_name_edges(pre_env.onto_1) | _name_edges(pre_env.onto_2)).keys())
             post_map = _name_edges(graph)
             added_edges = {post_map[k] for k in post_map.keys() - pre_names}
         _draw_diff_edges(combined, added_edges, combined_seen)
@@ -340,10 +352,21 @@ def save_post_merge_debug(
         _add_nodes_with_border(single, graph, color, single_seen)
         _add_graph_edges(single, graph)
         _draw_diff_edges(single, added_edges, single_seen)
-        _save(single, out_dir / f"debug_merged_env_{i}.html")
+        _save(single, path)
 
-    _add_graph_nodes(combined, leftover_1, _LEFTOVER1, combined_seen)
-    _add_graph_nodes(combined, leftover_2, _LEFTOVER2, combined_seen)
-    _add_graph_edges(combined, leftover_1)
-    _add_graph_edges(combined, leftover_2)
+    combined = _net()
+    combined_seen: set[str] = set()
+
+    for i, graph in enumerate(merged_environments):
+        pre = merge_environments[i] if merge_environments and i < len(merge_environments) else None
+        color = _POST_PALETTE[i % len(_POST_PALETTE)]
+        _save_merged_env(graph, pre, color, out_dir / f"debug_merged_env_{i}.html",
+                         combined, combined_seen)
+
+    for i, graph in enumerate(leftover_merged_environments):
+        pre = leftover_environments[i] if leftover_environments and i < len(leftover_environments) else None
+        color = _POST_PALETTE[(len(merged_environments) + i) % len(_POST_PALETTE)]
+        _save_merged_env(graph, pre, color, out_dir / f"debug_leftover_merged_env_{i}.html",
+                         combined, combined_seen)
+
     _save(combined, out_dir / "debug_post_merge.html")

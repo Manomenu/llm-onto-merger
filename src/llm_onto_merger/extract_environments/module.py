@@ -1,11 +1,8 @@
 import bisect
-from collections import deque
+import random
+from collections import deque, defaultdict
 
-from rdflib import Graph, URIRef
-
-from collections import defaultdict
-
-from rdflib import Literal
+from rdflib import Graph, Literal, URIRef
 
 from ..alignment.alignment import Alignment
 from ..logger import get_logger
@@ -490,6 +487,148 @@ def _build_merge_environment(
 
 
 # ---------------------------------------------------------------------------
+# Leftover environment builder
+# ---------------------------------------------------------------------------
+
+def _available_subjects(source: Graph, seen: set[URIRef]) -> list[URIRef]:
+    return list({
+        s for s, _, _ in source
+        if isinstance(s, URIRef) and s not in seen and not _is_well_known(s)
+    })
+
+
+def _build_leftover_merge_environment(
+    source_1: Graph,
+    source_2: Graph,
+    config: MergeEnvironmentConfig,
+    env_idx: int,
+    global_frozen: set[URIRef],
+    uri_to_code: dict[str, str],
+    code_to_ns: dict[str, str],
+) -> MergeEnvironment:
+    """Build one merge environment from leftover entities (no alignments).
+
+    Seeds are drawn randomly from both sources. After each BFS expansion
+    exhausts both queues, more random seeds are injected — until the char
+    limit is hit or both sources are empty.
+    """
+    tracker = _EnvSizeTracker(uri_to_code)
+    sub1, sub2 = Graph(), Graph()
+    seen1: set[URIRef] = set()
+    seen2: set[URIRef] = set()
+    border_set1: set[URIRef] = set()
+    border_set2: set[URIRef] = set()
+    expand_queue1: deque[URIRef] = deque()
+    expand_queue2: deque[URIRef] = deque()
+
+    def _inject_seed(source: Graph, sub: Graph, seen: set[URIRef],
+                     queue: deque[URIRef], side: int) -> bool:
+        candidates = _available_subjects(source, seen)
+        if not candidates:
+            return False
+        entity = random.choice(candidates)
+        seen.add(entity)
+        triples = move_entity_triples(entity, source, sub)
+        tracker.add_onto_triples(triples, sub, side)
+        new_cands = _new_border_candidates(triples, seen)
+        seen.update(new_cands)
+        queue.extend(new_cands)
+        log.info(
+            "  leftover env #%d  seed injected: %s (onto%d)",
+            env_idx, local_name(str(entity)), side,
+        )
+        return True
+
+    def _expand_one(
+        candidate: URIRef,
+        source: Graph, sub: Graph, seen: set[URIRef],
+        border_set: set[URIRef], queue: deque[URIRef],
+        side: int,
+    ) -> bool:
+        """Expand one border candidate. Returns True if building should stop."""
+        if _is_well_known(candidate) or candidate in global_frozen:
+            border_set.add(candidate)
+            tracker.add_border(candidate, side)
+            return False
+
+        delta = _estimate_delta(candidate, source, seen)
+        if delta == 0:
+            border_set.add(candidate)
+            tracker.add_border(candidate, side)
+            return False
+
+        if tracker.size + delta > config.max_chars:
+            log.info(
+                "  leftover env #%d  size limit at %s (onto%d) — stopping",
+                env_idx, local_name(str(candidate)), side,
+            )
+            border_set.add(candidate)
+            tracker.add_border(candidate, side)
+            return True
+
+        triples = move_entity_triples(candidate, source, sub)
+        tracker.add_onto_triples(triples, sub, side)
+        new_cands = _new_border_candidates(triples, seen)
+        seen.update(new_cands)
+        queue.extend(new_cands)
+        return False
+
+    # Inject initial seeds
+    _inject_seed(source_1, sub1, seen1, expand_queue1, side=1)
+    _inject_seed(source_2, sub2, seen2, expand_queue2, side=2)
+
+    stopped = False
+    while not stopped:
+        # BFS until both queues are empty or size limit hit
+        while (expand_queue1 or expand_queue2) and not stopped:
+            if expand_queue1 and not stopped:
+                stopped = _expand_one(
+                    expand_queue1.popleft(),
+                    source_1, sub1, seen1, border_set1, expand_queue1, side=1,
+                )
+            if expand_queue2 and not stopped:
+                stopped = _expand_one(
+                    expand_queue2.popleft(),
+                    source_2, sub2, seen2, border_set2, expand_queue2, side=2,
+                )
+
+        if stopped:
+            break
+
+        # Queues exhausted — inject more seeds if any remain
+        s1 = _inject_seed(source_1, sub1, seen1, expand_queue1, side=1)
+        s2 = _inject_seed(source_2, sub2, seen2, expand_queue2, side=2)
+        if not s1 and not s2:
+            break  # both sources fully consumed
+
+    for node in expand_queue1:
+        border_set1.add(node)
+        tracker.add_border(node, side=1)
+    for node in expand_queue2:
+        border_set2.add(node)
+        tracker.add_border(node, side=2)
+
+    log.info(
+        "leftover env #%d  done  |  onto1: %d triples  onto2: %d triples"
+        "  |  border1: %d  border2: %d  |  stopped early: %s  |  tracked_size: %d chars",
+        env_idx, len(sub1), len(sub2),
+        len(border_set1), len(border_set2), "YES" if stopped else "no",
+        tracker.size,
+    )
+
+    return MergeEnvironment(
+        onto_1=sub1,
+        onto_2=sub2,
+        alignments=[],
+        border1=deque(border_set1),
+        border2=deque(border_set2),
+        uri_to_code=uri_to_code,
+        code_to_ns=code_to_ns,
+        tracked_size=tracker.size,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Module
 # ---------------------------------------------------------------------------
 
@@ -502,14 +641,14 @@ class ExtractEnvironmentsModule:
         onto_1: Graph,
         onto_2: Graph,
         alignments: list[Alignment],
-    ) -> tuple[list[MergeEnvironment], Graph, Graph]:
+    ) -> tuple[list[MergeEnvironment], list[MergeEnvironment]]:
         """Extract merge environments from two ontologies.
 
         Returns:
-            (environments, leftover_1, leftover_2) — leftover graphs contain triples
-            that had no alignment and were never absorbed into any environment.
+            (alignment_environments, leftover_environments)
+            alignment_environments — seeded by alignment pairs (highest-measure first)
+            leftover_environments  — seeded randomly from entities not covered by any alignment
         """
-        # REQ: pre-rename entity2 → entity1 in onto2 for '=' alignments
         renamed_onto_2, alignments = _pre_rename_onto2(onto_2, alignments)
 
         source_1 = Graph()
@@ -519,12 +658,10 @@ class ExtractEnvironmentsModule:
         for triple in renamed_onto_2:
             source_2.add(triple)
 
-        # Build namespace codec once — namespace prefixes don't change as entities
-        # move between source and env sub-graphs during extraction.
         uri_to_code, code_to_ns = _build_namespace_codec(source_1, source_2)
 
         alignment_pool = _AlignmentPool(alignments)
-        environments: list[MergeEnvironment] = []
+        alignment_envs: list[MergeEnvironment] = []
         global_frozen: set[URIRef] = set()
 
         log.info(
@@ -538,12 +675,8 @@ class ExtractEnvironmentsModule:
                 source_1, source_2, alignment_pool, self.config, idx, global_frozen,
                 uri_to_code, code_to_ns,
             )
-            environments.append(env)
+            alignment_envs.append(env)
 
-            # REQ: freeze border nodes of the completed env so they can't become
-            # interior of any future env.
-            # REQ exception: nodes still in alignment_pool are NOT frozen — they will
-            # become seeds of their own environment and their neighbors can expand normally.
             for node in (*env.border1, *env.border2):
                 if not alignment_pool.contains(str(node)):
                     global_frozen.add(node)
@@ -551,8 +684,27 @@ class ExtractEnvironmentsModule:
             idx += 1
 
         log.info(
-            "Extraction done: %d environments  |  %d nodes frozen"
-            "  |  onto1=%d triples  onto2=%d triples remaining (no alignment → pass-through)",
-            len(environments), len(global_frozen), len(source_1), len(source_2),
+            "Alignment extraction done: %d environments  |  %d nodes frozen"
+            "  |  onto1=%d triples  onto2=%d triples remaining",
+            len(alignment_envs), len(global_frozen), len(source_1), len(source_2),
         )
-        return environments, source_1, source_2
+
+        # Build leftover environments from remaining entities
+        leftover_envs: list[MergeEnvironment] = []
+        leftover_idx = 0
+        while (
+            _available_subjects(source_1, set()) or _available_subjects(source_2, set())
+        ):
+            env = _build_leftover_merge_environment(
+                source_1, source_2, self.config,
+                leftover_idx, global_frozen, uri_to_code, code_to_ns,
+            )
+            leftover_envs.append(env)
+            leftover_idx += 1
+
+        log.info(
+            "Leftover extraction done: %d environments",
+            len(leftover_envs),
+        )
+
+        return alignment_envs, leftover_envs

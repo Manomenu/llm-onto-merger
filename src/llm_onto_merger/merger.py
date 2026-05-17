@@ -76,18 +76,17 @@ class LLMOntologyMerger:
         extractor = ExtractEnvironmentsModule(
             MergeEnvironmentConfig(max_chars=args.merge_env_max_chars)
         )
-        merge_environments, onto_1_leftover, onto_2_leftover = extractor.extract(
-            onto_1, onto_2, alignments
-        )
+        alignment_envs, leftover_envs = extractor.extract(onto_1, onto_2, alignments)
 
-        total = len(merge_environments)
-        semaphore = asyncio.Semaphore(settings.parallel_llm_request_count)
-        merger = MergeEnvironmentsModule()
+        all_envs   = alignment_envs + leftover_envs
+        total      = len(all_envs)
+        n_align    = len(alignment_envs)
+        semaphore  = asyncio.Semaphore(settings.parallel_llm_request_count)
+        merger     = MergeEnvironmentsModule()
 
         log.info(
-            "Merging %d environments | parallel_llm_requests: %d",
-            total,
-            settings.parallel_llm_request_count,
+            "Merging %d environments (%d alignment + %d leftover) | parallel_llm_requests: %d",
+            total, n_align, len(leftover_envs), settings.parallel_llm_request_count,
         )
 
         async def _merge_one(env, idx):
@@ -96,34 +95,36 @@ class LLMOntologyMerger:
                 log.info("Merged environment %d/%d", idx + 1, total)
                 return result
 
-        merged_environments = await asyncio.gather(
-            *[_merge_one(env, i) for i, env in enumerate(merge_environments)]
-        )
+        all_merged = list(await asyncio.gather(
+            *[_merge_one(env, i) for i, env in enumerate(all_envs)]
+        ))
+
+        merged_alignment = all_merged[:n_align]
+        merged_leftover  = all_merged[n_align:]
 
         if settings.debug:
             save_pre_merge_debug(
-                merge_environments,
-                onto_1_leftover,
-                onto_2_leftover,
+                alignment_envs,
+                leftover_envs,
                 out_dir,
                 original_alignments=alignments,
-                merged_graphs=list(merged_environments),
+                merged_graphs=merged_alignment,
+                leftover_merged_graphs=merged_leftover,
             )
             save_post_merge_debug(
-                list(merged_environments),
-                onto_1_leftover,
-                onto_2_leftover,
+                merged_alignment,
+                merged_leftover,
                 out_dir,
-                merge_environments=merge_environments,
+                merge_environments=alignment_envs,
+                leftover_environments=leftover_envs,
             )
             save_diff_debug(
-                merge_environments,
-                list(merged_environments),
+                alignment_envs,
+                merged_alignment,
                 out_dir,
+                leftover_environments=leftover_envs,
+                leftover_merged_graphs=merged_leftover,
             )
 
-        merged_onto = integrate_environments(
-            list(merged_environments), onto_1_leftover, onto_2_leftover
-        )
-
+        merged_onto = integrate_environments(all_merged)
         save_ontology(merged_onto, out_dir)
