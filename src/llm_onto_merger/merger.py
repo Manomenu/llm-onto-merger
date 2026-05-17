@@ -1,9 +1,7 @@
 import asyncio
 from pathlib import Path
 
-from rdflib import Graph, URIRef
-
-from llm_onto_merger.alignment.alignment import Alignment, AlignmentModule
+from llm_onto_merger.alignment.alignment import AlignmentModule
 from llm_onto_merger.debug import (
     save_diff_debug,
     save_post_merge_debug,
@@ -17,40 +15,10 @@ from llm_onto_merger.integrate_environments import integrate_environments
 from llm_onto_merger.load_arguments import LoadedArguments
 from llm_onto_merger.logger import get_logger
 from llm_onto_merger.merge_environments.module import MergeEnvironmentsModule
-from llm_onto_merger.ontology import create_ontology, save_ontology
+from llm_onto_merger.ontology import apply_alignments, create_ontology, save_ontology
 from llm_onto_merger.settings import settings
 
 log = get_logger(__name__)
-
-
-def _build_applied_alignments_ontology(
-    onto_1: Graph,
-    onto_2: Graph,
-    alignments: list[Alignment],
-) -> Graph:
-    """Naive alignment-based merge: union of both ontologies with each aligned
-    entity2 collapsed into entity1 (all its triples re-pointed to entity1's URI).
-    Useful as a baseline to compare against the LLM-merged ontology.
-    """
-    result = Graph()
-    for t in onto_1:
-        result.add(t)
-    for t in onto_2:
-        result.add(t)
-
-    for al in alignments:
-        e1 = URIRef(al.entity1)
-        e2 = URIRef(al.entity2)
-        if e1 == e2:
-            continue
-        for _, p, o in list(result.triples((e2, None, None))):
-            result.remove((e2, p, o))
-            result.add((e1, p, o))
-        for s, p, _ in list(result.triples((None, None, e2))):
-            result.remove((s, p, e2))
-            result.add((s, p, e1))
-
-    return result
 
 
 class LLMOntologyMerger:
@@ -69,7 +37,7 @@ class LLMOntologyMerger:
             args.base_path, args.candidate_path
         )
 
-        applied_onto = _build_applied_alignments_ontology(onto_1, onto_2, alignments)
+        applied_onto = apply_alignments(onto_1, onto_2, alignments)
         save_ontology(applied_onto, out_dir, name="applied_alignments")
         log.info("Alignments applied: %d", len(alignments))
 
@@ -78,15 +46,18 @@ class LLMOntologyMerger:
         )
         alignment_envs, leftover_envs = extractor.extract(onto_1, onto_2, alignments)
 
-        all_envs   = alignment_envs + leftover_envs
-        total      = len(all_envs)
-        n_align    = len(alignment_envs)
-        semaphore  = asyncio.Semaphore(settings.parallel_llm_request_count)
-        merger     = MergeEnvironmentsModule()
+        all_envs = alignment_envs + leftover_envs
+        total = len(all_envs)
+        n_align = len(alignment_envs)
+        semaphore = asyncio.Semaphore(settings.parallel_llm_request_count)
+        merger = MergeEnvironmentsModule()
 
         log.info(
             "Merging %d environments (%d alignment + %d leftover) | parallel_llm_requests: %d",
-            total, n_align, len(leftover_envs), settings.parallel_llm_request_count,
+            total,
+            n_align,
+            len(leftover_envs),
+            settings.parallel_llm_request_count,
         )
 
         async def _merge_one(env, idx):
@@ -95,12 +66,14 @@ class LLMOntologyMerger:
                 log.info("Merged environment %d/%d", idx + 1, total)
                 return result
 
-        all_merged = list(await asyncio.gather(
-            *[_merge_one(env, i) for i, env in enumerate(all_envs)]
-        ))
+        all_merged = list(
+            await asyncio.gather(
+                *[_merge_one(env, i) for i, env in enumerate(all_envs)]
+            )
+        )
 
         merged_alignment = all_merged[:n_align]
-        merged_leftover  = all_merged[n_align:]
+        merged_leftover = all_merged[n_align:]
 
         if settings.debug:
             save_pre_merge_debug(
