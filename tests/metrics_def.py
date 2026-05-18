@@ -4,7 +4,7 @@ Compute ontology quality metrics based on 7 academic quality dimensions.
 
 Metrics are derived from the Ewaluacja sections of each dimension:
   1. Structural Coherence          — ARC, unsatisfiable_classes, cycle_count
-  2. Domain Coherence              — cohesion (automated proxy; full eval = case study)
+  2. Domain Coherence              — (case study only; no automated metric)
   3. Conciseness                   — syntactic_uniqueness_ratio, ALC
   4. Knowledge Completeness        — cross_onto_relations_count
   5. Hierarchy Integration Quality — cross_onto_subclassof_count, connectivity_ratio,
@@ -49,8 +49,6 @@ _OWL_THING  = OWL.Thing
 _SUB        = RDFS.subClassOf
 _LABEL      = RDFS.label
 _COMMENT    = RDFS.comment
-_DOMAIN     = RDFS.domain
-_RANGE      = RDFS.range
 _PROP_TYPES = (_OWL_OBJ, _OWL_DATA, _OWL_ANN, _OWL_FP, _OWL_IFP)
 
 ONTOMETRICS_URL = (
@@ -110,19 +108,6 @@ _REGISTRY: dict[str, dict] = {
             "wykrytych przez iteracyjny DFS. Docelowo = 0 — hierarchia klas powinna "
             "być acyklicznym grafem skierowanym (DAG) zakotwiczonym w owl:Thing. "
             "Cykl is-a (A ⊑ B ⊑ A) jest semantyczną sprzecznością."
-        ),
-    },
-    # ── Domain Coherence ──────────────────────────────────────────────────────
-    "cohesion": {
-        "api_key":    None,
-        "source":     "self-implemented",
-        "categories": ["Domain Coherence"],
-        "target":     "high (= 1.0)",
-        "interpretation": (
-            "Ułamek właściwości posiadających jednocześnie rdfs:domain i rdfs:range. "
-            "Właściwości z oboma ograniczeniami precyzyjnie definiują, między jakimi "
-            "klasami mogą zachodzić relacje — redukując ryzyko niespójności domenowych "
-            "(np. hasAge jednocześnie na Person i Car). Pełna ewaluacja DC wymaga case study."
         ),
     },
     # ── Conciseness ───────────────────────────────────────────────────────────
@@ -477,11 +462,6 @@ def _compute_self_metrics(
     # Cycle count
     cycle_count = float(_count_cycles(g))
 
-    # Cohesion
-    with_domain = {p for p in prop if any(True for _ in g.objects(p, _DOMAIN))}
-    with_range  = {p for p in prop if any(True for _ in g.objects(p, _RANGE))}
-    cohesion = len(with_domain & with_range) / n_p if n_p else 0.0
-
     # Syntactic uniqueness ratio
     unique_local = len({_local(c) for c in cls})
     syntactic_uniqueness_ratio = unique_local / n_c if n_c else 1.0
@@ -536,7 +516,6 @@ def _compute_self_metrics(
     return {
         "ARC":                       arc,
         "cycle_count":               cycle_count,
-        "cohesion":                  round(cohesion,                   4),
         "syntactic_uniqueness_ratio": round(syntactic_uniqueness_ratio, 4),
         "cross_onto_subclassof_count": float(cross_sub),
         "cross_onto_relations_count":  float(cross_rel),

@@ -66,6 +66,25 @@
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src"
             }
+        },
+        {
+            "name": "Merge: aml-cso",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "llm_onto_merger.main",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "--base", "tests/inputs/aml-cso/aml.owl",
+                "--candidate", "tests/inputs/aml-cso/CSO.3.5.owl",
+                "--alignment-tool", "aml",
+                "--output", "tests/outputs/aml-cso",
+                "--max-env-chars", "20000"
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            }
         }
     ]
 }
