@@ -214,6 +214,10 @@ def _add_env(net: Network, env: MergeEnvironment, seen: set[str]) -> None:
     _add_graph_edges(net, env.onto_1)
     _add_graph_edges(net, env.onto_2)
     for al in env.alignments:
+        for uri in (al.entity1, al.entity2):
+            if uri not in seen:
+                net.add_node(uri, label=local_name(uri), color=_PRE_ALIGNED, title=uri)
+                seen.add(uri)
         net.add_edge(
             al.entity1,
             al.entity2,

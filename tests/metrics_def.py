@@ -16,7 +16,7 @@ API:  https://ontometrics.informatik.uni-rostock.de/ontologymetrics/
       (University of Rostock, public, no auth required)
 
 Usage:
-    python tests/metrics_def.py <folder_name>
+    python tests/metrics_def.py <folder_name> [--hermit] [--skip-api]
 
 Reads:
     tests/inputs/<folder_name>/*.owl
@@ -28,6 +28,7 @@ Writes:
     tests/outputs/<folder_name>/metrics_def.html
 """
 
+import argparse
 import csv
 import re
 import sys
@@ -39,33 +40,32 @@ import requests
 from rdflib import OWL, RDF, RDFS, XSD, BNode, Graph, Literal, URIRef
 
 _OWL_DISJOINT_WITH = OWL.disjointWith
-_OWL_CLASS  = OWL.Class
-_OWL_OBJ    = OWL.ObjectProperty
-_OWL_DATA   = OWL.DatatypeProperty
-_OWL_ANN    = OWL.AnnotationProperty
-_OWL_FP     = OWL.FunctionalProperty
-_OWL_IFP    = OWL.InverseFunctionalProperty
-_OWL_THING  = OWL.Thing
-_SUB        = RDFS.subClassOf
-_LABEL      = RDFS.label
-_COMMENT    = RDFS.comment
+_OWL_CLASS = OWL.Class
+_OWL_OBJ = OWL.ObjectProperty
+_OWL_DATA = OWL.DatatypeProperty
+_OWL_ANN = OWL.AnnotationProperty
+_OWL_FP = OWL.FunctionalProperty
+_OWL_IFP = OWL.InverseFunctionalProperty
+_OWL_THING = OWL.Thing
+_SUB = RDFS.subClassOf
+_LABEL = RDFS.label
+_COMMENT = RDFS.comment
 _PROP_TYPES = (_OWL_OBJ, _OWL_DATA, _OWL_ANN, _OWL_FP, _OWL_IFP)
 
 ONTOMETRICS_URL = (
-    "https://ontometrics.informatik.uni-rostock.de"
-    "/ontologymetrics/ServletController"
+    "https://ontometrics.informatik.uni-rostock.de/ontologymetrics/ServletController"
 )
 _DELAY_S = 3
 
 # Category name → (css-abbreviation, badge-colour)
 _CATEGORIES: dict[str, tuple[str, str]] = {
-    "Structural Coherence":          ("sc", "#c0392b"),
-    "Domain Coherence":              ("dc", "#8e44ad"),
-    "Conciseness":                   ("cn", "#16a085"),
-    "Knowledge Completeness":        ("kc", "#27ae60"),
+    "Structural Coherence": ("sc", "#c0392b"),
+    "Domain Coherence": ("dc", "#8e44ad"),
+    "Conciseness": ("cn", "#16a085"),
+    "Knowledge Completeness": ("kc", "#27ae60"),
     "Hierarchy Integration Quality": ("hi", "#2980b9"),
-    "Accuracy":                      ("ac", "#d35400"),
-    "Understandability":             ("un", "#7f8c8d"),
+    "Accuracy": ("ac", "#d35400"),
+    "Understandability": ("un", "#7f8c8d"),
 }
 
 # ── Metric registry ────────────────────────────────────────────────────────────
@@ -73,10 +73,10 @@ _CATEGORIES: dict[str, tuple[str, str]] = {
 _REGISTRY: dict[str, dict] = {
     # ── Structural Coherence ───────────────────────────────────────────────────
     "ARC": {
-        "api_key":    None,
-        "source":     "self-implemented",
+        "api_key": None,
+        "source": "self-implemented",
         "categories": ["Structural Coherence", "Hierarchy Integration Quality"],
-        "target":     "low (ideally 1)",
+        "target": "low (ideally 1)",
         "interpretation": (
             "Absolute Root Cardinality — liczba klas bez nazwanego rodzica (korzeni hierarchii). "
             "Wartość 1 = spójna hierarchia z jednym korzeniem, brak orphan classes. "
@@ -86,10 +86,10 @@ _REGISTRY: dict[str, dict] = {
         ),
     },
     "unsatisfiable_classes": {
-        "api_key":    None,
-        "source":     "hermit_reasoner",
+        "api_key": None,
+        "source": "hermit_reasoner",
         "categories": ["Structural Coherence"],
-        "target":     "= 0",
+        "target": "= 0",
         "interpretation": (
             "Liczba klas inferowanych przez HermiT jako równoważne owl:Nothing — klas "
             "niemożliwych do instancjonowania bez logicznej sprzeczności. Docelowo = 0. "
@@ -99,10 +99,10 @@ _REGISTRY: dict[str, dict] = {
         ),
     },
     "cycle_count": {
-        "api_key":    None,
-        "source":     "self-implemented",
+        "api_key": None,
+        "source": "self-implemented",
         "categories": ["Structural Coherence"],
-        "target":     "= 0",
+        "target": "= 0",
         "interpretation": (
             "Liczba cykli (back edges) w grafie skierowanym relacji subClassOf, "
             "wykrytych przez iteracyjny DFS. Docelowo = 0 — hierarchia klas powinna "
@@ -112,10 +112,10 @@ _REGISTRY: dict[str, dict] = {
     },
     # ── Conciseness ───────────────────────────────────────────────────────────
     "syntactic_uniqueness_ratio": {
-        "api_key":    None,
-        "source":     "self-implemented",
+        "api_key": None,
+        "source": "self-implemented",
         "categories": ["Conciseness"],
-        "target":     "= 1.0",
+        "target": "= 1.0",
         "interpretation": (
             "Syntactic Uniqueness Ratio = liczba unikalnych nazw lokalnych klas / "
             "całkowita liczba URI klas. Wartość < 1.0 = duplikaty nazw pod różnymi "
@@ -124,10 +124,10 @@ _REGISTRY: dict[str, dict] = {
         ),
     },
     "ALC": {
-        "api_key":    ["absolute_leaf_cardinality"],
-        "source":     "ontometrics_api",
+        "api_key": ["absolute_leaf_cardinality"],
+        "source": "ontometrics_api",
         "categories": ["Conciseness", "Hierarchy Integration Quality"],
-        "target":     "context-dependent",
+        "target": "context-dependent",
         "interpretation": (
             "Absolute Leaf Cardinality — liczba klas bez podklas (liści). "
             "Wymiar C: spada po merge = mniej duplikatów liści = lepsza deduplication; "
@@ -137,10 +137,10 @@ _REGISTRY: dict[str, dict] = {
     },
     # ── Knowledge Completeness ────────────────────────────────────────────────
     "cross_onto_relations_count": {
-        "api_key":    None,
-        "source":     "self-implemented",
+        "api_key": None,
+        "source": "self-implemented",
         "categories": ["Knowledge Completeness"],
-        "target":     "high",
+        "target": "high",
         "interpretation": (
             "Liczba wszystkich relacji RDF (dowolny predykat) łączących encje z Onto1 "
             "z encjami z Onto2 w scalonej ontologii. Dla naiwnej unii = 0. "
@@ -150,10 +150,10 @@ _REGISTRY: dict[str, dict] = {
     },
     # ── Hierarchy Integration Quality ─────────────────────────────────────────
     "cross_onto_subclassof_count": {
-        "api_key":    None,
-        "source":     "self-implemented",
+        "api_key": None,
+        "source": "self-implemented",
         "categories": ["Hierarchy Integration Quality", "Knowledge Completeness"],
-        "target":     "high",
+        "target": "high",
         "interpretation": (
             "Liczba relacji SubClassOf łączących klasę z Onto1 z klasą z Onto2 "
             "(lub odwrotnie) w scalonej ontologii. Dla naiwnej unii = 0. "
@@ -163,10 +163,10 @@ _REGISTRY: dict[str, dict] = {
         ),
     },
     "connectivity_ratio": {
-        "api_key":    None,
-        "source":     "self-implemented",
+        "api_key": None,
+        "source": "self-implemented",
         "categories": ["Hierarchy Integration Quality"],
-        "target":     "= 1.0",
+        "target": "= 1.0",
         "interpretation": (
             "Connectivity Ratio = liczba klas osiągalnych z owl:Thing przez relacje "
             "SubClassOf / całkowita liczba klas. "
@@ -175,10 +175,10 @@ _REGISTRY: dict[str, dict] = {
         ),
     },
     "average_depth": {
-        "api_key":    ["average_depth"],
-        "source":     "ontometrics_api",
+        "api_key": ["average_depth"],
+        "source": "ontometrics_api",
         "categories": ["Hierarchy Integration Quality"],
-        "target":     "higher after merge",
+        "target": "higher after merge",
         "interpretation": (
             "Średnia głębokość hierarchii klas (śr. liczba krawędzi SubClassOf od "
             "owl:Thing do klasy). Wzrost po merge = klasy jednej ontologii zagnieżdżone "
@@ -186,20 +186,20 @@ _REGISTRY: dict[str, dict] = {
         ),
     },
     "max_depth": {
-        "api_key":    ["maximal_depth", "max_depth", "maximum_depth"],
-        "source":     "ontometrics_api",
+        "api_key": ["maximal_depth", "max_depth", "maximum_depth"],
+        "source": "ontometrics_api",
         "categories": ["Hierarchy Integration Quality"],
-        "target":     "higher after merge",
+        "target": "higher after merge",
         "interpretation": (
             "Maksymalna głębokość drzewa klas (najdłuższa ścieżka od korzenia do liścia). "
             "Wzrost = encje jednej ontologii zostały zagnieżdżone głębiej w hierarchii drugiej."
         ),
     },
     "average_breadth": {
-        "api_key":    ["average_breadth"],
-        "source":     "ontometrics_api",
+        "api_key": ["average_breadth"],
+        "source": "ontometrics_api",
         "categories": ["Hierarchy Integration Quality"],
-        "target":     "context-dependent",
+        "target": "context-dependent",
         "interpretation": (
             "Średnia liczba bezpośrednich podklas na węzeł posiadający dzieci. "
             "Wzrost = klasy jednej ontologii zyskały podklasy z drugiej; "
@@ -207,10 +207,10 @@ _REGISTRY: dict[str, dict] = {
         ),
     },
     "max_breadth": {
-        "api_key":    ["maximal_breadth", "max_breadth", "maximum_breadth"],
-        "source":     "ontometrics_api",
+        "api_key": ["maximal_breadth", "max_breadth", "maximum_breadth"],
+        "source": "ontometrics_api",
         "categories": ["Hierarchy Integration Quality"],
-        "target":     "context-dependent",
+        "target": "context-dependent",
         "interpretation": (
             "Maksymalna liczba bezpośrednich podklas jednej klasy. "
             "Bardzo wysoka wartość = 'klasa-worek' skupiająca wiele pojęć bez pośrednich "
@@ -219,10 +219,10 @@ _REGISTRY: dict[str, dict] = {
     },
     # ── Accuracy ──────────────────────────────────────────────────────────────
     "triple_preservation_ratio": {
-        "api_key":    None,
-        "source":     "self-implemented",
+        "api_key": None,
+        "source": "self-implemented",
         "categories": ["Accuracy"],
-        "target":     "= 1.0",
+        "target": "= 1.0",
         "interpretation": (
             "Triple Preservation Ratio = liczba trójek RDF z Onto1 ∪ Onto2 "
             "(porównanie po lokalnych nazwach S/P/O) obecnych w scalonej ontologii / "
@@ -232,10 +232,10 @@ _REGISTRY: dict[str, dict] = {
     },
     # ── Understandability ─────────────────────────────────────────────────────
     "annotation_coverage_ratio": {
-        "api_key":    None,
-        "source":     "self-implemented",
+        "api_key": None,
+        "source": "self-implemented",
         "categories": ["Understandability"],
-        "target":     "= 1.0",
+        "target": "= 1.0",
         "interpretation": (
             "Annotation Coverage Ratio = liczba encji (klas + właściwości) posiadających "
             "rdfs:label lub rdfs:comment / całkowita liczba encji. Docelowo = 1.0. "
@@ -246,6 +246,7 @@ _REGISTRY: dict[str, dict] = {
 }
 
 # ── OntoMetrics API ────────────────────────────────────────────────────────────
+
 
 def _load_graph(path: str) -> Graph:
     g = Graph()
@@ -260,11 +261,11 @@ def _query_api(owl_bytes: bytes, label: str) -> dict[str, float]:
     resp = requests.post(
         ONTOMETRICS_URL,
         data={
-            "text":             owl_bytes.decode("utf-8", errors="replace"),
-            "base":             "on",
-            "schema":           "on",
-            "knowledge":        "on",
-            "graph":            "on",
+            "text": owl_bytes.decode("utf-8", errors="replace"),
+            "base": "on",
+            "schema": "on",
+            "knowledge": "on",
+            "graph": "on",
             "store_aggreement": "on",
         },
         timeout=120,
@@ -276,21 +277,31 @@ def _query_api(owl_bytes: bytes, label: str) -> dict[str, float]:
 
 
 _SECTIONS = [
-    ("base",   "Base metrics"),
-    ("base",   "Class axioms"),
-    ("base",   "Object property axioms"),
-    ("base",   "Data property axioms"),
-    ("base",   "Individual axioms"),
-    ("base",   "Annotation axioms"),
+    ("base", "Base metrics"),
+    ("base", "Class axioms"),
+    ("base", "Object property axioms"),
+    ("base", "Data property axioms"),
+    ("base", "Individual axioms"),
+    ("base", "Annotation axioms"),
     ("schema", "Schema metrics"),
-    ("kb",     "Knowledgebase metrics"),
-    ("graph",  "Graph metrics"),
+    ("kb", "Knowledgebase metrics"),
+    ("graph", "Graph metrics"),
 ]
 _SKIP_ANYWHERE = frozenset(["show", "hide", "more", "details", "powered", "copyright"])
-_SKIP_FIRST    = frozenset([
-    "home", "result", "faq", "wiki", "contact", "impressum",
-    "results", "ontologyid", "optional", "created",
-])
+_SKIP_FIRST = frozenset(
+    [
+        "home",
+        "result",
+        "faq",
+        "wiki",
+        "contact",
+        "impressum",
+        "results",
+        "ontologyid",
+        "optional",
+        "created",
+    ]
+)
 
 
 def _parse_html(html: str) -> dict[str, float]:
@@ -316,9 +327,7 @@ def _parse_html(html: str) -> dict[str, float]:
         return label
 
     metrics: dict[str, float] = {}
-    pattern = re.compile(
-        r"([A-Z][A-Za-z /()\-]+?):\s*(-?\d+\.?\d*(?:e[+-]?\d+)?)"
-    )
+    pattern = re.compile(r"([A-Z][A-Za-z /()\-]+?):\s*(-?\d+\.?\d*(?:e[+-]?\d+)?)")
     for m in pattern.finditer(text):
         raw_name = m.group(1).strip()
         if len(raw_name) > 55:
@@ -349,6 +358,7 @@ def _parse_html(html: str) -> dict[str, float]:
 
 # ── rdflib helpers ─────────────────────────────────────────────────────────────
 
+
 def _local(uri: URIRef) -> str:
     s = str(uri)
     return s.split("#")[-1] if "#" in s else s.rsplit("/", 1)[-1]
@@ -377,6 +387,7 @@ def _properties(g: Graph) -> set[URIRef]:
 
 
 # ── Self-implemented metric computation ────────────────────────────────────────
+
 
 def _count_cycles(g: Graph) -> int:
     """Count back-edges in the subClassOf directed graph (each = one cycle)."""
@@ -446,16 +457,18 @@ def _compute_self_metrics(
     onto2_entities: set[URIRef],
     union: Graph | None = None,
 ) -> dict[str, float]:
-    cls  = _classes(g)
+    cls = _classes(g)
     prop = _properties(g)
-    n_c  = len(cls)
-    n_p  = len(prop)
+    n_c = len(cls)
 
     # ARC — classes without a named parent
     has_named_parent = {
-        s for s, _, o in g.triples((None, _SUB, None))
-        if isinstance(s, URIRef) and isinstance(o, URIRef)
-        and o != _OWL_THING and s in cls
+        s
+        for s, _, o in g.triples((None, _SUB, None))
+        if isinstance(s, URIRef)
+        and isinstance(o, URIRef)
+        and o != _OWL_THING
+        and s in cls
     }
     arc = float(len(cls - has_named_parent))
 
@@ -468,16 +481,20 @@ def _compute_self_metrics(
 
     # Cross-ontology metrics
     cross_sub = sum(
-        1 for s, _, o in g.triples((None, _SUB, None))
-        if isinstance(s, URIRef) and isinstance(o, URIRef)
+        1
+        for s, _, o in g.triples((None, _SUB, None))
+        if isinstance(s, URIRef)
+        and isinstance(o, URIRef)
         and (
             (s in onto1_entities and o in onto2_entities)
             or (s in onto2_entities and o in onto1_entities)
         )
     )
     cross_rel = sum(
-        1 for s, _, o in g
-        if isinstance(s, URIRef) and isinstance(o, URIRef)
+        1
+        for s, _, o in g
+        if isinstance(s, URIRef)
+        and isinstance(o, URIRef)
         and (
             (s in onto1_entities and o in onto2_entities)
             or (s in onto2_entities and o in onto1_entities)
@@ -488,17 +505,31 @@ def _compute_self_metrics(
     connectivity = _connectivity_ratio(g)
 
     # Triple preservation ratio vs union
+    # BNode objects are excluded: their internal IDs differ across parse sessions,
+    # so str(bnode) comparisons produce false negatives for restrictions/unions.
     if union is not None:
+
         def _key(s, p, o) -> tuple[str, str, str]:
             return (
-                _local(s), _local(p),
+                _local(s),
+                _local(p),
                 _local(o) if isinstance(o, URIRef) else str(o),
             )
-        union_triples = {_key(s, p, o) for s, p, o in union if isinstance(s, URIRef)}
-        g_triples     = {_key(s, p, o) for s, p, o in g if isinstance(s, URIRef)}
+
+        union_triples = {
+            _key(s, p, o)
+            for s, p, o in union
+            if isinstance(s, URIRef) and not isinstance(o, BNode)
+        }
+        g_triples = {
+            _key(s, p, o)
+            for s, p, o in g
+            if isinstance(s, URIRef) and not isinstance(o, BNode)
+        }
         tpr = (
             len(g_triples & union_triples) / len(union_triples)
-            if union_triples else 1.0
+            if union_triples
+            else 1.0
         )
     else:
         tpr = 1.0  # union itself
@@ -507,21 +538,22 @@ def _compute_self_metrics(
     entities = cls | prop
     n_e = len(entities)
     annotated = sum(
-        1 for e in entities
+        1
+        for e in entities
         if any(True for _ in g.objects(e, _LABEL))
         or any(True for _ in g.objects(e, _COMMENT))
     )
     annotation_coverage = annotated / n_e if n_e else 0.0
 
     return {
-        "ARC":                       arc,
-        "cycle_count":               cycle_count,
+        "ARC": arc,
+        "cycle_count": cycle_count,
         "syntactic_uniqueness_ratio": round(syntactic_uniqueness_ratio, 4),
         "cross_onto_subclassof_count": float(cross_sub),
-        "cross_onto_relations_count":  float(cross_rel),
-        "connectivity_ratio":         round(connectivity,              4),
-        "triple_preservation_ratio":  round(tpr,                       4),
-        "annotation_coverage_ratio":  round(annotation_coverage,       4),
+        "cross_onto_relations_count": float(cross_rel),
+        "connectivity_ratio": round(connectivity, 4),
+        "triple_preservation_ratio": round(tpr, 4),
+        "annotation_coverage_ratio": round(annotation_coverage, 4),
     }
 
 
@@ -529,10 +561,18 @@ def _compute_self_metrics(
 
 # XSD datatypes absent from the OWL 2 datatype map — HermiT rejects them.
 # See: https://www.w3.org/TR/owl2-syntax/#Datatype_Maps
-_XSD_UNSUPPORTED = frozenset([
-    XSD.date, XSD.time, XSD.duration,
-    XSD.gYear, XSD.gYearMonth, XSD.gMonth, XSD.gMonthDay, XSD.gDay,
-])
+_XSD_UNSUPPORTED = frozenset(
+    [
+        XSD.date,
+        XSD.time,
+        XSD.duration,
+        XSD.gYear,
+        XSD.gYearMonth,
+        XSD.gMonth,
+        XSD.gMonthDay,
+        XSD.gDay,
+    ]
+)
 
 
 def _strip_hermit_unsupported(g: Graph) -> Graph:
@@ -569,7 +609,9 @@ def _reasoner_check(g: Graph, label: str) -> dict[str, float | None]:
     try:
         import owlready2
     except ImportError:
-        print(f"  [HermiT/{label}] owlready2 not installed — skipping (pip install owlready2)")
+        print(
+            f"  [HermiT/{label}] owlready2 not installed — skipping (pip install owlready2)"
+        )
         return {"unsatisfiable_classes": None}
 
     import os
@@ -578,7 +620,9 @@ def _reasoner_check(g: Graph, label: str) -> dict[str, float | None]:
     g_safe = _strip_hermit_unsupported(g)
     stripped = len(g) - len(g_safe)
     if stripped:
-        print(f"  [HermiT/{label}] stripped {stripped} triples with unsupported XSD datatypes")
+        print(
+            f"  [HermiT/{label}] stripped {stripped} triples with unsupported XSD datatypes"
+        )
 
     with tempfile.NamedTemporaryFile(suffix=".owl", delete=False) as f:
         g_safe.serialize(destination=f.name, format="xml")
@@ -587,7 +631,7 @@ def _reasoner_check(g: Graph, label: str) -> dict[str, float | None]:
     try:
         print(f"  → HermiT [{label}] …", end=" ", flush=True)
         world = owlready2.World()
-        onto  = world.get_ontology(f"file://{tmp_path}").load()
+        onto = world.get_ontology(f"file://{tmp_path}").load()
         with onto:
             owlready2.sync_reasoner_hermit(world, infer_property_values=False)
         unsat = list(world.inconsistent_classes())
@@ -606,9 +650,9 @@ _CAT_ABBR: dict[str, str] = {cat: abbr for cat, (abbr, _) in _CATEGORIES.items()
 _CAT_COLOR: dict[str, str] = {cat: color for cat, (_, color) in _CATEGORIES.items()}
 
 _SOURCE_BORDER: dict[str, str] = {
-    "ontometrics_api":  "#2980b9",
+    "ontometrics_api": "#2980b9",
     "self-implemented": "#27ae60",
-    "hermit_reasoner":  "#8e44ad",
+    "hermit_reasoner": "#8e44ad",
 }
 
 _HTML_TEMPLATE = """\
@@ -716,25 +760,27 @@ def _write_html(
 
     html_rows: list[str] = []
     for metric_name, meta in _REGISTRY.items():
-        vals     = by_metric.get(metric_name, {})
-        u_val    = vals.get("union_input")
-        m_val    = vals.get("merged_ontology")
-        a_val    = vals.get("applied_alignments") if has_applied else None
-        border   = _SOURCE_BORDER.get(meta["source"], "#ccc")
-        badges   = _cat_badges(meta["categories"])
+        vals = by_metric.get(metric_name, {})
+        u_val = vals.get("union_input")
+        m_val = vals.get("merged_ontology")
+        a_val = vals.get("applied_alignments") if has_applied else None
+        if u_val is None and m_val is None and a_val is None:
+            continue
+        border = _SOURCE_BORDER.get(meta["source"], "#ccc")
+        badges = _cat_badges(meta["categories"])
         applied_cell = _fmt(a_val) if has_applied else ""
 
         html_rows.append(
             f'    <tr style="border-left: 3px solid {border}">\n'
-            f'      <td><strong>{metric_name}</strong></td>\n'
-            f'      {_fmt(u_val)}\n'
-            f'      {applied_cell}\n'
-            f'      {_fmt(m_val)}\n'
+            f"      <td><strong>{metric_name}</strong></td>\n"
+            f"      {_fmt(u_val)}\n"
+            f"      {applied_cell}\n"
+            f"      {_fmt(m_val)}\n"
             f'      <td class="tgt">{meta["target"]}</td>\n'
             f'      <td class="src">{meta["source"]}</td>\n'
             f'      <td class="cats">{badges}</td>\n'
             f'      <td class="interp">{meta["interpretation"]}</td>\n'
-            f'    </tr>'
+            f"    </tr>"
         )
 
     applied_col_header = "<th>applied_alignments</th>" if has_applied else ""
@@ -758,16 +804,31 @@ def _write_html(
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-def main() -> None:
-    if len(sys.argv) != 2:
-        print(f"Usage: {sys.argv[0]} <folder_name>", file=sys.stderr)
-        sys.exit(1)
 
-    folder    = sys.argv[1]
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Compute ontology quality metrics based on 7 academic quality dimensions."
+    )
+    parser.add_argument("folder_name", help="Subfolder under tests/inputs/ and tests/outputs/")
+    parser.add_argument(
+        "--hermit",
+        action="store_true",
+        default=False,
+        help="Run HermiT reasoner to compute unsatisfiable_classes (requires owlready2 + Java)",
+    )
+    parser.add_argument(
+        "--skip-api",
+        action="store_true",
+        default=False,
+        help="Skip OntoMetrics API calls (useful when the service is unavailable)",
+    )
+    args = parser.parse_args()
+
+    folder = args.folder_name
     repo_root = Path(__file__).parent.parent
-    input_dir  = repo_root / "tests" / "inputs"  / folder
+    input_dir = repo_root / "tests" / "inputs" / folder
     output_dir = repo_root / "tests" / "outputs" / folder
-    out_csv    = output_dir / "metrics_def.csv"
+    out_csv = output_dir / "metrics_def.csv"
 
     if not input_dir.exists():
         print(f"Input directory not found: {input_dir}", file=sys.stderr)
@@ -781,7 +842,7 @@ def main() -> None:
         )
         sys.exit(1)
 
-    merged_path  = output_dir / "merged_ontology.owl"
+    merged_path = output_dir / "merged_ontology.owl"
     applied_path = output_dir / "applied_alignments.owl"
 
     if not merged_path.exists():
@@ -796,7 +857,7 @@ def main() -> None:
         union.add(t)
     for t in onto2:
         union.add(t)
-    merged  = _load_graph(str(merged_path))
+    merged = _load_graph(str(merged_path))
     applied = _load_graph(str(applied_path)) if applied_path.exists() else None
 
     print(f"  onto1:              {len(onto1)} triples")
@@ -813,30 +874,33 @@ def main() -> None:
     onto2_entities: set[URIRef] = {s for s, _, _ in onto2 if isinstance(s, URIRef)}
 
     # ── API calls ──────────────────────────────────────────────────────────────
-    print("\nQuerying OntoMetrics API …")
-    api_graphs: list[tuple[str, bytes]] = [
-        ("union_input",     union.serialize(format="xml").encode("utf-8")),
-        ("merged_ontology", merged_path.read_bytes()),
-    ]
-    if applied is not None:
-        api_graphs.append(
-            ("applied_alignments", applied.serialize(format="xml").encode("utf-8"))
-        )
-
     api_results: dict[str, dict[str, float]] = {}
-    for i, (graph_name, owl_bytes) in enumerate(api_graphs):
-        if i > 0:
-            time.sleep(_DELAY_S)
-        try:
-            api_results[graph_name] = _query_api(owl_bytes, graph_name)
-        except Exception as exc:
-            print(f"  ERROR for {graph_name}: {exc}", file=sys.stderr)
-            api_results[graph_name] = {}
+    if args.skip_api:
+        print("\nOntoMetrics API skipped (--skip-api)")
+    else:
+        print("\nQuerying OntoMetrics API …")
+        api_graphs: list[tuple[str, bytes]] = [
+            ("union_input", union.serialize(format="xml").encode("utf-8")),
+            ("merged_ontology", merged_path.read_bytes()),
+        ]
+        if applied is not None:
+            api_graphs.append(
+                ("applied_alignments", applied.serialize(format="xml").encode("utf-8"))
+            )
+
+        for i, (graph_name, owl_bytes) in enumerate(api_graphs):
+            if i > 0:
+                time.sleep(_DELAY_S)
+            try:
+                api_results[graph_name] = _query_api(owl_bytes, graph_name)
+            except Exception as exc:
+                print(f"  ERROR for {graph_name}: {exc}", file=sys.stderr)
+                api_results[graph_name] = {}
 
     # ── Self-implemented metrics ───────────────────────────────────────────────
     print("\nComputing self-implemented metrics …")
     graph_objects: dict[str, Graph] = {
-        "union_input":     union,
+        "union_input": union,
         "merged_ontology": merged,
     }
     if applied is not None:
@@ -851,9 +915,12 @@ def main() -> None:
         print(f"  {name}: done")
 
     # ── HermiT reasoner ───────────────────────────────────────────────────────
-    print("\nRunning HermiT reasoner …")
-    for name, g in graph_objects.items():
-        self_metrics[name].update(_reasoner_check(g, name))
+    if args.hermit:
+        print("\nRunning HermiT reasoner …")
+        for name, g in graph_objects.items():
+            self_metrics[name].update(_reasoner_check(g, name))
+    else:
+        print("\nHermiT reasoner skipped (pass --hermit to enable unsatisfiable_classes)")
 
     # ── Assemble rows ──────────────────────────────────────────────────────────
     graph_names = ["union_input", "merged_ontology"] + (
@@ -878,15 +945,17 @@ def main() -> None:
             if value is None:
                 continue
 
-            rows.append({
-                "graph":          graph_name,
-                "metric":         metric_name,
-                "value":          value,
-                "source":         meta["source"],
-                "categories":     ", ".join(meta["categories"]),
-                "target":         meta["target"],
-                "interpretation": meta["interpretation"],
-            })
+            rows.append(
+                {
+                    "graph": graph_name,
+                    "metric": metric_name,
+                    "value": value,
+                    "source": meta["source"],
+                    "categories": ", ".join(meta["categories"]),
+                    "target": meta["target"],
+                    "interpretation": meta["interpretation"],
+                }
+            )
 
     if not rows:
         print("No metrics collected — API may be unavailable.", file=sys.stderr)
@@ -897,8 +966,15 @@ def main() -> None:
     with out_csv.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(
             f,
-            fieldnames=["graph", "metric", "value", "target", "source",
-                        "categories", "interpretation"],
+            fieldnames=[
+                "graph",
+                "metric",
+                "value",
+                "target",
+                "source",
+                "categories",
+                "interpretation",
+            ],
         )
         writer.writeheader()
         writer.writerows(rows)
@@ -919,8 +995,8 @@ def main() -> None:
     hdr = (
         f"{'metric':<{col}}  {'union_input':>15}  {'applied_alignments':>20}"
         f"  {'merged_ontology':>16}  target"
-        if has_app else
-        f"{'metric':<{col}}  {'union_input':>15}  {'merged_ontology':>16}  target"
+        if has_app
+        else f"{'metric':<{col}}  {'union_input':>15}  {'merged_ontology':>16}  target"
     )
     print(hdr)
     print("─" * len(hdr))
@@ -928,6 +1004,8 @@ def main() -> None:
         vals = by_metric.get(metric_name, {})
         u = vals.get("union_input")
         m = vals.get("merged_ontology")
+        if not vals:
+            continue
 
         def _fs(v: float | None, w: int) -> str:
             if v is None:
