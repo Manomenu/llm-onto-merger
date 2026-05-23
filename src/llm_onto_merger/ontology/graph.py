@@ -7,8 +7,6 @@ from ..logger import get_logger
 
 log = get_logger(__name__)
 
-_OWL_DISJOINT_WITH = URIRef("http://www.w3.org/2002/07/owl#disjointWith")
-
 
 def _relabel_entities(g: Graph) -> int:
     """For every URI that carries an rdfs:label, replace its local name (the
@@ -61,26 +59,17 @@ def create_ontology(ontology_path: Path) -> Graph:
     """Load an OWL/RDF ontology from the given path.
 
     Post-load preprocessing:
-    - disjointWith triples are stripped — O(N²) symmetry constraints that add
-      noise to the LLM merge step.
     - Each entity with an rdfs:label has its URI local name replaced with the
       label (whitespace → '_'), and the label triple is removed so the name is
       not duplicated in the serialised representation.
     """
     g = Graph()
     g.parse(str(ontology_path))
-
-    disjoint_triples = list(g.triples((None, _OWL_DISJOINT_WITH, None)))
-    for triple in disjoint_triples:
-        g.remove(triple)
-
     renamed = _relabel_entities(g)
-
     log.info(
-        "Ontology loaded from %s (%d triples, %d disjointWith removed, %d entities relabelled)",
+        "Ontology loaded from %s (%d triples, %d entities relabelled)",
         ontology_path,
         len(g),
-        len(disjoint_triples),
         renamed,
     )
     return g

@@ -42,18 +42,11 @@ def save_diff_debug(
     merge_environments: list[MergeEnvironment],
     merged_graphs: list[Graph],
     out_dir: Path,
-    leftover_environments: list[MergeEnvironment] | None = None,
-    leftover_merged_graphs: list[Graph] | None = None,
 ) -> None:
-    """Write env_diff_N.txt and leftover_env_diff_N.txt for each environment.
+    """Write env_diff_N.txt for each environment.
 
     Triples are compared by local name (URI-agnostic).
     Blank nodes and non-URIRef triples are excluded.
     """
     for i, (env, merged) in enumerate(zip(merge_environments, merged_graphs)):
         _write_diff(env, merged, out_dir / f"env_diff_{i}.txt")
-
-    for i, (env, merged) in enumerate(
-        zip(leftover_environments or [], leftover_merged_graphs or [])
-    ):
-        _write_diff(env, merged, out_dir / f"leftover_env_diff_{i}.txt")
