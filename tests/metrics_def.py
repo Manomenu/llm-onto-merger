@@ -124,8 +124,8 @@ _REGISTRY: dict[str, dict] = {
         ),
     },
     "ALC": {
-        "api_key": ["absolute_leaf_cardinality"],
-        "source": "ontometrics_api",
+        "api_key": None,
+        "source": "self-implemented",
         "categories": ["Conciseness", "Hierarchy Integration Quality"],
         "target": "context-dependent",
         "interpretation": (
@@ -175,8 +175,8 @@ _REGISTRY: dict[str, dict] = {
         ),
     },
     "average_depth": {
-        "api_key": ["average_depth"],
-        "source": "ontometrics_api",
+        "api_key": None,
+        "source": "self-implemented",
         "categories": ["Hierarchy Integration Quality"],
         "target": "higher after merge",
         "interpretation": (
@@ -186,8 +186,8 @@ _REGISTRY: dict[str, dict] = {
         ),
     },
     "max_depth": {
-        "api_key": ["maximal_depth", "max_depth", "maximum_depth"],
-        "source": "ontometrics_api",
+        "api_key": None,
+        "source": "self-implemented",
         "categories": ["Hierarchy Integration Quality"],
         "target": "higher after merge",
         "interpretation": (
@@ -196,8 +196,8 @@ _REGISTRY: dict[str, dict] = {
         ),
     },
     "average_breadth": {
-        "api_key": ["average_breadth"],
-        "source": "ontometrics_api",
+        "api_key": None,
+        "source": "self-implemented",
         "categories": ["Hierarchy Integration Quality"],
         "target": "context-dependent",
         "interpretation": (
@@ -207,8 +207,8 @@ _REGISTRY: dict[str, dict] = {
         ),
     },
     "max_breadth": {
-        "api_key": ["maximal_breadth", "max_breadth", "maximum_breadth"],
-        "source": "ontometrics_api",
+        "api_key": None,
+        "source": "self-implemented",
         "categories": ["Hierarchy Integration Quality"],
         "target": "context-dependent",
         "interpretation": (
@@ -451,6 +451,58 @@ def _connectivity_ratio(g: Graph) -> float:
     return len(reachable) / len(cls)
 
 
+def _hierarchy_stats(g: Graph, cls: set[URIRef]) -> dict[str, float]:
+    """Compute ALC, depth and breadth metrics from the subClassOf hierarchy."""
+    if not cls:
+        return {
+            "ALC": 0.0,
+            "average_depth": 0.0,
+            "max_depth": 0.0,
+            "average_breadth": 0.0,
+            "max_breadth": 0.0,
+        }
+
+    # children[parent] = direct named subclasses
+    children: dict[URIRef, list[URIRef]] = defaultdict(list)
+    for s, _, o in g.triples((None, _SUB, None)):
+        if isinstance(s, URIRef) and isinstance(o, URIRef) and s in cls:
+            children[o].append(s)
+
+    # ALC — named classes with no direct subclasses
+    alc = float(sum(1 for c in cls if not children.get(c)))
+
+    # BFS from owl:Thing — depth of each reachable class
+    depths: dict[URIRef, int] = {}
+    queue: deque[tuple[URIRef, int]] = deque([(_OWL_THING, 0)])
+    visited: set[URIRef] = {_OWL_THING}
+    while queue:
+        node, d = queue.popleft()
+        for child in children.get(node, []):
+            if child not in visited:
+                visited.add(child)
+                depths[child] = d + 1
+                queue.append((child, d + 1))
+
+    depth_vals = list(depths.values())
+    avg_depth = sum(depth_vals) / len(depth_vals) if depth_vals else 0.0
+    max_depth = float(max(depth_vals)) if depth_vals else 0.0
+
+    # Breadth — direct child count for nodes in cls that have children
+    breadths = [
+        len(ch) for node, ch in children.items() if node in cls and ch
+    ]
+    avg_breadth = sum(breadths) / len(breadths) if breadths else 0.0
+    max_breadth = float(max(breadths)) if breadths else 0.0
+
+    return {
+        "ALC": alc,
+        "average_depth": round(avg_depth, 4),
+        "max_depth": max_depth,
+        "average_breadth": round(avg_breadth, 4),
+        "max_breadth": max_breadth,
+    }
+
+
 def _compute_self_metrics(
     g: Graph,
     onto1_entities: set[URIRef],
@@ -545,6 +597,8 @@ def _compute_self_metrics(
     )
     annotation_coverage = annotated / n_e if n_e else 0.0
 
+    hierarchy = _hierarchy_stats(g, cls)
+
     return {
         "ARC": arc,
         "cycle_count": cycle_count,
@@ -554,6 +608,7 @@ def _compute_self_metrics(
         "connectivity_ratio": round(connectivity, 4),
         "triple_preservation_ratio": round(tpr, 4),
         "annotation_coverage_ratio": round(annotation_coverage, 4),
+        **hierarchy,
     }
 
 
