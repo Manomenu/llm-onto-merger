@@ -114,38 +114,78 @@ Codec jest budowany **raz** wspólnie dla obu ontologii przed ekstrakcją i prze
 
 ### 6. Ekstrakcja środowisk scalania (`extract_environments/module.py`)
 
-To jest centralny, najbardziej złożony krok. Celem jest podzielenie obu ontologii na małe pary podgrafów (`MergeEnvironment`), które można niezależnie wysłać do LLM.
+Celem jest stworzenie jednego `MergeEnvironment` na każdy alignment — małego podgrafu, który można niezależnie wysłać do LLM.
 
-#### 6a. Kopiowanie do roboczych grafów `source_1`, `source_2`
+#### 6a. Robocze kopie grafów
 
-Oba grafy są kopiowane do lokalnych kopii roboczych. Podczas ekstrakcji triplety są **przenoszone** (nie kopiowane) z `source_1`/`source_2` do podgrafów środowisk. Po zakończeniu ekstrakcji to co zostało w `source_1`/`source_2` to **leftovers** — encje bez żadnego alignmentu.
+```python
+source_1 = Graph()
+source_2 = Graph()
+for triple in onto_1:
+    source_1.add(triple)
+for triple in onto_2:
+    source_2.add(triple)
+```
 
-#### 6b. BFS dla każdego alignmentu (od najwyższego measure)
+Oba grafy są kopiowane do roboczych kopii. Triplety seed-węzłów są **przenoszone** (usuwane z source) przy ekstrakcji. Po przetworzeniu wszystkich alignmentów to co pozostanie w `source_1`/`source_2` to **leftovers** — encje bez dopasowania, pass-through do wyniku.
 
-Alignmenty są przetwarzane od największego `measure` do najmniejszego (najlepsze dopasowania pierwsze). Dla każdego alignmentu:
+#### 6b. Pula alignmentów (`_AlignmentPool`)
 
-**Seed:** Encja z onto_1 (`seed1`) i odpowiadająca z onto_2 (`seed2`) stają się punktem startowym ekspansji.
+```python
+pool = _AlignmentPool(alignments)
+# _sorted — lista posortowana rosnąco po measure; pop() z końca = O(1) najwyższy
+```
 
-**BFS (przeszukiwanie wszerz):** Z seeda rozchodzi się "fala" ekspansji — każdy sąsiad encji jest kandydatem do dołączenia do środowiska. Przetwarzane są dwie kolejki równolegle: `expand_queue1` (strona onto_1) i `expand_queue2` (strona onto_2).
+`pop()` zawsze zwraca alignment o **najwyższym** `measure` (najlepsze dopasowania pierwsze).
 
-Dla każdego kandydata BFS sprawdza:
+#### 6c. Budowanie środowiska (`_build_merge_environment`)
 
-1. **Well-known namespace?** (np. `owl:Class`, `rdf:type`) → trafia do `border` (granicy środowiska), nie jest ekspandowany. Well-known NSy to słownik RDF/OWL, nie encje domenowe.
+Dla każdego alignmentu jedno środowisko:
 
-2. **Globalnie zamrożony?** — węzły, które były na granicy wcześniej ukończonego środowiska i nie mają już alignmentu, są "zamrożone" — trafiają do granicy, nie są ponownie ekspandowane. Zapobiega to duplikowaniu encji w wielu środowiskach.
+**1. Seed — przeniesienie bezpośrednich trójek**
 
-3. **Jest w puli alignmentów?** → konieczna jest **paired expansion**: obaj partnerzy z obu stron muszą wejść razem. Sprawdzana jest łączna delta rozmiaru. Jeśli przekroczyłaby limit — alignment jest z powrotem wstawiany do puli (stanie się seedem własnego środowiska) i ekspansja kończy się.
+```python
+seed1 = URIRef(seed_al.entity1)   # strona onto_1
+seed2 = URIRef(seed_al.entity2)   # strona onto_2
 
-4. **Zwykły węzeł?** → estymowana jest delta rozmiaru (ile znaków doda ta encja do prompta). Jeśli mieści się w limicie — triplety encji są przenoszone do podgrafu środowiska.
+triples = move_entity_triples(seed1, source_1, sub1)
+```
 
-**Limit rozmiaru (`max_chars`):** Każde środowisko ma ograniczenie na liczbę znaków serializacji KG2Code. Limit zapobiega przekroczeniu okna kontekstu LLM. Rozmiar jest liczony przyrostowo podczas BFS (`_EnvSizeTracker`).
+`move_entity_triples` przenosi **wszystkie** triplety, w których seed jest podmiotem **lub** obiektem — więcej kontekstu niż same outgoing edges. Po przeniesieniu triplety nie istnieją już w `source_1`.
 
-**Border:** Węzły, które znaleziono jako sąsiadów, ale nie weszły do wnętrza środowiska (z powodu limitu, zamrożenia lub well-known) trafiają do `border1`/`border2`. Granica jest przekazywana do LLM jako kontekst — model wie, że środowisko jest fragmentem większej ontologii i z jakimi innymi encjami jest połączone.
+**2. Klasyfikacja sąsiadów → border**
+
+```python
+for s, _, o in triples:
+    for neighbor in (s, o):
+        if isinstance(neighbor, URIRef) and neighbor not in seeds and not is_wk(neighbor):
+            border_set.add(neighbor)
+```
+
+Każdy sąsiad (URIRef, nie-well-known, nieistniejący już w seeds) trafia do `border_set`. Nie ma wyjątków — nawet jeśli sąsiad ma alignment w puli, zostaje w borderze. Jego alignment zostanie pobrany jako seed **własnego** środowiska w kolejnej iteracji.
+
+| Przypadek | Akcja |
+|-----------|-------|
+| Well-known NS (`owl:`, `rdf:`, `xsd:`, ...) | pomijany — LLM zna te słowniki |
+| Już w seeds | pomijany |
+| Każdy inny URIRef | → `border` |
+
+**3. Kopiowanie trójek border-węzłów**
+
+```python
+for node in border_set1:
+    for triple in source_1.triples((node, None, None)):
+        border1_graph.add(triple)   # KOPIA, source pozostaje niezmieniony
+```
+
+Trójki border-węzłów są **kopiowane** (nie przenoszone) — ten sam węzeł może pojawiać się w borderze wielu środowisk i za każdym razem dostarczać pełen kontekst. Trójki nigdy nie są konsumowane z source przez samą przynależność do granicy.
+
+> **Uwaga:** trójki bezpośrednio łączące border-węzeł z seedem (np. `(border_node, prop, seed1)`) zostały już przeniesione przez `move_entity_triples(seed1, ...)` i **nie pojawią się** w `border1_graph`. Jest to zachowanie poprawne — te relacje są widoczne w `onto_1` po stronie seeda.
 
 **Wynik:** `(environments: list[MergeEnvironment], onto_1_leftover: Graph, onto_2_leftover: Graph)`
 
-- `environments` — lista środowisk scalania zasilanych alignmentami
-- `onto_1_leftover`, `onto_2_leftover` — to co zostało w `source_1`, `source_2` po wyczerpaniu wszystkich alignmentów: encje bez żadnego dopasowania. Trafiają do outputu bez zmian (pass-through).
+- `environments` — lista środowisk, każde z: `onto_1` (trójki seed1), `onto_2` (trójki seed2), `border1_graph`, `border2_graph`, `alignments: [seed_al]`
+- `onto_1_leftover`, `onto_2_leftover` — pozostałości source po ekstrakcji: encje bez żadnego alignmentu, pass-through do wyniku bez zmian
 
 ---
 
