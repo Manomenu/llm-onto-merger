@@ -2,148 +2,108 @@ from pydantic import BaseModel
 from rdflib import Graph, Literal, URIRef
 
 from ..logger import get_logger
-from .uri import local_name
 
 log = get_logger(__name__)
 
-# Preamble included once at the top of a prompt that uses KG2Code representation.
-# Tuple format: (subject, relation, object) — only outgoing triples are stored,
-# so subject is always the entity itself.
 KG2CODE_PREAMBLE = """
-An OWL ontology entity is defined as follows:
+Each ontology entity is represented as:
+  Entity(uri, tuples)
+where:
+  uri    — 'code:LocalName'  uniquely identifies the entity, e.g. 'aa:Person'
+  tuples — outgoing triples: list of (subject_uri, predicate_uri, object_uri_or_literal)
+           every URI element uses the same 'code:LocalName' encoding
 
-class Entity:
-    def __init__(self, uri, name, tuples=[]):
-        self.uri = uri
-        self.name = name
-        self.tuples = tuples
+Example:
+  Entity('aa:Person', tuples=[
+      ('aa:Person', 'af:subClassOf', 'ab:Animal'),
+      ('aa:Person', 'ae:type', 'ah:Class'),
+  ])
 
-    def get_neighbors(self):
-        neighbors = set()
-        for subject, relation, obj in self.tuples:
-            neighbors.add(obj)
-            return list(neighbors)
-
-    def get_relation_information(self):
-        return [relation for subject, relation, obj in self.tuples]
+When generating a Merged_Ontology you MUST use the same code prefixes for existing entities.
+For entirely new concepts you may use 'zz:NewName'.
 """
-
-# Standard RDF/OWL/RDFS predicates resolvable from local name alone.
-WELL_KNOWN_PREDICATES: dict[str, str] = {
-    "type":                "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-    "subClassOf":          "http://www.w3.org/2000/01/rdf-schema#subClassOf",
-    "subPropertyOf":       "http://www.w3.org/2000/01/rdf-schema#subPropertyOf",
-    "domain":              "http://www.w3.org/2000/01/rdf-schema#domain",
-    "range":               "http://www.w3.org/2000/01/rdf-schema#range",
-    "label":               "http://www.w3.org/2000/01/rdf-schema#label",
-    "comment":             "http://www.w3.org/2000/01/rdf-schema#comment",
-    "disjointWith":        "http://www.w3.org/2002/07/owl#disjointWith",
-    "equivalentClass":     "http://www.w3.org/2002/07/owl#equivalentClass",
-    "equivalentProperty":  "http://www.w3.org/2002/07/owl#equivalentProperty",
-    "inverseOf":           "http://www.w3.org/2002/07/owl#inverseOf",
-    "onProperty":          "http://www.w3.org/2002/07/owl#onProperty",
-    "hasValue":            "http://www.w3.org/2002/07/owl#hasValue",
-    "someValuesFrom":      "http://www.w3.org/2002/07/owl#someValuesFrom",
-    "allValuesFrom":       "http://www.w3.org/2002/07/owl#allValuesFrom",
-}
-
-_INVALID_NAMES = frozenset({"", "merged"})
 
 
 class Entity(BaseModel):
     uri: str
-    name: str
     tuples: list[tuple[str, str, str]]
 
 
-def graph_to_string(
-    graph: Graph,
-    uri_to_code: dict[str, str] | None = None,
-) -> str:
-    """Render all entities in *graph* as KG2Code-style Entity(...) declarations.
+def _namespace_of(uri: str) -> str:
+    return (uri.rsplit("#", 1)[0] + "#") if "#" in uri else (uri.rsplit("/", 1)[0] + "/")
 
-    Does NOT include KG2CODE_PREAMBLE — prepend it once at the prompt level.
 
-    uri_to_code — when provided, each subject URI is replaced with its short
-    code (e.g. 'aa', 'ab') to reduce prompt size.  The caller is responsible
-    for restoring full URIs from the reverse mapping after the LLM responds.
+def _encode(uri: str, ns_to_code: dict[str, str]) -> str:
+    """Encode a full URI as 'code:LocalName'. Falls back to the bare URI on miss."""
+    ns = _namespace_of(uri)
+    code = ns_to_code.get(ns)
+    local = uri[len(ns):]
+    return f"{code}:{local}" if code and local else uri
+
+
+def _decode(coded: str, code_to_ns: dict[str, str]) -> URIRef | Literal:
+    """Decode 'code:LocalName' → URIRef. Falls back to Literal for unknowns."""
+    idx = coded.find(":")
+    if idx > 0:
+        code, local = coded[:idx], coded[idx + 1:]
+        ns = code_to_ns.get(code)
+        if ns and local:
+            return URIRef(ns + local)
+    if coded.startswith("http"):
+        return URIRef(coded)
+    return Literal(coded)
+
+
+def graph_to_string(graph: Graph, ns_to_code: dict[str, str]) -> str:
+    """Render all entities in *graph* as KG2Code Entity(...) declarations.
+
+    Every URI — subject, predicate, object — is encoded as 'code:LocalName'
+    using ns_to_code so the full URI can be reconstructed from the response.
+    Does NOT include KG2CODE_PREAMBLE.
     """
-    subjects = sorted(
-        {s for s, _, _ in graph if isinstance(s, URIRef)},
-        key=str,
-    )
+    subjects = sorted({s for s, _, _ in graph if isinstance(s, URIRef)}, key=str)
     lines = []
     for subj in subjects:
-        subj_str = str(subj)
-        uri_repr = (
-            uri_to_code[subj_str]
-            if uri_to_code and subj_str in uri_to_code
-            else subj_str
-        )
+        subj_enc = _encode(str(subj), ns_to_code)
         tuple_strs = [
-            f"('{local_name(subj)}', '{local_name(p)}', '{str(o) if isinstance(o, Literal) else local_name(o)}')"
+            f"('{subj_enc}', '{_encode(str(p), ns_to_code)}', "
+            f"'{str(o) if isinstance(o, Literal) else _encode(str(o), ns_to_code)}')"
             for _, p, o in graph.triples((subj, None, None))
         ]
-        lines.append(
-            f"Entity('{uri_repr}', name='{local_name(subj)}',"
-            f" tuples=[{', '.join(tuple_strs)}])"
-        )
+        lines.append(f"Entity('{subj_enc}', tuples=[{', '.join(tuple_strs)}])")
     return "\n".join(lines)
 
 
-def _is_valid_entity(e: Entity) -> bool:
-    """Return False for placeholder/garbage entities the LLM sometimes emits."""
-    name = e.name.strip()
-    uri  = e.uri.strip()
-    if not name or not uri:
+def _is_valid_entity(e: Entity, code_to_ns: dict[str, str]) -> bool:
+    uri = e.uri.strip()
+    if not uri:
         return False
-    if name in _INVALID_NAMES:
-        return False
-    if not uri.startswith("http"):
-        return False
-    return True
+    idx = uri.find(":")
+    if idx > 0:
+        return uri[:idx] in code_to_ns and bool(uri[idx + 1:])
+    return uri.startswith("http")
 
 
-def entities_to_graph(entities: list[Entity]) -> Graph:
-    """Reconstruct an rdflib Graph from a list of Entity returned by the LLM.
+def entities_to_graph(entities: list[Entity], code_to_ns: dict[str, str]) -> Graph:
+    """Reconstruct an rdflib Graph from LLM-returned Entity list.
 
-    Tuple format is (subject_name, predicate_local, object_name_or_literal).
-    Resolution strategy:
-    - subject   → entity.uri (authoritative full URI)
-    - predicate → WELL_KNOWN_PREDICATES lookup, else entity namespace + local
-    - object    → matched entity URI by name, else Literal
-
-    Entities with empty/invalid names or URIs are silently dropped.
+    Every URI element is decoded via code_to_ns.  Unknown codes fall back to
+    Literal; triples with a non-URIRef predicate are silently skipped.
     """
-    valid_entities = [e for e in entities if _is_valid_entity(e)]
-    if len(valid_entities) < len(entities):
+    valid = [e for e in entities if _is_valid_entity(e, code_to_ns)]
+    if len(valid) < len(entities):
         log.warning(
-            "Dropped %d invalid/placeholder entities from LLM response "
-            "(empty name, non-http URI, or known placeholder)",
-            len(entities) - len(valid_entities),
+            "Dropped %d invalid/placeholder entities from LLM response",
+            len(entities) - len(valid),
         )
-
-    name_to_uri = {e.name: e.uri for e in valid_entities}
-
-    def _namespace(uri: str) -> str:
-        return uri.rsplit("#", 1)[0] + "#" if "#" in uri else uri.rsplit("/", 1)[0] + "/"
-
-    def _resolve_predicate(local: str, entity_ns: str) -> URIRef:
-        if local in WELL_KNOWN_PREDICATES:
-            return URIRef(WELL_KNOWN_PREDICATES[local])
-        return URIRef(entity_ns + local)
-
-    def _resolve_object(obj: str) -> URIRef | Literal:
-        if obj in name_to_uri:
-            return URIRef(name_to_uri[obj])
-        return Literal(obj)
-
     graph = Graph()
-    for entity in valid_entities:
-        subj = URIRef(entity.uri)
-        ns   = _namespace(entity.uri)
-        for _, pred_local, obj_repr in entity.tuples:
-            if not pred_local.strip():
-                continue
-            graph.add((subj, _resolve_predicate(pred_local, ns), _resolve_object(obj_repr)))
+    for entity in valid:
+        subj = _decode(entity.uri, code_to_ns)
+        if not isinstance(subj, URIRef):
+            continue
+        for _, p_coded, o_coded in entity.tuples:
+            p = _decode(p_coded, code_to_ns)
+            o = _decode(o_coded, code_to_ns)
+            if isinstance(p, URIRef):
+                graph.add((subj, p, o))
     return graph

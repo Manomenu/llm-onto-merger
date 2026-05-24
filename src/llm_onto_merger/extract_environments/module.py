@@ -11,71 +11,11 @@ from .merge_environment import (
     MergeEnvironmentConfig,
     _CHARS_PER_BORDER_NODE,
     _CHARS_PER_TRIPLE_TERM,
-    _build_namespace_codec,
+    _namespace_of,
+    build_namespace_codec,
 )
 
 log = get_logger(__name__)
-
-# Namespaces whose nodes are infrastructure/vocabulary, not domain entities.
-# They may appear as border references but must never be pulled into env interior.
-_WELL_KNOWN_NS: tuple[str, ...] = (
-    "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-    "http://www.w3.org/2001/XMLSchema#",
-    "http://www.w3.org/2000/01/rdf-schema#",
-    "http://www.w3.org/2002/07/owl#",
-    "http://www.w3.org/2003/11/swrl#",
-    "http://www.w3.org/2003/11/swrlb#",
-    "http://www.owl-ontologies.com/2005/08/07/xsp.owl#",
-    "http://protege.stanford.edu/plugins/owl/protege#",
-)
-
-
-def _is_well_known(uri: URIRef) -> bool:
-    s = str(uri)
-    return s.startswith(_WELL_KNOWN_NS)
-
-
-# ---------------------------------------------------------------------------
-# Pre-rename
-# ---------------------------------------------------------------------------
-
-def _pre_rename_onto2(
-    onto_2: Graph,
-    alignments: list[Alignment],
-) -> tuple[Graph, list[Alignment]]:
-    """REQ: before extraction, rename every entity2 URI → entity1 URI inside onto2
-    for '=' alignments. Non-'=' alignments (e.g. subClassOf) are left untouched.
-    Also updates the alignment objects so pool lookups stay consistent.
-    """
-    # REQ: only '=' relation triggers renaming
-    uri_map: dict[str, str] = {
-        al.entity2: al.entity1
-        for al in alignments
-        if al.relation == "=" and al.entity2 != al.entity1
-    }
-    if not uri_map:
-        return onto_2, alignments
-
-    log.info(
-        "Pre-renaming %d entity2 URIs in onto2 (= alignments only)", len(uri_map)
-    )
-
-    # Rebuild onto2 with substituted URIs
-    renamed: Graph = Graph()
-    for s, p, o in onto_2:
-        new_s = URIRef(uri_map[str(s)]) if isinstance(s, URIRef) and str(s) in uri_map else s
-        new_o = URIRef(uri_map[str(o)]) if isinstance(o, URIRef) and str(o) in uri_map else o
-        renamed.add((new_s, p, new_o))
-
-    # REQ: update alignment entity2 so the pool seed uses the new URI
-    updated: list[Alignment] = [
-        al.model_copy(update={"entity2": uri_map[al.entity2]})
-        if al.relation == "=" and al.entity2 in uri_map
-        else al
-        for al in alignments
-    ]
-
-    return renamed, updated
 
 
 # ---------------------------------------------------------------------------
@@ -291,7 +231,11 @@ def _build_merge_environment(
     global_frozen: set[URIRef],
     uri_to_code: dict[str, str],
     code_to_ns: dict[str, str],
+    ns_to_code: dict[str, str],
+    well_known_codes: frozenset[str],
 ) -> MergeEnvironment:
+    is_wk = lambda u: ns_to_code.get(_namespace_of(str(u))) in well_known_codes  # noqa: E731
+
     # REQ: seed from the most relevant (highest-measure) alignment pair
     seed_al = alignment_pool.pop()
     seed1 = URIRef(seed_al.entity1)
@@ -341,7 +285,7 @@ def _build_merge_environment(
 
         # Well-known namespace nodes (owl, rdf, rdfs, xsd, swrl, …) are vocabulary,
         # not domain entities — keep as border reference, never expand into interior.
-        if _is_well_known(candidate):
+        if is_wk(candidate):
             border_set.add(candidate)
             tracker.add_border(candidate, side)
             return False
@@ -479,7 +423,7 @@ def _build_merge_environment(
         alignments=env_alignments,
         border1=deque(border_set1),
         border2=deque(border_set2),
-        uri_to_code=uri_to_code,
+        ns_to_code=ns_to_code,
         code_to_ns=code_to_ns,
         tracked_size=tracker.size,
     )
@@ -498,6 +442,10 @@ class ExtractEnvironmentsModule:
         onto_1: Graph,
         onto_2: Graph,
         alignments: list[Alignment],
+        uri_to_code: dict[str, str],
+        code_to_ns: dict[str, str],
+        ns_to_code: dict[str, str],
+        well_known_codes: frozenset[str],
     ) -> tuple[list[MergeEnvironment], Graph, Graph]:
         """Extract merge environments from two ontologies.
 
@@ -505,16 +453,12 @@ class ExtractEnvironmentsModule:
             (environments, leftover_1, leftover_2) — leftover graphs contain triples
             that had no alignment and were never absorbed into any environment.
         """
-        renamed_onto_2, alignments = _pre_rename_onto2(onto_2, alignments)
-
         source_1 = Graph()
         source_2 = Graph()
         for triple in onto_1:
             source_1.add(triple)
-        for triple in renamed_onto_2:
+        for triple in onto_2:
             source_2.add(triple)
-
-        uri_to_code, code_to_ns = _build_namespace_codec(source_1, source_2)
 
         alignment_pool = _AlignmentPool(alignments)
         environments: list[MergeEnvironment] = []
@@ -529,7 +473,7 @@ class ExtractEnvironmentsModule:
         while not alignment_pool.is_empty():
             env = _build_merge_environment(
                 source_1, source_2, alignment_pool, self.config, idx, global_frozen,
-                uri_to_code, code_to_ns,
+                uri_to_code, code_to_ns, ns_to_code, well_known_codes,
             )
             environments.append(env)
 

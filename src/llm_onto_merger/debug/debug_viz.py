@@ -23,58 +23,17 @@ Post-merge environments each get a unique colour from a rotating 12-colour
 palette; leftovers keep the same blue-grey tones as above.
 """
 
-from collections import deque
 from pathlib import Path
 
 from pyvis.network import Network
 from rdflib import Graph, URIRef
 
-from ..alignment.alignment import Alignment
 from ..extract_environments.merge_environment import MergeEnvironment
 from ..logger import get_logger
 from ..ontology import local_name
 
 log = get_logger(__name__)
 
-
-def _restore_env_for_display(
-    env: MergeEnvironment,
-    reverse_map: dict[str, str],
-) -> MergeEnvironment:
-    """Return a display-only copy of env with onto_2 URIs restored to their
-    original entity2 URIs (undoing the pre-rename done before extraction).
-    onto_1 and border1 are shared by reference (not modified).
-    """
-    if not reverse_map:
-        return env
-
-    def _sub(uri: URIRef) -> URIRef:
-        return URIRef(reverse_map[str(uri)]) if str(uri) in reverse_map else uri
-
-    restored_onto2 = Graph()
-    for s, p, o in env.onto_2:
-        restored_onto2.add(
-            (
-                _sub(s) if isinstance(s, URIRef) else s,
-                p,
-                _sub(o) if isinstance(o, URIRef) else o,
-            )
-        )
-
-    restored_border2 = deque(_sub(u) for u in env.border2)
-
-    restored_alignments = [
-        al.model_copy(update={"entity2": reverse_map.get(al.entity2, al.entity2)})
-        for al in env.alignments
-    ]
-
-    return MergeEnvironment(
-        onto_1=env.onto_1,
-        onto_2=restored_onto2,
-        alignments=restored_alignments,
-        border1=env.border1,
-        border2=restored_border2,
-    )
 
 
 # ── pre-merge palette ────────────────────────────────────────────────────────
@@ -242,38 +201,27 @@ def save_pre_merge_debug(
     leftover_1: Graph,
     leftover_2: Graph,
     out_dir: Path,
-    original_alignments: list[Alignment] | None = None,
     merged_graphs: list[Graph] | None = None,
 ) -> None:
     """Write debug_pre_merge.html, debug_merge_env_N.html,
     onto_1_leftover.html, and onto_2_leftover.html.
     """
-    reverse_map: dict[str, str] = {}
-    if original_alignments:
-        reverse_map = {
-            al.entity1: al.entity2
-            for al in original_alignments
-            if al.relation == "=" and al.entity1 != al.entity2
-        }
-
     combined = _net()
     combined_seen: set[str] = set()
 
     for i, env in enumerate(merge_environments):
-        display_env = _restore_env_for_display(env, reverse_map)
-
         deleted_edges: set[tuple[str, str, str]] = set()
         if merged_graphs and i < len(merged_graphs):
-            pre_map = _name_edges(display_env.onto_1) | _name_edges(display_env.onto_2)
+            pre_map = _name_edges(env.onto_1) | _name_edges(env.onto_2)
             post_names = set(_name_edges(merged_graphs[i]).keys())
             deleted_edges = {pre_map[k] for k in pre_map.keys() - post_names}
 
-        _add_env(combined, display_env, combined_seen)
+        _add_env(combined, env, combined_seen)
         _draw_diff_edges(combined, deleted_edges, combined_seen)
 
         single = _net()
         single_seen: set[str] = set()
-        _add_env(single, display_env, single_seen)
+        _add_env(single, env, single_seen)
         _draw_diff_edges(single, deleted_edges, single_seen)
         _save(single, out_dir / f"debug_merge_env_{i}.html")
 

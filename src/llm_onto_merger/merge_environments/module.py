@@ -38,12 +38,4 @@ class MergeEnvironmentsModule:
         )
         merged = MergedOntology.model_validate(response.value)
         log.info("Received %d entities in merged ontology", len(merged.Merged_Ontology))
-        # Restore full URIs: LLM returns namespace codes (e.g. 'aa') as entity.uri.
-        # Reconstruction: code_to_ns[code] + entity.name  e.g. 'aa' + 'Person'
-        # → 'http://cmt#Person'.  Falls back to e.uri as-is for unknown codes.
-        entities = [
-            e.model_copy(update={"uri": code_to_uri[e.uri] + e.name})
-            if e.uri in code_to_uri else e
-            for e in merged.Merged_Ontology
-        ]
-        return entities_to_graph(entities)
+        return entities_to_graph(merged.Merged_Ontology, code_to_uri)

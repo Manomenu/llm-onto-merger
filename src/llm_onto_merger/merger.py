@@ -10,6 +10,7 @@ from llm_onto_merger.debug import (
 from llm_onto_merger.extract_environments import (
     ExtractEnvironmentsModule,
     MergeEnvironmentConfig,
+    build_namespace_codec,
 )
 from llm_onto_merger.integrate_environments import integrate_environments
 from llm_onto_merger.load_arguments import LoadedArguments
@@ -41,11 +42,14 @@ class LLMOntologyMerger:
         save_ontology(applied_onto, out_dir, name="applied_alignments")
         log.info("Alignments applied: %d", len(alignments))
 
+        uri_to_code, code_to_ns, ns_to_code, well_known_codes = build_namespace_codec(onto_1, onto_2)
+
         extractor = ExtractEnvironmentsModule(
             MergeEnvironmentConfig(max_chars=args.merge_env_max_chars)
         )
         merge_environments, onto_1_leftover, onto_2_leftover = extractor.extract(
-            onto_1, onto_2, alignments
+            onto_1, onto_2, alignments,
+            uri_to_code, code_to_ns, ns_to_code, well_known_codes,
         )
 
         total     = len(merge_environments)
@@ -76,7 +80,6 @@ class LLMOntologyMerger:
                 onto_1_leftover,
                 onto_2_leftover,
                 out_dir,
-                original_alignments=alignments,
                 merged_graphs=merged_environments,
             )
             save_post_merge_debug(
