@@ -2,21 +2,10 @@ import itertools
 import string
 from collections import deque
 
-from rdflib import Graph, URIRef
+from rdflib import Graph, Literal, URIRef
 
 from ..alignment.alignment import Alignment
 from ..ontology import KG2CODE_PREAMBLE, graph_to_string
-
-# Calibrated against observed KG2Code serialisation sizes with URI compression.
-# Each triple serialises as a Python tuple with three quoted local names:
-#   ('Subject', 'relation', 'Object')  →  ~44 chars/tuple
-# The Entity() header now uses a 2-char code instead of a full URI:
-#   Entity('aa', name='Person', tuples=[  →  ~39 chars/entity (was ~72)
-# Savings ≈ 33 chars/entity ÷ avg 3 triples/entity ≈ 11 chars/triple
-# Net per triple: ~61 chars  →  3 terms × 20 ≈ 60.
-# Border nodes appear as comma-separated local names  →  ~12 chars each.
-_CHARS_PER_TRIPLE_TERM = 20   # chars per URI/literal position inside a KG2Code tuple
-_CHARS_PER_BORDER_NODE = 12   # avg local-name length + separator in the border list
 
 _CODEC_CHARS = string.ascii_lowercase
 
@@ -37,12 +26,13 @@ MERGED_CODE = "zz"
 
 
 def _namespace_of(uri: str) -> str:
-    """Return the namespace prefix of a URI (everything up to and including # or last /)."""
-    return (uri.rsplit("#", 1)[0] + "#") if "#" in uri else (uri.rsplit("/", 1)[0] + "/")
+    """Return namespace prefix of a URI. Returns '' for URIs with no meaningful local name."""
+    ns = (uri.rsplit("#", 1)[0] + "#") if "#" in uri else (uri.rsplit("/", 1)[0] + "/")
+    return ns if len(uri) > len(ns) and len(ns) > 8 else ""
 
 
 def _encode_border(uri: URIRef, ns_to_code: dict[str, str]) -> str:
-    """Encode a border URIRef as 'code:LocalName' for the prompt."""
+    """Encode a border URIRef as 'code::LocalName' for the prompt."""
     s = str(uri)
     ns = _namespace_of(s)
     code = ns_to_code.get(ns)
@@ -68,11 +58,13 @@ def build_namespace_codec(
         well_known_codes — frozenset of codes assigned to well-known namespaces
     """
     data_namespaces = {
-        _namespace_of(str(node))
+        ns
         for g in (onto_1, onto_2)
         for s, p, o in g
         for node in (s, p, o)
         if isinstance(node, URIRef)
+        for ns in [_namespace_of(str(node))]
+        if ns
     }
     # Well-known NS added only if absent from data; zz is reserved, skip it.
     all_namespaces = sorted(data_namespaces | set(_WELL_KNOWN_NS))
@@ -94,10 +86,12 @@ def build_namespace_codec(
     code_to_ns[MERGED_CODE] = MERGED_NS
 
     uri_to_code: dict[str, str] = {
-        str(s): ns_to_code[_namespace_of(str(s))]
+        str(s): ns_to_code[ns]
         for g in (onto_1, onto_2)
         for s, _, _ in g
-        if isinstance(s, URIRef) and _namespace_of(str(s)) in ns_to_code
+        if isinstance(s, URIRef)
+        for ns in [_namespace_of(str(s))]
+        if ns and ns in ns_to_code
     }
     well_known_codes = frozenset(
         ns_to_code[ns] for ns in _WELL_KNOWN_NS if ns in ns_to_code
@@ -118,39 +112,65 @@ class MergeEnvironment:
         alignments: list[Alignment],
         border1: deque[URIRef] | None = None,
         border2: deque[URIRef] | None = None,
+        border1_graph: Graph | None = None,
+        border2_graph: Graph | None = None,
         ns_to_code: dict[str, str] | None = None,
         code_to_ns: dict[str, str] | None = None,
-        tracked_size: int = 0,
+        max_chars: int = 10_000,
     ) -> None:
         self.onto_1 = onto_1
         self.onto_2 = onto_2
         self.alignments = alignments
         self.border1: deque[URIRef] = border1 if border1 is not None else deque()
         self.border2: deque[URIRef] = border2 if border2 is not None else deque()
+        self.border1_graph: Graph = border1_graph if border1_graph is not None else Graph()
+        self.border2_graph: Graph = border2_graph if border2_graph is not None else Graph()
         self._ns_to_code: dict[str, str] = ns_to_code or {}
         self._code_to_ns: dict[str, str] = code_to_ns or {}
-        self.tracked_size: int = tracked_size
+        self._max_chars = max_chars
+
+    def _render_border(self, border_graph: Graph, used_chars: int) -> str:
+        """Render border nodes as Entity declarations, with triples when space allows."""
+        subjects = sorted({s for s, _, _ in border_graph if isinstance(s, URIRef)}, key=str)
+        lines = []
+        remaining = self._max_chars - used_chars
+        for subj in subjects:
+            enc = _encode_border(subj, self._ns_to_code)
+            tuple_strs = []
+            for _, p, o in border_graph.triples((subj, None, None)):
+                p_enc = _encode_border(URIRef(str(p)), self._ns_to_code)
+                o_enc = str(o) if isinstance(o, Literal) else _encode_border(URIRef(str(o)), self._ns_to_code)
+                tuple_strs.append(f"('{enc}', '{p_enc}', '{o_enc}')")
+            full_line = f"Entity('{enc}', tuples=[{', '.join(tuple_strs)}])"
+            bare_line = f"Entity('{enc}', tuples=[])"
+            chosen = full_line if len(full_line) <= remaining else bare_line
+            lines.append(chosen)
+            remaining -= len(chosen) + 1  # +1 for the joining newline
+        return "\n".join(lines)
 
     def to_string(self) -> tuple[str, dict[str, str]]:
         """Serialise the environment as a KG2Code prompt string.
 
-        Every URI is encoded as 'code:LocalName' so the LLM can reconstruct
+        Every URI is encoded as 'code::LocalName' so the LLM can reconstruct
         full URIs from the response.  Returns (prompt_string, code_to_ns).
         """
-        border1_str = ", ".join(_encode_border(u, self._ns_to_code) for u in self.border1)
-        border2_str = ", ".join(_encode_border(u, self._ns_to_code) for u in self.border2)
+        onto1_str = graph_to_string(self.onto_1, self._ns_to_code)
+        onto2_str = graph_to_string(self.onto_2, self._ns_to_code)
         alignments_str = "\n".join(al.to_string() for al in self.alignments)
+        base_chars = len(onto1_str) + len(onto2_str) + len(alignments_str)
+        border1_str = self._render_border(self.border1_graph, base_chars)
+        border2_str = self._render_border(self.border2_graph, base_chars + len(border1_str))
         text = f"""
             {KG2CODE_PREAMBLE}
 
 
             [Ontology_1]:
-            {graph_to_string(self.onto_1, self._ns_to_code)}
+            {onto1_str}
             [Border_1]:
             {border1_str}
 
             [Ontology_2]:
-            {graph_to_string(self.onto_2, self._ns_to_code)}
+            {onto2_str}
             [Border_2]:
             {border2_str}
 

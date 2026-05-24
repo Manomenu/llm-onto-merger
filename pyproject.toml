@@ -13,6 +13,7 @@ authors = [
 ]
 dependencies = [
   "agent-framework",
+  "agent-framework-openai",
   "pydantic-settings",
   "pydantic",
   "rdflib",

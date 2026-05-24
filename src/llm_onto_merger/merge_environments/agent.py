@@ -1,10 +1,17 @@
 from agent_framework.ollama import OllamaChatClient
+from agent_framework_openai import OpenAIChatClient
 
 from ..settings import settings
 
-merge_agent = OllamaChatClient(
-    host=settings.ollama_host,
-    model=settings.ollama_model,
+merge_agent = (
+    OpenAIChatClient(
+        model=settings.vllm_model, api_key="Empty", base_url=settings.vllm_host
+    )
+    if settings.use_vllm
+    else OllamaChatClient(
+        host=settings.ollama_host,
+        model=settings.ollama_model,
+    )
 ).as_agent(
     name="Ontology Merger Agent",
     instructions="""

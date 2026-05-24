@@ -1,9 +1,11 @@
 import argparse
 import os
+from pathlib import Path
 
 from pydantic import BaseModel
 
 from .logger import get_logger
+from .settings import settings
 
 log = get_logger(__name__)
 
@@ -37,7 +39,7 @@ def load_arguments() -> LoadedArguments:
         help="Alignment tool to use (default: aml)",
     )
     parser.add_argument(
-        "--output", default="tests/outputs", help="Output directory (merged_ontology.owl and debug files are saved here)"
+        "--output", default=None, help="Output directory (merged_ontology.owl and debug files are saved here)"
     )
     parser.add_argument(
         "--max-env-chars",
@@ -55,11 +57,18 @@ def load_arguments() -> LoadedArguments:
         if not os.path.isfile(path):
             parser.error(f"Path for --{path_attr} is not a file: {path}")
 
+    if settings.use_vllm:
+        output_dir = f"tests/vllm_outputs/{Path(args.base).stem}"
+    elif args.output is not None:
+        output_dir = args.output
+    else:
+        output_dir = "tests/outputs"
+
     loaded = LoadedArguments(
         base_path=args.base,
         candidate_path=args.candidate,
         alignment_tool=args.alignment_tool,
-        output_dir=args.output,
+        output_dir=output_dir,
         merge_env_max_chars=args.max_env_chars,
     )
     log.info(

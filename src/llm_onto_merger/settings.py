@@ -10,8 +10,15 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    ollama_model: str
+    # Ollama backend
+    ollama_model: str = ""
     ollama_host: str = "http://localhost:11434"
+
+    # vLLM backend (OpenAI-compatible)
+    use_vllm: bool = False
+    vllm_model: str = ""
+    vllm_host: str = "http://localhost:8000/v1"
+
     parallel_llm_request_count: int = 4
     debug: bool = False
 
