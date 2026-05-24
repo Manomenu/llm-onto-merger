@@ -51,6 +51,10 @@ class LLMOntologyMerger:
             onto_1, onto_2, alignments,
             uri_to_code, code_to_ns, ns_to_code, well_known_codes,
         )
+        extractor.expand_extracted(
+            merge_environments, onto_1_leftover, onto_2_leftover,
+            ns_to_code, well_known_codes,
+        )
 
         total     = len(merge_environments)
         semaphore = asyncio.Semaphore(settings.parallel_llm_request_count)

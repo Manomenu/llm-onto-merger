@@ -114,9 +114,13 @@ Codec jest budowany **raz** wspólnie dla obu ontologii przed ekstrakcją i prze
 
 ### 6. Ekstrakcja środowisk scalania (`extract_environments/module.py`)
 
-Celem jest stworzenie jednego `MergeEnvironment` na każdy alignment — małego podgrafu, który można niezależnie wysłać do LLM.
+Ekstrakcja przebiega w **dwóch fazach**. Faza 1 (`extract`) tworzy szkielet — po jednym środowisku na alignment, z seed-węzłami w środku i bezpośrednimi sąsiadami w borderze. Faza 2 (`expand_extracted`) iteracyjnie wciąga border do wnętrza środowisk, aż zabraknie miejsca lub węzłów do ekspansji.
 
-#### 6a. Robocze kopie grafów
+---
+
+#### Faza 1 — `ExtractEnvironmentsModule.extract`
+
+##### 6a. Robocze kopie grafów
 
 ```python
 source_1 = Graph()
@@ -129,7 +133,7 @@ for triple in onto_2:
 
 Oba grafy są kopiowane do roboczych kopii. Triplety seed-węzłów są **przenoszone** (usuwane z source) przy ekstrakcji. Po przetworzeniu wszystkich alignmentów to co pozostanie w `source_1`/`source_2` to **leftovers** — encje bez dopasowania, pass-through do wyniku.
 
-#### 6b. Pula alignmentów (`_AlignmentPool`)
+##### 6b. Pula alignmentów (`_AlignmentPool`)
 
 ```python
 pool = _AlignmentPool(alignments)
@@ -138,7 +142,7 @@ pool = _AlignmentPool(alignments)
 
 `pop()` zawsze zwraca alignment o **najwyższym** `measure` (najlepsze dopasowania pierwsze).
 
-#### 6c. Budowanie środowiska (`_build_merge_environment`)
+##### 6c. Budowanie środowiska (`_build_merge_environment`)
 
 Dla każdego alignmentu jedno środowisko:
 
@@ -182,10 +186,113 @@ Trójki border-węzłów są **kopiowane** (nie przenoszone) — ten sam węzeł
 
 > **Uwaga:** trójki bezpośrednio łączące border-węzeł z seedem (np. `(border_node, prop, seed1)`) zostały już przeniesione przez `move_entity_triples(seed1, ...)` i **nie pojawią się** w `border1_graph`. Jest to zachowanie poprawne — te relacje są widoczne w `onto_1` po stronie seeda.
 
-**Wynik:** `(environments: list[MergeEnvironment], onto_1_leftover: Graph, onto_2_leftover: Graph)`
+**Wynik fazy 1:** `(environments: list[MergeEnvironment], onto_1_leftover: Graph, onto_2_leftover: Graph)`
 
 - `environments` — lista środowisk, każde z: `onto_1` (trójki seed1), `onto_2` (trójki seed2), `border1_graph`, `border2_graph`, `alignments: [seed_al]`
 - `onto_1_leftover`, `onto_2_leftover` — pozostałości source po ekstrakcji: encje bez żadnego alignmentu, pass-through do wyniku bez zmian
+
+---
+
+#### Faza 2 — `ExtractEnvironmentsModule.expand_extracted`
+
+Po fazie 1 każde środowisko ma seed w środku i border na granicy. Faza 2 iteracyjnie wciąga węzły z bordera do wnętrza (`onto_1`, `onto_2`), stopniowo poszerzając kontekst dostępny dla LLM.
+
+##### Globalne zamrożenie (`global_frozen`)
+
+```python
+global_frozen: set[URIRef] = {
+    s
+    for env in environments
+    for graph in (env.onto_1, env.onto_2)
+    for s, _, _ in graph
+    if isinstance(s, URIRef)
+}
+```
+
+Na początku fazy 2 zbiór `global_frozen` zawiera wszystkie seed-węzły ze wszystkich środowisk. Węzeł raz dodany do wnętrza jakiegoś środowiska jest zamrożony globalnie — nie może trafić do wnętrza innego środowiska. Może nadal figurować w `border_graph` innych środowisk jako kontekst, ale nie zostanie stamtąd przeniesiony.
+
+##### Pętla round-robin
+
+```python
+active = list(range(len(environments)))
+
+while active:
+    next_active = []
+    for idx in active:
+        env = environments[idx]
+        did_1 = _expand_one(env.border1, ..., env.onto_1, source_1, global_frozen, is_wk)
+        did_2 = _expand_one(env.border2, ..., env.onto_2, source_2, global_frozen, is_wk)
+
+        still_has_border = bool(env.border1) or bool(env.border2)
+        within_limit = env.interior_char_estimate() < config.max_chars
+
+        if still_has_border and within_limit:
+            next_active.append(idx)
+    active = next_active
+    if not any_expanded:
+        break
+```
+
+W każdej rundzie każde aktywne środowisko dostaje **jeden krok ekspansji z onto_1 i jeden z onto_2** (łącznie ≤ 2 węzły na środowisko na rundę). Dzięki round-robin węzły nie są monopolizowane przez pierwsze środowisko — każdy alignment dostaje szansę na rozrost.
+
+Środowisko jest usuwane z rotacji gdy:
+- `env.interior_char_estimate() >= max_chars` — wnętrze przekroczyło limit rozmiaru, lub
+- brak dalszych węzłów w `border1` i `border2` — wszystkie zostały wciągnięte lub zamrożone.
+
+Pętla kończy się gdy `active` jest puste lub w całej rundzie nie udało się nic expandować (wszystkie bordersy wyczerpane / zamrożone).
+
+##### Krok ekspansji — `_expand_one`
+
+```python
+def _expand_one(border, border_queued, border_graph, interior, source, global_frozen, is_wk):
+    while border:
+        node = border.popleft()
+        if node in global_frozen or is_wk(node):
+            continue          # wyrzuć — zamrożony lub well-known, permanentnie
+
+        triples = move_entity_triples(node, source, interior)
+        global_frozen.add(node)
+
+        # Usuń outgoing trójki węzła z border_graph — jest już we wnętrzu
+        for triple in list(border_graph.triples((node, None, None))):
+            border_graph.remove(triple)
+
+        # Odkryj nowych sąsiadów i dodaj ich do bordera
+        for s, _, o in triples:
+            for neighbour in (s, o):
+                if (isinstance(neighbour, URIRef)
+                        and neighbour not in global_frozen
+                        and not is_wk(neighbour)
+                        and neighbour not in border_queued):
+                    border.append(neighbour)
+                    border_queued.add(neighbour)
+                    for triple in source.triples((neighbour, None, None)):
+                        border_graph.add(triple)
+        return True
+    return False
+```
+
+**Border rośnie dynamicznie.** Gdy węzeł `N` jest expandowany, jego trójki są przenoszone z `source` do `interior`. Każdy sąsiad `N` w tych trójkach (który nie jest zamrożony ani well-known i nie był jeszcze zekolejkowany) staje się **nowym kandydatem do bordera** — trafia na koniec deque i jego trójki są kopiowane do `border_graph` jako kontekst. Oznacza to, że border środowiska rozrasta się falowo: w fazie 1 są w nim tylko bezpośredni sąsiedzi seeda (odległość 1), po pierwszym kroku ekspansji pojawiają się węzły na odległości 2, po kolejnym — odległości 3, itd.
+
+Kolejność ekspansji to BFS od seeda: węzły dodane w fazie 1 (bezpośredni sąsiedzi seeda) są z przodu kolejki, węzły odkryte podczas ekspansji trafiają na koniec. Naturalna kolejność BFS zapewnia, że bliższe kontekstowo węzły wchodzą do wnętrza przed dalszymi.
+
+Węzeł już zekolejkowany (`border_queued`) nigdy nie jest dodawany dwukrotnie — to zapobiega duplikatom w deque gdy ten sam węzeł jest sąsiadem wielu ekspandowanych węzłów.
+
+##### Renderowanie bordera po fazie 2
+
+`MergeEnvironment._render_border` automatycznie pomija węzły już obecne we wnętrzu:
+
+```python
+interior_subjects = {s for s, _, _ in interior if isinstance(s, URIRef)}
+subjects = sorted(
+    {s for s, _, _ in border_graph if isinstance(s, URIRef)} - interior_subjects,
+    key=str,
+)
+```
+
+Dzięki temu węzeł, który przeszedł z bordera do `onto_1`, pojawi się w sekcji `[Ontology_1]` (z pełnymi trójkami) — a nie zduplikuje się w `[Border_1]`.
+
+**Wynik fazy 2:** środowiska są zmodyfikowane in-place; `source_1`/`source_2` są dalej konsumowane — to co z nich pozostanie po obu fazach to ostateczne leftovers (encje bez żadnego alignmentu i nierozważone jako sąsiedzi żadnego seeda).
 
 ---
 
@@ -311,10 +418,11 @@ main.py
     ├── AlignmentModule.create_alignment() # AML → lista Alignment
     ├── apply_alignments()                # baseline merge → applied_alignments.owl
     ├── build_namespace_codec()           # wspólny codec URI → kody aa/ab/...
-    ├── ExtractEnvironmentsModule.extract()
-    │   ├── _pre_rename_onto2()           # entity2 → entity1 dla = alignmentów
-    │   └── _build_merge_environment() × N  # BFS z limitem rozmiaru
+    ├── ExtractEnvironmentsModule.extract()          # faza 1
+    │   └── _build_merge_environment() × N           # 1 env / alignment
     │       └── → MergeEnvironment (onto_1_sub, onto_2_sub, border, alignments)
+    ├── ExtractEnvironmentsModule.expand_extracted() # faza 2
+    │   └── _expand_one() × round-robin              # border → interior, BFS
     ├── MergeEnvironmentsModule.merge() × N  [równolegle]
     │   ├── env.to_string()               # → KG2Code prompt
     │   ├── merge_agent.run()             # → Ollama LLM

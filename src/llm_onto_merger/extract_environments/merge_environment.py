@@ -128,10 +128,29 @@ class MergeEnvironment:
         self._ns_to_code: dict[str, str] = ns_to_code or {}
         self._code_to_ns: dict[str, str] = code_to_ns or {}
         self._max_chars = max_chars
+        # Track which nodes have been queued into border1/border2 to prevent duplicate
+        # deque entries when new neighbours are discovered during expand_extracted.
+        self._border1_queued: set[URIRef] = set(self.border1)
+        self._border2_queued: set[URIRef] = set(self.border2)
 
-    def _render_border(self, border_graph: Graph, used_chars: int) -> str:
-        """Render border nodes as Entity declarations, with triples when space allows."""
-        subjects = sorted({s for s, _, _ in border_graph if isinstance(s, URIRef)}, key=str)
+    def interior_char_estimate(self) -> int:
+        """Estimate serialized size of the two interior graphs combined."""
+        return (
+            len(graph_to_string(self.onto_1, self._ns_to_code))
+            + len(graph_to_string(self.onto_2, self._ns_to_code))
+        )
+
+    def _render_border(self, border_graph: Graph, interior: Graph, used_chars: int) -> str:
+        """Render border nodes as Entity declarations, with triples when space allows.
+
+        Nodes already promoted to *interior* are excluded — they appear in the
+        [Ontology_N] section and must not be duplicated in [Border_N].
+        """
+        interior_subjects = {s for s, _, _ in interior if isinstance(s, URIRef)}
+        subjects = sorted(
+            {s for s, _, _ in border_graph if isinstance(s, URIRef)} - interior_subjects,
+            key=str,
+        )
         lines = []
         remaining = self._max_chars - used_chars
         for subj in subjects:
@@ -158,8 +177,8 @@ class MergeEnvironment:
         onto2_str = graph_to_string(self.onto_2, self._ns_to_code)
         alignments_str = "\n".join(al.to_string() for al in self.alignments)
         base_chars = len(onto1_str) + len(onto2_str) + len(alignments_str)
-        border1_str = self._render_border(self.border1_graph, base_chars)
-        border2_str = self._render_border(self.border2_graph, base_chars + len(border1_str))
+        border1_str = self._render_border(self.border1_graph, self.onto_1, base_chars)
+        border2_str = self._render_border(self.border2_graph, self.onto_2, base_chars + len(border1_str))
         text = f"""
             {KG2CODE_PREAMBLE}
 
