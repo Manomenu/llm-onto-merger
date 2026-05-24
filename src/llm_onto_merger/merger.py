@@ -96,6 +96,6 @@ class LLMOntologyMerger:
             )
 
         merged_onto = integrate_environments(
-            merged_environments, onto_1_leftover, onto_2_leftover
+            merged_environments, onto_1_leftover, onto_2_leftover, code_to_ns
         )
         save_ontology(merged_onto, out_dir)

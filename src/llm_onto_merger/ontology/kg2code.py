@@ -5,6 +5,9 @@ from ..logger import get_logger
 
 log = get_logger(__name__)
 
+ALIAS_PREDICATE_CODED = "zz::alias"
+ALIAS_PREDICATE = "http://merged#alias"
+
 KG2CODE_PREAMBLE = """
 Each ontology entity is represented as:
   Entity(uri, tuples)
@@ -83,6 +86,34 @@ def _is_valid_entity(e: Entity, code_to_ns: dict[str, str]) -> bool:
     if idx > 0:
         return uri[:idx] in code_to_ns and bool(uri[idx + 2:])
     return uri.startswith("http")
+
+
+def _decode_alias_literal(s: str, code_to_ns: dict[str, str]) -> URIRef | None:
+    """Decode an alias literal encoded as 'code;;LocalName' → URIRef."""
+    idx = s.find(";;")
+    if idx > 0:
+        code, local = s[:idx], s[idx + 2:]
+        ns = code_to_ns.get(code)
+        if ns and local:
+            return URIRef(ns + local)
+    return None
+
+
+def build_alias_map(graphs: list[Graph], code_to_ns: dict[str, str]) -> dict[str, str]:
+    """Extract alias triples and return {old_uri: new_uri}.
+
+    Scans for (subject, http://merged#alias, literal) triples where the literal
+    encodes an old URI in 'code;;LocalName' format.
+    """
+    alias_pred = URIRef(ALIAS_PREDICATE)
+    result: dict[str, str] = {}
+    for graph in graphs:
+        for s, p, o in graph.triples((None, alias_pred, None)):
+            if isinstance(s, URIRef) and isinstance(o, Literal):
+                old_uri = _decode_alias_literal(str(o), code_to_ns)
+                if old_uri:
+                    result[str(old_uri)] = str(s)
+    return result
 
 
 def entities_to_graph(entities: list[Entity], code_to_ns: dict[str, str]) -> Graph:

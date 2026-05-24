@@ -42,6 +42,11 @@ merge_agent = OllamaChatClient(
         with name that is more suitable for the domain and have all information from both "Underaged" and "Child" classes.
         - No duplicate names for axioms. For example, if we have "hasAge" property in Ontology_1 and "ageValue" property in Ontology_2,
         then Merged_Ontology should contain only one property with name that is more suitable for the domain.
+        - Whenever you merge two entities into one (i.e. an entity from Ontology_1 and an entity from Ontology_2 are replaced by a single entity in Merged_Ontology),
+        you MUST add an alias triple for every replaced entity URI using the predicate zz::alias.
+        The replaced entity URI MUST be written as a literal using ";;" as separator (not "::"), so it is NOT decoded as a live URI.
+        For example, if "Underaged" (aa::Underaged) and "Child" (ab::Child) are merged into "Child" (ab::Child), add:
+          ('ab::Child', 'zz::alias', 'aa;;Underaged')
 
         Knowledge completeness
         - Merged_Ontology should contain as much information from Ontology_1 and Ontology_2 as possible.
