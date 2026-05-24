@@ -116,7 +116,7 @@ def _expand_one(
     source: Graph,
     global_frozen: set[URIRef],
     is_wk: Callable[[URIRef], bool],
-) -> bool:
+) -> URIRef | None:
     """Pop the next expandable node from *border*, move its triples into *interior*.
 
     A node is not expandable if it is in global_frozen (already interior
@@ -127,7 +127,7 @@ def _expand_one(
     (if not already queued / frozen / well-known) and their source triples are
     copied into *border_graph* for context.
 
-    Returns True if a node was expanded, False if the border is exhausted.
+    Returns the expanded node, or None if the border is exhausted.
     """
     while border:
         node = border.popleft()
@@ -157,8 +157,8 @@ def _expand_one(
                     for triple in source.triples((neighbour, None, None)):
                         border_graph.add(triple)
 
-        return True
-    return False
+        return node
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -248,13 +248,25 @@ class ExtractEnvironmentsModule:
         def is_wk(u: URIRef) -> bool:
             return ns_to_code.get(_namespace_of(str(u))) in well_known_codes
 
-        # Seed nodes (already in interiors after phase 1) start globally frozen.
+        def _env_label(i: int) -> str:
+            al = environments[i].alignments[0]
+            return f"env #{i} ({local_name(al.entity1)} ↔ {local_name(al.entity2)})"
+
+        # Only actual seed nodes start frozen — not every subject found in the interior
+        # graphs.  move_entity_triples pulls in triples where the seed is the *object*
+        # too (e.g. (Author, subClassOf, Person)), so border nodes can appear as
+        # subjects inside onto_1/onto_2 without having been explicitly expanded.
         global_frozen: set[URIRef] = {
-            s
+            URIRef(uri)
             for env in environments
-            for graph in (env.onto_1, env.onto_2)
-            for s, _, _ in graph
-            if isinstance(s, URIRef)
+            for al in env.alignments
+            for uri in (al.entity1, al.entity2)
+        }
+
+        # Snapshot state before any expansion for the final summary.
+        initial: dict[int, tuple[int, int, int, int]] = {
+            i: (len(env.onto_1), len(env.onto_2), len(env.border1), len(env.border2))
+            for i, env in enumerate(environments)
         }
 
         active = list(range(len(environments)))
@@ -264,6 +276,7 @@ class ExtractEnvironmentsModule:
         )
 
         round_num = 0
+        stop_reason = "all environments left rotation"
         while active:
             round_num += 1
             next_active: list[int] = []
@@ -272,17 +285,23 @@ class ExtractEnvironmentsModule:
             for idx in active:
                 env = environments[idx]
 
-                did_1 = _expand_one(
+                expanded_1 = _expand_one(
                     env.border1, env._border1_queued, env.border1_graph,
                     env.onto_1, source_1, global_frozen, is_wk,
                 )
-                did_2 = _expand_one(
+                expanded_2 = _expand_one(
                     env.border2, env._border2_queued, env.border2_graph,
                     env.onto_2, source_2, global_frozen, is_wk,
                 )
 
-                if did_1 or did_2:
+                if expanded_1 is not None or expanded_2 is not None:
                     any_expanded = True
+                    n1 = local_name(str(expanded_1)) if expanded_1 is not None else "-"
+                    n2 = local_name(str(expanded_2)) if expanded_2 is not None else "-"
+                    log.info(
+                        "%s  round %d  |  onto_1 <- %s  |  onto_2 <- %s",
+                        _env_label(idx), round_num, n1, n2,
+                    )
 
                 still_has_border = bool(env.border1) or bool(env.border2)
                 within_limit = env.interior_char_estimate() < self.config.max_chars
@@ -290,19 +309,38 @@ class ExtractEnvironmentsModule:
                 if still_has_border and within_limit:
                     next_active.append(idx)
                 else:
+                    reasons: list[str] = []
+                    if not within_limit:
+                        reasons.append("char limit reached")
+                    if not still_has_border:
+                        reasons.append("border exhausted (all nodes frozen or no triples left in source)")
                     log.info(
-                        "env #%d  leaving rotation after round %d"
-                        "  |  has_border=%s  within_limit=%s",
-                        idx, round_num, still_has_border, within_limit,
+                        "%s  leaving rotation after round %d  |  reason: %s",
+                        _env_label(idx), round_num, ", ".join(reasons),
                     )
 
             active = next_active
 
             if not any_expanded:
-                # Full round produced nothing — all remaining borders are exhausted or frozen.
+                stop_reason = "no expansion in round — all border nodes frozen or source exhausted"
                 break
 
+        log.info("Expansion done after %d rounds  |  reason: %s", round_num, stop_reason)
         log.info(
-            "Expansion done: %d rounds  |  source_1=%d triples  source_2=%d triples remaining",
-            round_num, len(source_1), len(source_2),
+            "source after expansion  |  source_1=%d triples  source_2=%d triples",
+            len(source_1), len(source_2),
         )
+
+        # Per-environment growth summary.
+        for i, env in enumerate(environments):
+            i1_before, i2_before, b1_before, b2_before = initial[i]
+            log.info(
+                "%s  summary  |"
+                "  onto_1: %d->%d triples  onto_2: %d->%d triples"
+                "  |  border1: %d->%d nodes  border2: %d->%d nodes",
+                _env_label(i),
+                i1_before, len(env.onto_1),
+                i2_before, len(env.onto_2),
+                b1_before, len(env.border1),
+                b2_before, len(env.border2),
+            )
