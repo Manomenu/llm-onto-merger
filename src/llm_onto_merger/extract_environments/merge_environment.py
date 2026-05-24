@@ -47,7 +47,7 @@ def _encode_border(uri: URIRef, ns_to_code: dict[str, str]) -> str:
     ns = _namespace_of(s)
     code = ns_to_code.get(ns)
     local = s[len(ns):]
-    return f"{code}:{local}" if code and local else s
+    return f"{code}::{local}" if code and local else s
 
 
 def build_namespace_codec(

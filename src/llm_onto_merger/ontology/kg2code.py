@@ -9,18 +9,19 @@ KG2CODE_PREAMBLE = """
 Each ontology entity is represented as:
   Entity(uri, tuples)
 where:
-  uri    — 'code:LocalName'  uniquely identifies the entity, e.g. 'aa:Person'
+  uri    — 'code::LocalName'  uniquely identifies the entity, e.g. 'aa::Person'
   tuples — outgoing triples: list of (subject_uri, predicate_uri, object_uri_or_literal)
-           every URI element uses the same 'code:LocalName' encoding
+           every URI element uses the same 'code::LocalName' encoding
+           literal values (strings, numbers) are written as-is without a code prefix
 
 Example:
-  Entity('aa:Person', tuples=[
-      ('aa:Person', 'af:subClassOf', 'ab:Animal'),
-      ('aa:Person', 'ae:type', 'ah:Class'),
+  Entity('aa::Person', tuples=[
+      ('aa::Person', 'af::subClassOf', 'ab::Animal'),
+      ('aa::Person', 'ae::type', 'ah::Class'),
   ])
 
 When generating a Merged_Ontology you MUST use the same code prefixes for existing entities.
-For entirely new concepts you may use 'zz:NewName'.
+For entirely new concepts you may use 'zz::NewName'.
 """
 
 
@@ -34,18 +35,18 @@ def _namespace_of(uri: str) -> str:
 
 
 def _encode(uri: str, ns_to_code: dict[str, str]) -> str:
-    """Encode a full URI as 'code:LocalName'. Falls back to the bare URI on miss."""
+    """Encode a full URI as 'code::LocalName'. Falls back to the bare URI on miss."""
     ns = _namespace_of(uri)
     code = ns_to_code.get(ns)
     local = uri[len(ns):]
-    return f"{code}:{local}" if code and local else uri
+    return f"{code}::{local}" if code and local else uri
 
 
 def _decode(coded: str, code_to_ns: dict[str, str]) -> URIRef | Literal:
-    """Decode 'code:LocalName' → URIRef. Falls back to Literal for unknowns."""
-    idx = coded.find(":")
+    """Decode 'code::LocalName' → URIRef. Falls back to Literal for unknowns."""
+    idx = coded.find("::")
     if idx > 0:
-        code, local = coded[:idx], coded[idx + 1:]
+        code, local = coded[:idx], coded[idx + 2:]
         ns = code_to_ns.get(code)
         if ns and local:
             return URIRef(ns + local)
@@ -78,9 +79,9 @@ def _is_valid_entity(e: Entity, code_to_ns: dict[str, str]) -> bool:
     uri = e.uri.strip()
     if not uri:
         return False
-    idx = uri.find(":")
+    idx = uri.find("::")
     if idx > 0:
-        return uri[:idx] in code_to_ns and bool(uri[idx + 1:])
+        return uri[:idx] in code_to_ns and bool(uri[idx + 2:])
     return uri.startswith("http")
 
 
