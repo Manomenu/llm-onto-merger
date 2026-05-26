@@ -13,11 +13,12 @@ from .kg2code import (
     graph_to_string,
 )
 from .merge import apply_alignments
-from .uri import local_name
+from .uri import local_name, namespace_of
 
 __all__ = [
     # uri
     "local_name",
+    "namespace_of",
     # kg2code
     "KG2CODE_PREAMBLE",
     "Entity",

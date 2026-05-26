@@ -5,7 +5,7 @@ from collections import deque
 from rdflib import Graph, Literal, URIRef
 
 from ..alignment.alignment import Alignment
-from ..ontology import KG2CODE_PREAMBLE, graph_to_string
+from ..ontology import KG2CODE_PREAMBLE, graph_to_string, namespace_of
 
 _CODEC_CHARS = string.ascii_lowercase
 
@@ -25,16 +25,10 @@ MERGED_NS = "http://merged#"
 MERGED_CODE = "zz"
 
 
-def _namespace_of(uri: str) -> str:
-    """Return namespace prefix of a URI. Returns '' for URIs with no meaningful local name."""
-    ns = (uri.rsplit("#", 1)[0] + "#") if "#" in uri else (uri.rsplit("/", 1)[0] + "/")
-    return ns if len(uri) > len(ns) and len(ns) > 8 else ""
-
-
 def _encode_border(uri: URIRef, ns_to_code: dict[str, str]) -> str:
     """Encode a border URIRef as 'code::LocalName' for the prompt."""
     s = str(uri)
-    ns = _namespace_of(s)
+    ns = namespace_of(s)
     code = ns_to_code.get(ns)
     local = s[len(ns):]
     return f"{code}::{local}" if code and local else s
@@ -63,7 +57,7 @@ def build_namespace_codec(
         for s, p, o in g
         for node in (s, p, o)
         if isinstance(node, URIRef)
-        for ns in [_namespace_of(str(node))]
+        for ns in [namespace_of(str(node))]
         if ns
     }
     # Well-known NS added only if absent from data; zz is reserved, skip it.
@@ -90,7 +84,7 @@ def build_namespace_codec(
         for g in (onto_1, onto_2)
         for s, _, _ in g
         if isinstance(s, URIRef)
-        for ns in [_namespace_of(str(s))]
+        for ns in [namespace_of(str(s))]
         if ns and ns in ns_to_code
     }
     well_known_codes = frozenset(

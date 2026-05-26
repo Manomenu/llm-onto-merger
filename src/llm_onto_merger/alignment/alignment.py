@@ -27,6 +27,3 @@ class AlignmentModule(ABC):
         """Compute alignment between base and candidate ontologies."""
 
 
-alignment_modules_dict = {
-    "aml": AlignmentModule,
-}

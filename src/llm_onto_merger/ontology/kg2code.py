@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from rdflib import Graph, Literal, URIRef
 
 from ..logger import get_logger
+from .uri import namespace_of
 
 log = get_logger(__name__)
 
@@ -33,18 +34,9 @@ class Entity(BaseModel):
     tuples: list[tuple[str, str, str]]
 
 
-def _namespace_of(uri: str) -> str:
-    """Return namespace prefix of a URI. Returns '' for URIs with no meaningful local name."""
-    ns = (uri.rsplit("#", 1)[0] + "#") if "#" in uri else (uri.rsplit("/", 1)[0] + "/")
-    # Require a non-empty local part AND that the namespace itself is more than just
-    # the scheme (http:// = 7 chars, https:// = 8) so bare-host URIs like
-    # 'http://cmt' don't produce the nonsense namespace 'http://'.
-    return ns if len(uri) > len(ns) and len(ns) > 8 else ""
-
-
 def _encode(uri: str, ns_to_code: dict[str, str]) -> str:
     """Encode a full URI as 'code::LocalName'. Falls back to the bare URI on miss."""
-    ns = _namespace_of(uri)
+    ns = namespace_of(uri)
     code = ns_to_code.get(ns)
     local = uri[len(ns):]
     return f"{code}::{local}" if code and local else uri

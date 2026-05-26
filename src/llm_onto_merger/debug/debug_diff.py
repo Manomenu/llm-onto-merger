@@ -21,11 +21,11 @@ def _write_diff(
             if isinstance(s, URIRef) and isinstance(o, URIRef)
         }
 
-    pre  = _names(env.onto_1) | _names(env.onto_2)
-    post = _names(merged)
+    pre_triple_names  = _names(env.onto_1) | _names(env.onto_2)
+    post_triple_names = _names(merged)
 
-    deleted = sorted(pre - post)
-    added   = sorted(post - pre)
+    deleted = sorted(pre_triple_names - post_triple_names)
+    added   = sorted(post_triple_names - pre_triple_names)
 
     with path.open("w") as f:
         f.write("[Deleted]\n")

@@ -5,12 +5,10 @@ from rdflib import Graph, URIRef
 
 from ..alignment.alignment import Alignment
 from ..logger import get_logger
-from ..ontology import local_name, move_entity_triples
+from ..ontology import local_name, move_entity_triples, namespace_of
 from .merge_environment import (
     MergeEnvironment,
     MergeEnvironmentConfig,
-    _namespace_of,
-    build_namespace_codec,
 )
 
 log = get_logger(__name__)
@@ -47,7 +45,7 @@ def _build_merge_environment(
     code_to_ns: dict[str, str],
     well_known_codes: frozenset[str],
 ) -> MergeEnvironment:
-    is_wk = lambda u: ns_to_code.get(_namespace_of(str(u))) in well_known_codes  # noqa: E731
+    is_wk = lambda u: ns_to_code.get(namespace_of(str(u))) in well_known_codes  # noqa: E731
 
     seed1 = URIRef(seed_al.entity1)
     seed2 = URIRef(seed_al.entity2)
@@ -174,7 +172,6 @@ class ExtractEnvironmentsModule:
         onto_1: Graph,
         onto_2: Graph,
         alignments: list[Alignment],
-        uri_to_code: dict[str, str],
         code_to_ns: dict[str, str],
         ns_to_code: dict[str, str],
         well_known_codes: frozenset[str],
@@ -246,7 +243,7 @@ class ExtractEnvironmentsModule:
         Modifies *environments*, *source_1*, and *source_2* in-place.
         """
         def is_wk(u: URIRef) -> bool:
-            return ns_to_code.get(_namespace_of(str(u))) in well_known_codes
+            return ns_to_code.get(namespace_of(str(u))) in well_known_codes
 
         def _env_label(i: int) -> str:
             al = environments[i].alignments[0]

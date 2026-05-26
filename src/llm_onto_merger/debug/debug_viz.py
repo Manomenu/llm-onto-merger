@@ -72,8 +72,8 @@ _DIFF_EDGE = "#ff1493"  # deep pink — added/deleted edges
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 
-def _net() -> Network:
-    n = Network(
+def _new_network() -> Network:
+    network = Network(
         height="900px",
         width="100%",
         directed=True,
@@ -81,8 +81,8 @@ def _net() -> Network:
         bgcolor="#ffffff",
         font_color="#222222",
     )
-    n.barnes_hut(gravity=-5000, central_gravity=0.3, spring_length=120)
-    return n
+    network.barnes_hut(gravity=-5000, central_gravity=0.3, spring_length=120)
+    return network
 
 
 def _add_graph_nodes(net: Network, graph: Graph, color: str, seen: set[str]) -> None:
@@ -206,7 +206,7 @@ def save_pre_merge_debug(
     """Write debug_pre_merge.html, debug_merge_env_N.html,
     onto_1_leftover.html, and onto_2_leftover.html.
     """
-    combined = _net()
+    combined = _new_network()
     combined_seen: set[str] = set()
 
     for i, env in enumerate(merge_environments):
@@ -219,7 +219,7 @@ def save_pre_merge_debug(
         _add_env(combined, env, combined_seen)
         _draw_diff_edges(combined, deleted_edges, combined_seen)
 
-        single = _net()
+        single = _new_network()
         single_seen: set[str] = set()
         _add_env(single, env, single_seen)
         _draw_diff_edges(single, deleted_edges, single_seen)
@@ -231,17 +231,17 @@ def save_pre_merge_debug(
     _add_graph_edges(combined, leftover_2)
     _save(combined, out_dir / "debug_pre_merge.html")
 
-    lo1 = _net()
-    lo1_seen: set[str] = set()
-    _add_graph_nodes(lo1, leftover_1, _LEFTOVER1, lo1_seen)
-    _add_graph_edges(lo1, leftover_1)
-    _save(lo1, out_dir / "onto_1_leftover.html")
+    leftover1_net = _new_network()
+    leftover1_seen: set[str] = set()
+    _add_graph_nodes(leftover1_net, leftover_1, _LEFTOVER1, leftover1_seen)
+    _add_graph_edges(leftover1_net, leftover_1)
+    _save(leftover1_net, out_dir / "onto_1_leftover.html")
 
-    lo2 = _net()
-    lo2_seen: set[str] = set()
-    _add_graph_nodes(lo2, leftover_2, _LEFTOVER2, lo2_seen)
-    _add_graph_edges(lo2, leftover_2)
-    _save(lo2, out_dir / "onto_2_leftover.html")
+    leftover2_net = _new_network()
+    leftover2_seen: set[str] = set()
+    _add_graph_nodes(leftover2_net, leftover_2, _LEFTOVER2, leftover2_seen)
+    _add_graph_edges(leftover2_net, leftover_2)
+    _save(leftover2_net, out_dir / "onto_2_leftover.html")
 
 
 def save_post_merge_debug(
@@ -274,24 +274,24 @@ def save_post_merge_debug(
                 node_color = "#000000" if uri in global_border else color
                 net.add_node(uri, label=local_name(uri), color=node_color, title=uri)
 
-    combined = _net()
+    combined = _new_network()
     combined_seen: set[str] = set()
 
     for i, graph in enumerate(merged_environments):
-        pre = merge_environments[i] if merge_environments and i < len(merge_environments) else None
+        pre_env = merge_environments[i] if merge_environments and i < len(merge_environments) else None
         color = _POST_PALETTE[i % len(_POST_PALETTE)]
 
         _add_nodes_with_border(combined, graph, color, combined_seen)
         _add_graph_edges(combined, graph)
 
         added_edges: set[tuple[str, str, str]] = set()
-        if pre is not None:
-            pre_names = set((_name_edges(pre.onto_1) | _name_edges(pre.onto_2)).keys())
+        if pre_env is not None:
+            pre_names = set((_name_edges(pre_env.onto_1) | _name_edges(pre_env.onto_2)).keys())
             post_map = _name_edges(graph)
             added_edges = {post_map[k] for k in post_map.keys() - pre_names}
         _draw_diff_edges(combined, added_edges, combined_seen)
 
-        single = _net()
+        single = _new_network()
         single_seen: set[str] = set()
         _add_nodes_with_border(single, graph, color, single_seen)
         _add_graph_edges(single, graph)

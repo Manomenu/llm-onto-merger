@@ -42,14 +42,14 @@ class LLMOntologyMerger:
         save_ontology(applied_onto, out_dir, name="applied_alignments")
         log.info("Alignments applied: %d", len(alignments))
 
-        uri_to_code, code_to_ns, ns_to_code, well_known_codes = build_namespace_codec(onto_1, onto_2)
+        _, code_to_ns, ns_to_code, well_known_codes = build_namespace_codec(onto_1, onto_2)
 
         extractor = ExtractEnvironmentsModule(
             MergeEnvironmentConfig(max_chars=args.merge_env_max_chars)
         )
         merge_environments, onto_1_leftover, onto_2_leftover = extractor.extract(
             onto_1, onto_2, alignments,
-            uri_to_code, code_to_ns, ns_to_code, well_known_codes,
+            code_to_ns, ns_to_code, well_known_codes,
         )
         extractor.expand_extracted(
             merge_environments, onto_1_leftover, onto_2_leftover,
@@ -66,7 +66,7 @@ class LLMOntologyMerger:
             settings.parallel_llm_request_count,
         )
 
-        async def _merge_one(env, idx):
+        async def _merge_single_env(env, idx):
             async with semaphore:
                 result = await merger.merge(env, idx=idx + 1, total=total)
                 log.info("Merged environment %d/%d", idx + 1, total)
@@ -74,7 +74,7 @@ class LLMOntologyMerger:
 
         merged_environments = list(
             await asyncio.gather(
-                *[_merge_one(env, i) for i, env in enumerate(merge_environments)]
+                *[_merge_single_env(env, i) for i, env in enumerate(merge_environments)]
             )
         )
 
