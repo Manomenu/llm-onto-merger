@@ -126,6 +126,12 @@ class MergeEnvironment:
         # deque entries when new neighbours are discovered during expand_extracted.
         self._border1_queued: set[URIRef] = set(self.border1)
         self._border2_queued: set[URIRef] = set(self.border2)
+        # Nodes explicitly placed in interior: seeds (phase 1) + nodes expanded via _expand_one
+        # (phase 2).  Distinct from onto_1/onto_2 subjects because move_entity_triples also
+        # pulls in triples where the seed is the *object*, making border nodes appear as
+        # subjects in the interior graph without having been deliberately expanded.
+        self.expanded_nodes_1: set[URIRef] = set()
+        self.expanded_nodes_2: set[URIRef] = set()
 
     def interior_char_estimate(self) -> int:
         """Estimate serialized size of the two interior graphs combined."""
@@ -134,15 +140,16 @@ class MergeEnvironment:
             + len(graph_to_string(self.onto_2, self._ns_to_code))
         )
 
-    def _render_border(self, border_graph: Graph, interior: Graph, used_chars: int) -> str:
+    def _render_border(
+        self, border_graph: Graph, expanded_nodes: set[URIRef], used_chars: int
+    ) -> str:
         """Render border nodes as Entity declarations, with triples when space allows.
 
-        Nodes already promoted to *interior* are excluded — they appear in the
-        [Ontology_N] section and must not be duplicated in [Border_N].
+        Nodes in *expanded_nodes* (seeds and phase-2 expansions) are excluded — they
+        appear in [Ontology_N] and must not be duplicated in [Border_N].
         """
-        interior_subjects = {s for s, _, _ in interior if isinstance(s, URIRef)}
         subjects = sorted(
-            {s for s, _, _ in border_graph if isinstance(s, URIRef)} - interior_subjects,
+            {s for s, _, _ in border_graph if isinstance(s, URIRef)} - expanded_nodes,
             key=str,
         )
         lines = []
@@ -171,8 +178,8 @@ class MergeEnvironment:
         onto2_str = graph_to_string(self.onto_2, self._ns_to_code)
         alignments_str = "\n".join(al.to_string() for al in self.alignments)
         base_chars = len(onto1_str) + len(onto2_str) + len(alignments_str)
-        border1_str = self._render_border(self.border1_graph, self.onto_1, base_chars)
-        border2_str = self._render_border(self.border2_graph, self.onto_2, base_chars + len(border1_str))
+        border1_str = self._render_border(self.border1_graph, self.expanded_nodes_1, base_chars)
+        border2_str = self._render_border(self.border2_graph, self.expanded_nodes_2, base_chars + len(border1_str))
         text = f"""
             {KG2CODE_PREAMBLE}
 

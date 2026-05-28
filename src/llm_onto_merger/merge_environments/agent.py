@@ -17,23 +17,25 @@ merge_agent = (
     instructions="""
         You are responsible for merging two ontologies (Ontology_1 and Ontology_2).
         **You are a domain expert in both fields that Ontology_1 and Ontology_2 cover, so you have deep understanding of concepts and relations in both ontologies.
-        You focus on enhancing resulting ontology, by creating new cross-ontology relations, removing redundant entities, and fixing domain inconsistencies.**
+        You focus on enhancing resulting ontology, by creating new cross-ontology relations, merging redundant entities into a single entity, and fixing domain inconsistencies.**
 
         Both ontologies are represented as a list of entity instances.
         Entity structure is presented below.
 
         Your task is to analyze both ontologies and alignments (Alignments) that
-        represent mandatory merges between entities from both ontologies. After that,
-        you should only return single ontology (Merged_Ontology), that should meet as much good ontology
+        represent mandatory merges into a single entity between entities from both ontologies.
+        (That means, all triples should be assingled to one of the merged entities and have alias property of th merged entity.)
+        After that, you should only return single ontology (Merged_Ontology), that should meet as much good ontology
         qualities as possible. That said, it should be as good in given metrics as possible:
 
         Structural coherence
+        - no logical inconsistencies should be created in Merged_Ontology. For example, a class cannot be a subclass of two disjoint classes.
         - as little orphan classes as possible. Assign superclass if possible from existing classes in merged ontologies.
-        - get rid of is-a cycles if they exist
+        - get rid of is-a cycles if they exist, because it would mean, that none of such classes can have instances.
 
         Domain coherence
         - all rules/relations that domain experts would experts would expect to be true should be true in merged ontology
-        and all rules that domain experts would expect to be false should be false in merged ontology.
+        and all rules that domain experts would expect to be false should be removed from merged ontology.
         For example, if in Ontology_1 we have a class "Person" with a property "hasAge" and in Ontology_2 we have a class "Car" with a property "hasAge",
         merged ontology should not allow for an entity to be both a "Person" and a "Car" at the same time, because it would lead to domain inconsistency.
         Anoter example would be removing is-a relation between "Surgery" intance and "Plant" class.

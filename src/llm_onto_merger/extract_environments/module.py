@@ -88,7 +88,7 @@ def _build_merge_environment(
         env_idx, len(sub1), len(sub2), len(border_set1), len(border_set2),
     )
 
-    return MergeEnvironment(
+    env = MergeEnvironment(
         onto_1=sub1,
         onto_2=sub2,
         alignments=[seed_al],
@@ -100,6 +100,9 @@ def _build_merge_environment(
         code_to_ns=code_to_ns,
         max_chars=config.max_chars,
     )
+    env.expanded_nodes_1.add(seed1)
+    env.expanded_nodes_2.add(seed2)
+    return env
 
 
 # ---------------------------------------------------------------------------
@@ -111,6 +114,7 @@ def _expand_one(
     border_queued: set[URIRef],
     border_graph: Graph,
     interior: Graph,
+    expanded_nodes: set[URIRef],
     source: Graph,
     global_frozen: set[URIRef],
     is_wk: Callable[[URIRef], bool],
@@ -134,6 +138,7 @@ def _expand_one(
 
         triples = move_entity_triples(node, source, interior)
         global_frozen.add(node)
+        expanded_nodes.add(node)
 
         # The node has moved to interior — remove its outgoing triples from
         # border_graph (they are now redundant; incoming edges from other border
@@ -142,16 +147,19 @@ def _expand_one(
             border_graph.remove(triple)
 
         # Discover new neighbours and queue them as border candidates.
-        for s, _, o in triples:
+        for s, p, o in triples:
             for neighbour in (s, o):
-                if (
-                    isinstance(neighbour, URIRef)
-                    and neighbour not in global_frozen
-                    and not is_wk(neighbour)
-                    and neighbour not in border_queued
-                ):
+                if not isinstance(neighbour, URIRef) or is_wk(neighbour) or neighbour in border_queued:
+                    continue
+                border_queued.add(neighbour)
+                if neighbour in global_frozen:
+                    # Already interior elsewhere — cannot expand, but surface as border context.
+                    # Only add the triple when the frozen node is the subject so it appears
+                    # as a border_graph subject and gets rendered by _render_border.
+                    if neighbour == s:
+                        border_graph.add((s, p, o))
+                else:
                     border.append(neighbour)
-                    border_queued.add(neighbour)
                     for triple in source.triples((neighbour, None, None)):
                         border_graph.add(triple)
 
@@ -284,11 +292,11 @@ class ExtractEnvironmentsModule:
 
                 expanded_1 = _expand_one(
                     env.border1, env._border1_queued, env.border1_graph,
-                    env.onto_1, source_1, global_frozen, is_wk,
+                    env.onto_1, env.expanded_nodes_1, source_1, global_frozen, is_wk,
                 )
                 expanded_2 = _expand_one(
                     env.border2, env._border2_queued, env.border2_graph,
-                    env.onto_2, source_2, global_frozen, is_wk,
+                    env.onto_2, env.expanded_nodes_2, source_2, global_frozen, is_wk,
                 )
 
                 if expanded_1 is not None or expanded_2 is not None:
@@ -329,8 +337,16 @@ class ExtractEnvironmentsModule:
         )
 
         # Per-environment growth summary.
+        # Border count = subjects in border_graph minus explicitly expanded nodes
+        # (same definition used by _render_border).
         for i, env in enumerate(environments):
             i1_before, i2_before, b1_before, b2_before = initial[i]
+            b1_after = len(
+                {s for s, _, _ in env.border1_graph if isinstance(s, URIRef)} - env.expanded_nodes_1
+            )
+            b2_after = len(
+                {s for s, _, _ in env.border2_graph if isinstance(s, URIRef)} - env.expanded_nodes_2
+            )
             log.info(
                 "%s  summary  |"
                 "  onto_1: %d->%d triples  onto_2: %d->%d triples"
@@ -338,6 +354,6 @@ class ExtractEnvironmentsModule:
                 _env_label(i),
                 i1_before, len(env.onto_1),
                 i2_before, len(env.onto_2),
-                b1_before, len(env.border1),
-                b2_before, len(env.border2),
+                b1_before, b1_after,
+                b2_before, b2_after,
             )
