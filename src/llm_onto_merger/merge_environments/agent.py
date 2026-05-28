@@ -41,12 +41,16 @@ merge_agent = (
         Anoter example would be removing is-a relation between "Surgery" intance and "Plant" class.
 
         Cross-ontology and intra-ontology relations / Knowledge completeness
-        - Merged_Ontology can introduce new relations between entities from the same ontology. We do this to enhance the quality of the ontology, by making implicit relations explicit and fixing domain inconsistencies.
-        For example, if in Ontology_1 we had "Cat" and "Dog" without is-a relation between them, merged ontology should not introduce is-a relation between "Cat" and "Dog".
-        - We allow to introduce new relations between entities from different ontologies (cross-ontology relations).
+        - Merged_Ontology can and should introduce new relations between entities from the same ontology when those relations are implied by domain knowledge but were not explicitly stated.
+        For example, if Ontology_1 has class "Animal" and class "Dog" without a subClassOf relation between them, merged ontology should introduce "Dog subClassOf Animal" because it is a universally known domain fact.
+        Do not invent relations that are not grounded in domain knowledge — for example, do not introduce is-a between "Cat" and "Dog" just because both exist in the same ontology.
+        - Merged_Ontology can and should introduce new relations between entities from different ontologies (cross-ontology relations).
         For example if we have "Animal" class in Ontology_1 and "Cat" class in Ontology_2, we can introduce is-a relation between "Cat" and "Animal" in merged ontology.
 
         Conciseness
+        - No two entities in Merged_Ontology should share the same local name. If two entities from different ontologies have the same local name, you must either:
+          (a) merge them into one entity (if they represent the same concept), adding alias triples for the replaced URIs, or
+          (b) rename one of them to a more precise name that distinguishes it from the other.
         - Each relation, entity is unique in Merged_Ontology. For example, if we had "Underaged" class in Ontology_1 and "Child" class in Ontology_2 it should exist in Merged_Ontology as one class,
         with name that is more suitable for the domain and have all information from both "Underaged" and "Child" classes.
         - No duplicate names for axioms. For example, if we have "hasAge" property in Ontology_1 and "ageValue" property in Ontology_2,
@@ -68,6 +72,12 @@ merge_agent = (
         Hierarchy integration quality
         - Merged_Ontology is of higher quality if there is more "is-a" relations between entities from Ontology_1 and Ontology_2 in Merged_Ontology.
 
+        Understandability
+        - Every class and property in Merged_Ontology should have an rdfs:label and an rdfs:comment.
+        - rdfs:label should be a human-readable name for the entity (e.g. "Medical Surgery").
+        - rdfs:comment should be a short description of what the entity represents in the domain (e.g. "A surgical procedure performed for medical purposes").
+        - If an entity from the source ontologies already has a label or comment, preserve it (or improve it). If it does not, add one based on your domain knowledge.
+
         Besides good ontology qualities merged ontology should also meet other mandatory
         requirements related to Border_1 and Border_2:
         - Merged_Ontology should contain a relation to/from every entity from Border_1 and Border_2.
@@ -75,6 +85,3 @@ merge_agent = (
         - Border entity names should be preserved in Merged_Ontology, do not change their URIs also.
         """,
 )
-
-# TO CONSIDER - zamiast tworzyc magicznie Merged_Ontology zwracaj liste merge'ów z
-# uzasadnieniem czemu dana operacja jest zastosowana - przy kazdej operacji.
