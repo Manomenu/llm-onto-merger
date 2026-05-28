@@ -12,11 +12,8 @@ Metrics are derived from the Ewaluacja sections of each dimension:
   6. Accuracy                      — triple_preservation_ratio
   7. Understandability             — annotation_coverage_ratio
 
-API:  https://ontometrics.informatik.uni-rostock.de/ontologymetrics/
-      (University of Rostock, public, no auth required)
-
 Usage:
-    python tests/metrics_def.py <folder_name> [--hermit] [--skip-api]
+    python tests/metrics_def.py <folder_name>
 
 Reads:
     tests/inputs/<folder_name>/*.owl
@@ -30,13 +27,10 @@ Writes:
 
 import argparse
 import csv
-import re
 import sys
-import time
 from collections import defaultdict, deque
 from pathlib import Path
 
-import requests
 from rdflib import OWL, RDF, RDFS, XSD, BNode, Graph, Literal, URIRef
 
 _OWL_DISJOINT_WITH = OWL.disjointWith
@@ -52,11 +46,6 @@ _LABEL = RDFS.label
 _COMMENT = RDFS.comment
 _PROP_TYPES = (_OWL_OBJ, _OWL_DATA, _OWL_ANN, _OWL_FP, _OWL_IFP)
 
-ONTOMETRICS_URL = (
-    "https://ontometrics.informatik.uni-rostock.de/ontologymetrics/ServletController"
-)
-_DELAY_S = 3
-
 # Category name → (css-abbreviation, badge-colour)
 _CATEGORIES: dict[str, tuple[str, str]] = {
     "Structural Coherence": ("sc", "#c0392b"),
@@ -69,11 +58,9 @@ _CATEGORIES: dict[str, tuple[str, str]] = {
 }
 
 # ── Metric registry ────────────────────────────────────────────────────────────
-# api_key: list of substrings matched against parsed API response keys; None = self-only.
 _REGISTRY: dict[str, dict] = {
     # ── Structural Coherence ───────────────────────────────────────────────────
     "ARC": {
-        "api_key": None,
         "source": "self-implemented",
         "categories": ["Structural Coherence", "Hierarchy Integration Quality"],
         "target": "low (ideally 1)",
@@ -86,7 +73,6 @@ _REGISTRY: dict[str, dict] = {
         ),
     },
     "unsatisfiable_classes": {
-        "api_key": None,
         "source": "hermit_reasoner",
         "categories": ["Structural Coherence"],
         "target": "= 0",
@@ -99,7 +85,6 @@ _REGISTRY: dict[str, dict] = {
         ),
     },
     "cycle_count": {
-        "api_key": None,
         "source": "self-implemented",
         "categories": ["Structural Coherence"],
         "target": "= 0",
@@ -112,7 +97,6 @@ _REGISTRY: dict[str, dict] = {
     },
     # ── Conciseness ───────────────────────────────────────────────────────────
     "syntactic_uniqueness_ratio": {
-        "api_key": None,
         "source": "self-implemented",
         "categories": ["Conciseness"],
         "target": "= 1.0",
@@ -124,7 +108,6 @@ _REGISTRY: dict[str, dict] = {
         ),
     },
     "ALC": {
-        "api_key": None,
         "source": "self-implemented",
         "categories": ["Conciseness", "Hierarchy Integration Quality"],
         "target": "context-dependent",
@@ -137,7 +120,6 @@ _REGISTRY: dict[str, dict] = {
     },
     # ── Knowledge Completeness ────────────────────────────────────────────────
     "cross_onto_relations_count": {
-        "api_key": None,
         "source": "self-implemented",
         "categories": ["Knowledge Completeness"],
         "target": "high",
@@ -148,9 +130,21 @@ _REGISTRY: dict[str, dict] = {
             "osobno, powstałe przez połączenie obu ontologii."
         ),
     },
+    "new_intra_onto_relations_count": {
+        "source": "self-implemented",
+        "categories": ["Knowledge Completeness"],
+        "target": "context-dependent",
+        "interpretation": (
+            "Liczba nowych relacji RDF (dowolny predykat) łączących dwie encje z TEJ SAMEJ "
+            "ontologii źródłowej (Onto1↔Onto1 lub Onto2↔Onto2), nieobecnych w unii wejściowej. "
+            "Wysoka wartość może wskazywać na uwidocznienie implicit relacji domenowych "
+            "— model scalający sprawia, że stają się explicit. "
+            "Niska wartość sugeruje, że model głównie łączył ontologie, bez uzupełniania "
+            "wiedzy wewnątrz każdej z nich."
+        ),
+    },
     # ── Hierarchy Integration Quality ─────────────────────────────────────────
     "cross_onto_subclassof_count": {
-        "api_key": None,
         "source": "self-implemented",
         "categories": ["Hierarchy Integration Quality", "Knowledge Completeness"],
         "target": "high",
@@ -163,7 +157,6 @@ _REGISTRY: dict[str, dict] = {
         ),
     },
     "connectivity_ratio": {
-        "api_key": None,
         "source": "self-implemented",
         "categories": ["Hierarchy Integration Quality"],
         "target": "= 1.0",
@@ -175,7 +168,6 @@ _REGISTRY: dict[str, dict] = {
         ),
     },
     "average_depth": {
-        "api_key": None,
         "source": "self-implemented",
         "categories": ["Hierarchy Integration Quality"],
         "target": "higher after merge",
@@ -186,7 +178,6 @@ _REGISTRY: dict[str, dict] = {
         ),
     },
     "max_depth": {
-        "api_key": None,
         "source": "self-implemented",
         "categories": ["Hierarchy Integration Quality"],
         "target": "higher after merge",
@@ -196,7 +187,6 @@ _REGISTRY: dict[str, dict] = {
         ),
     },
     "average_breadth": {
-        "api_key": None,
         "source": "self-implemented",
         "categories": ["Hierarchy Integration Quality"],
         "target": "context-dependent",
@@ -207,7 +197,6 @@ _REGISTRY: dict[str, dict] = {
         ),
     },
     "max_breadth": {
-        "api_key": None,
         "source": "self-implemented",
         "categories": ["Hierarchy Integration Quality"],
         "target": "context-dependent",
@@ -219,20 +208,18 @@ _REGISTRY: dict[str, dict] = {
     },
     # ── Accuracy ──────────────────────────────────────────────────────────────
     "triple_preservation_ratio": {
-        "api_key": None,
         "source": "self-implemented",
         "categories": ["Accuracy"],
         "target": "= 1.0",
         "interpretation": (
             "Triple Preservation Ratio = liczba trójek RDF z Onto1 ∪ Onto2 "
-            "(porównanie po lokalnych nazwach S/P/O) obecnych w scalonej ontologii / "
-            "całkowita liczba trójek w Onto1 ∪ Onto2. Docelowo = 1.0. "
-            "Niska wartość = duże straty wiedzy źródłowej wymagające uzasadnienia."
+            "(porównanie po lokalnych nazwach S/P/O, z normalizacją przez alias LLM) "
+            "obecnych w scalonej ontologii / całkowita liczba trójek w Onto1 ∪ Onto2. "
+            "Docelowo = 1.0. Niska wartość = duże straty wiedzy źródłowej wymagające uzasadnienia."
         ),
     },
     # ── Understandability ─────────────────────────────────────────────────────
     "annotation_coverage_ratio": {
-        "api_key": None,
         "source": "self-implemented",
         "categories": ["Understandability"],
         "target": "= 1.0",
@@ -245,7 +232,8 @@ _REGISTRY: dict[str, dict] = {
     },
 }
 
-# ── OntoMetrics API ────────────────────────────────────────────────────────────
+
+# ── rdflib helpers ─────────────────────────────────────────────────────────────
 
 
 def _load_graph(path: str) -> Graph:
@@ -254,109 +242,6 @@ def _load_graph(path: str) -> Graph:
     for t in list(g.triples((None, _OWL_DISJOINT_WITH, None))):
         g.remove(t)
     return g
-
-
-def _query_api(owl_bytes: bytes, label: str) -> dict[str, float]:
-    print(f"  → OntoMetrics API [{label}] …", end=" ", flush=True)
-    resp = requests.post(
-        ONTOMETRICS_URL,
-        data={
-            "text": owl_bytes.decode("utf-8", errors="replace"),
-            "base": "on",
-            "schema": "on",
-            "knowledge": "on",
-            "graph": "on",
-            "store_aggreement": "on",
-        },
-        timeout=120,
-    )
-    resp.raise_for_status()
-    metrics = _parse_html(resp.text)
-    print(f"{len(metrics)} metrics")
-    return metrics
-
-
-_SECTIONS = [
-    ("base", "Base metrics"),
-    ("base", "Class axioms"),
-    ("base", "Object property axioms"),
-    ("base", "Data property axioms"),
-    ("base", "Individual axioms"),
-    ("base", "Annotation axioms"),
-    ("schema", "Schema metrics"),
-    ("kb", "Knowledgebase metrics"),
-    ("graph", "Graph metrics"),
-]
-_SKIP_ANYWHERE = frozenset(["show", "hide", "more", "details", "powered", "copyright"])
-_SKIP_FIRST = frozenset(
-    [
-        "home",
-        "result",
-        "faq",
-        "wiki",
-        "contact",
-        "impressum",
-        "results",
-        "ontologyid",
-        "optional",
-        "created",
-    ]
-)
-
-
-def _parse_html(html: str) -> dict[str, float]:
-    text = re.sub(r"<[^>]+>", " ", html)
-    text = re.sub(r"&nbsp;", " ", text)
-    text = re.sub(r"\s+", " ", text)
-    idx = text.find("Results")
-    if idx >= 0:
-        text = text[idx:]
-
-    section_spans: list[tuple[int, str]] = []
-    for prefix, marker in _SECTIONS:
-        pos = text.find(marker)
-        if pos >= 0:
-            section_spans.append((pos, prefix))
-    section_spans.sort()
-
-    def _section_at(pos: int) -> str:
-        label = "base"
-        for sp, sl in section_spans:
-            if sp <= pos:
-                label = sl
-        return label
-
-    metrics: dict[str, float] = {}
-    pattern = re.compile(r"([A-Z][A-Za-z /()\-]+?):\s*(-?\d+\.?\d*(?:e[+-]?\d+)?)")
-    for m in pattern.finditer(text):
-        raw_name = m.group(1).strip()
-        if len(raw_name) > 55:
-            continue
-        lower = raw_name.lower()
-        if any(w in lower for w in _SKIP_ANYWHERE):
-            continue
-        if lower.split()[0] in _SKIP_FIRST:
-            continue
-        try:
-            value = float(m.group(2))
-        except ValueError:
-            continue
-        section = _section_at(m.start())
-        key = (
-            raw_name.lower()
-            .replace(" ", "_")
-            .replace("/", "_per_")
-            .replace("(", "")
-            .replace(")", "")
-            .replace("-", "_")
-        )
-        full_key = f"{section}/{key}"
-        if full_key not in metrics:
-            metrics[full_key] = value
-    return metrics
-
-
-# ── rdflib helpers ─────────────────────────────────────────────────────────────
 
 
 def _local(uri: URIRef) -> str:
@@ -462,16 +347,13 @@ def _hierarchy_stats(g: Graph, cls: set[URIRef]) -> dict[str, float]:
             "max_breadth": 0.0,
         }
 
-    # children[parent] = direct named subclasses
     children: dict[URIRef, list[URIRef]] = defaultdict(list)
     for s, _, o in g.triples((None, _SUB, None)):
         if isinstance(s, URIRef) and isinstance(o, URIRef) and s in cls:
             children[o].append(s)
 
-    # ALC — named classes with no direct subclasses
     alc = float(sum(1 for c in cls if not children.get(c)))
 
-    # BFS from owl:Thing — depth of each reachable class
     depths: dict[URIRef, int] = {}
     queue: deque[tuple[URIRef, int]] = deque([(_OWL_THING, 0)])
     visited: set[URIRef] = {_OWL_THING}
@@ -487,10 +369,7 @@ def _hierarchy_stats(g: Graph, cls: set[URIRef]) -> dict[str, float]:
     avg_depth = sum(depth_vals) / len(depth_vals) if depth_vals else 0.0
     max_depth = float(max(depth_vals)) if depth_vals else 0.0
 
-    # Breadth — direct child count for nodes in cls that have children
-    breadths = [
-        len(ch) for node, ch in children.items() if node in cls and ch
-    ]
+    breadths = [len(ch) for node, ch in children.items() if node in cls and ch]
     avg_breadth = sum(breadths) / len(breadths) if breadths else 0.0
     max_breadth = float(max(breadths)) if breadths else 0.0
 
@@ -560,6 +439,20 @@ def _compute_self_metrics(
     # BNode objects are excluded: their internal IDs differ across parse sessions,
     # so str(bnode) comparisons produce false negatives for restrictions/unions.
     if union is not None:
+        # Build local-name alias map from merged graph:
+        #   (new_uri, http://merged#alias, "code;;OldLocalName") → {OldLocalName: NewLocalName}
+        # This lets us normalize union triples before comparison so entities that
+        # were renamed by the LLM still count as preserved.
+        _ALIAS_PRED = "http://merged#alias"
+        alias_local: dict[str, str] = {}
+        for _s, _p, _o in g:
+            if str(_p) == _ALIAS_PRED and isinstance(_s, URIRef) and isinstance(_o, Literal):
+                parts = str(_o).split(";;", 1)
+                if len(parts) == 2 and parts[1]:
+                    alias_local[parts[1]] = _local(_s)
+
+        def _norm(local: str) -> str:
+            return alias_local.get(local, local)
 
         def _key(s, p, o) -> tuple[str, str, str]:
             return (
@@ -568,8 +461,15 @@ def _compute_self_metrics(
                 _local(o) if isinstance(o, URIRef) else str(o),
             )
 
+        def _key_norm(s, p, o) -> tuple[str, str, str]:
+            return (
+                _norm(_local(s)),
+                _norm(_local(p)),
+                _norm(_local(o)) if isinstance(o, URIRef) else str(o),
+            )
+
         union_triples = {
-            _key(s, p, o)
+            _key_norm(s, p, o)
             for s, p, o in union
             if isinstance(s, URIRef) and not isinstance(o, BNode)
         }
@@ -583,8 +483,29 @@ def _compute_self_metrics(
             if union_triples
             else 1.0
         )
+
+        # New intra-ontology relations: triples where both S and O local names
+        # come from the same source ontology, but the triple is absent from union.
+        onto1_locals = {_local(e) for e in onto1_entities}
+        onto2_locals = {_local(e) for e in onto2_entities}
+        union_keys = {
+            (_local(s), _local(p), _local(o))
+            for s, p, o in union
+            if isinstance(s, URIRef) and isinstance(o, URIRef)
+        }
+        new_intra_rel = float(sum(
+            1
+            for s, p, o in g
+            if isinstance(s, URIRef) and isinstance(o, URIRef)
+            and (
+                (_local(s) in onto1_locals and _local(o) in onto1_locals)
+                or (_local(s) in onto2_locals and _local(o) in onto2_locals)
+            )
+            and (_local(s), _local(p), _local(o)) not in union_keys
+        ))
     else:
         tpr = 1.0  # union itself
+        new_intra_rel = 0.0
 
     # Annotation coverage ratio
     entities = cls | prop
@@ -605,6 +526,7 @@ def _compute_self_metrics(
         "syntactic_uniqueness_ratio": round(syntactic_uniqueness_ratio, 4),
         "cross_onto_subclassof_count": float(cross_sub),
         "cross_onto_relations_count": float(cross_rel),
+        "new_intra_onto_relations_count": new_intra_rel,
         "connectivity_ratio": round(connectivity, 4),
         "triple_preservation_ratio": round(tpr, 4),
         "annotation_coverage_ratio": round(annotation_coverage, 4),
@@ -705,7 +627,6 @@ _CAT_ABBR: dict[str, str] = {cat: abbr for cat, (abbr, _) in _CATEGORIES.items()
 _CAT_COLOR: dict[str, str] = {cat: color for cat, (_, color) in _CATEGORIES.items()}
 
 _SOURCE_BORDER: dict[str, str] = {
-    "ontometrics_api": "#2980b9",
     "self-implemented": "#27ae60",
     "hermit_reasoner": "#8e44ad",
 }
@@ -776,7 +697,6 @@ _LEGEND_TEMPLATE = """\
 <div class="legend">
   <h3>Source</h3>
   <div class="legend-row">
-    <span class="legend-item"><span class="src-dot" style="background:#2980b9"></span> ontometrics_api</span>
     <span class="legend-item"><span class="src-dot" style="background:#27ae60"></span> self-implemented</span>
     <span class="legend-item"><span class="src-dot" style="background:#8e44ad"></span> hermit_reasoner</span>
   </div>
@@ -865,18 +785,6 @@ def main() -> None:
         description="Compute ontology quality metrics based on 7 academic quality dimensions."
     )
     parser.add_argument("folder_name", help="Subfolder under tests/inputs/ and tests/outputs/")
-    parser.add_argument(
-        "--hermit",
-        action="store_true",
-        default=False,
-        help="Run HermiT reasoner to compute unsatisfiable_classes (requires owlready2 + Java)",
-    )
-    parser.add_argument(
-        "--skip-api",
-        action="store_true",
-        default=False,
-        help="Skip OntoMetrics API calls (useful when the service is unavailable)",
-    )
     args = parser.parse_args()
 
     folder = args.folder_name
@@ -928,30 +836,6 @@ def main() -> None:
     onto1_entities: set[URIRef] = {s for s, _, _ in onto1 if isinstance(s, URIRef)}
     onto2_entities: set[URIRef] = {s for s, _, _ in onto2 if isinstance(s, URIRef)}
 
-    # ── API calls ──────────────────────────────────────────────────────────────
-    api_results: dict[str, dict[str, float]] = {}
-    if args.skip_api:
-        print("\nOntoMetrics API skipped (--skip-api)")
-    else:
-        print("\nQuerying OntoMetrics API …")
-        api_graphs: list[tuple[str, bytes]] = [
-            ("union_input", union.serialize(format="xml").encode("utf-8")),
-            ("merged_ontology", merged_path.read_bytes()),
-        ]
-        if applied is not None:
-            api_graphs.append(
-                ("applied_alignments", applied.serialize(format="xml").encode("utf-8"))
-            )
-
-        for i, (graph_name, owl_bytes) in enumerate(api_graphs):
-            if i > 0:
-                time.sleep(_DELAY_S)
-            try:
-                api_results[graph_name] = _query_api(owl_bytes, graph_name)
-            except Exception as exc:
-                print(f"  ERROR for {graph_name}: {exc}", file=sys.stderr)
-                api_results[graph_name] = {}
-
     # ── Self-implemented metrics ───────────────────────────────────────────────
     print("\nComputing self-implemented metrics …")
     graph_objects: dict[str, Graph] = {
@@ -970,12 +854,9 @@ def main() -> None:
         print(f"  {name}: done")
 
     # ── HermiT reasoner ───────────────────────────────────────────────────────
-    if args.hermit:
-        print("\nRunning HermiT reasoner …")
-        for name, g in graph_objects.items():
-            self_metrics[name].update(_reasoner_check(g, name))
-    else:
-        print("\nHermiT reasoner skipped (pass --hermit to enable unsatisfiable_classes)")
+    print("\nRunning HermiT reasoner …")
+    for name, g in graph_objects.items():
+        self_metrics[name].update(_reasoner_check(g, name))
 
     # ── Assemble rows ──────────────────────────────────────────────────────────
     graph_names = ["union_input", "merged_ontology"] + (
@@ -984,22 +865,10 @@ def main() -> None:
 
     rows: list[dict] = []
     for graph_name in graph_names:
-        api_raw = api_results.get(graph_name, {})
         for metric_name, meta in _REGISTRY.items():
-            api_key = meta["api_key"]
-            value: float | None = None
-
-            if api_key is not None:
-                value = next(
-                    (v for k, v in api_raw.items() if any(alt in k for alt in api_key)),
-                    None,
-                )
-            else:
-                value = self_metrics[graph_name].get(metric_name)
-
+            value = self_metrics[graph_name].get(metric_name)
             if value is None:
                 continue
-
             rows.append(
                 {
                     "graph": graph_name,
@@ -1013,7 +882,7 @@ def main() -> None:
             )
 
     if not rows:
-        print("No metrics collected — API may be unavailable.", file=sys.stderr)
+        print("No metrics collected.", file=sys.stderr)
         sys.exit(1)
 
     # ── Write CSV ──────────────────────────────────────────────────────────────

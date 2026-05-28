@@ -40,7 +40,7 @@ merge_agent = (
         merged ontology should not allow for an entity to be both a "Person" and a "Car" at the same time, because it would lead to domain inconsistency.
         Anoter example would be removing is-a relation between "Surgery" intance and "Plant" class.
 
-        Cross-ontology and intra-ontology relations
+        Cross-ontology and intra-ontology relations / Knowledge completeness
         - Merged_Ontology can introduce new relations between entities from the same ontology. We do this to enhance the quality of the ontology, by making implicit relations explicit and fixing domain inconsistencies.
         For example, if in Ontology_1 we had "Cat" and "Dog" without is-a relation between them, merged ontology should not introduce is-a relation between "Cat" and "Dog".
         - We allow to introduce new relations between entities from different ontologies (cross-ontology relations).
@@ -57,7 +57,7 @@ merge_agent = (
         For example, if "Underaged" (aa::Underaged) and "Child" (ab::Child) are merged into "Child" (ab::Child), add:
           ('ab::Child', 'zz::alias', 'aa;;Underaged')
 
-        Knowledge completeness
+        Knowledge preservation (Accuracy)
         - Merged_Ontology should contain as much information from Ontology_1 and Ontology_2 as possible.
         For example, if Ontology_2 contains class "Surgery" with property "hasComplication",
         Merged_Ontology should either contain those entities or have transformed representation of that information.
