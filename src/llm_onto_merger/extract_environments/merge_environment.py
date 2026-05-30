@@ -2,7 +2,7 @@ import itertools
 import string
 from collections import deque
 
-from rdflib import Graph, Literal, URIRef
+from rdflib import OWL, RDF, RDFS, XSD, Graph, Literal, URIRef
 
 from ..alignment.alignment import Alignment
 from ..ontology import KG2CODE_PREAMBLE, graph_to_string, namespace_of
@@ -10,10 +10,10 @@ from ..ontology import KG2CODE_PREAMBLE, graph_to_string, namespace_of
 _CODEC_CHARS = string.ascii_lowercase
 
 _WELL_KNOWN_NS: tuple[str, ...] = (
-    "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-    "http://www.w3.org/2001/XMLSchema#",
-    "http://www.w3.org/2000/01/rdf-schema#",
-    "http://www.w3.org/2002/07/owl#",
+    str(RDF),
+    str(XSD),
+    str(RDFS),
+    str(OWL),
     "http://www.w3.org/2003/11/swrl#",
     "http://www.w3.org/2003/11/swrlb#",
     "http://www.owl-ontologies.com/2005/08/07/xsp.owl#",

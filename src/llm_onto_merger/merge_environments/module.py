@@ -5,8 +5,6 @@ from llm_onto_merger.extract_environments.merge_environment import MergeEnvironm
 from llm_onto_merger.logger import get_logger
 from llm_onto_merger.ontology import Entity, entities_to_graph, local_name
 
-from .agent import merge_agent
-
 log = get_logger(__name__)
 
 
@@ -15,7 +13,6 @@ class MergedOntology(BaseModel):
 
 
 _MERGED_ONTOLOGY_SCHEMA = MergedOntology.model_json_schema()
-_INSTRUCTION_LEN = len(merge_agent.default_options.get("instructions") or "")
 
 
 def _local_keys(g: Graph) -> set[tuple[str, str, str]]:
@@ -78,6 +75,10 @@ def _audit_merge(idx: int, env: MergeEnvironment, merged: Graph) -> None:
 
 
 class MergeEnvironmentsModule:
+    def __init__(self, agent) -> None:
+        self._agent = agent
+        self._instruction_len = len(agent.default_options.get("instructions") or "")
+
     async def merge(self, merge_environment: MergeEnvironment, idx: int = 0, total: int = 0) -> Graph:
         request, code_to_uri = merge_environment.to_string()
         n_triples = len(merge_environment.onto_1) + len(merge_environment.onto_2)
@@ -87,11 +88,11 @@ class MergeEnvironmentsModule:
         )
         log.info(
             "Sending merge request | instruction: %d chars | request: %d chars | total: %d chars",
-            _INSTRUCTION_LEN,
+            self._instruction_len,
             len(request),
-            _INSTRUCTION_LEN + len(request),
+            self._instruction_len + len(request),
         )
-        response = await merge_agent.run(
+        response = await self._agent.run(
             request,
             options={"response_format": _MERGED_ONTOLOGY_SCHEMA},
         )

@@ -15,6 +15,7 @@ from llm_onto_merger.extract_environments import (
 from llm_onto_merger.integrate_environments import integrate_environments
 from llm_onto_merger.load_arguments import LoadedArguments
 from llm_onto_merger.logger import get_logger
+from llm_onto_merger.merge_environments.agent import build_merge_agent
 from llm_onto_merger.merge_environments.module import MergeEnvironmentsModule
 from llm_onto_merger.alignment.alignment import Alignment
 from llm_onto_merger.ontology import apply_alignments, create_ontology, save_ontology
@@ -75,7 +76,7 @@ class LLMOntologyMerger:
 
         total     = len(merge_environments)
         semaphore = asyncio.Semaphore(settings.parallel_llm_request_count)
-        merger    = MergeEnvironmentsModule()
+        merger    = MergeEnvironmentsModule(build_merge_agent(ns_to_code, code_to_ns))
 
         log.info(
             "Merging %d environments | parallel_llm_requests: %d",

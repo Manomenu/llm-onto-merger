@@ -43,13 +43,29 @@ def _encode(uri: str, ns_to_code: dict[str, str]) -> str:
 
 
 def _decode(coded: str, code_to_ns: dict[str, str]) -> URIRef | Literal:
-    """Decode 'code::LocalName' → URIRef. Falls back to Literal for unknowns."""
+    """Decode 'code::LocalName' → URIRef. Falls back to Literal for unknowns.
+
+    Emits a warning when the value looks URI-shaped (contains '::') but the
+    namespace code is unknown or the local name is empty.  No warning is
+    emitted for values without '::' that fall back to Literal — those are
+    legitimately literal object values (e.g. rdfs:comment text).
+    """
     idx = coded.find("::")
     if idx > 0:
         code, local = coded[:idx], coded[idx + 2:]
         ns = code_to_ns.get(code)
         if ns and local:
             return URIRef(ns + local)
+        if not ns:
+            log.warning(
+                "Decoder: unknown namespace code '%s' in '%s' — falling back to Literal",
+                code, coded,
+            )
+        elif not local:
+            log.warning(
+                "Decoder: empty local name after '::' in '%s' — falling back to Literal",
+                coded,
+            )
     if coded.startswith("http"):
         return URIRef(coded)
     return Literal(coded)
@@ -86,13 +102,33 @@ def _is_valid_entity(e: Entity, code_to_ns: dict[str, str]) -> bool:
 
 
 def _decode_alias_literal(s: str, code_to_ns: dict[str, str]) -> URIRef | None:
-    """Decode an alias literal encoded as 'code;;LocalName' → URIRef."""
+    """Decode an alias literal encoded as 'code;;LocalName' → URIRef.
+
+    Emits a warning on every failure path because an alias-predicate object is
+    always meant to encode an old URI — anything else is a malformed LLM
+    response (missing ';;' separator, unknown code, or empty local name).
+    """
     idx = s.find(";;")
-    if idx > 0:
-        code, local = s[:idx], s[idx + 2:]
-        ns = code_to_ns.get(code)
-        if ns and local:
-            return URIRef(ns + local)
+    if idx < 0:
+        log.warning(
+            "Alias decoder: missing ';;' separator in alias literal '%s' — discarded",
+            s,
+        )
+        return None
+    code, local = s[:idx], s[idx + 2:]
+    ns = code_to_ns.get(code)
+    if ns and local:
+        return URIRef(ns + local)
+    if not ns:
+        log.warning(
+            "Alias decoder: unknown namespace code '%s' in alias literal '%s' — discarded",
+            code, s,
+        )
+    elif not local:
+        log.warning(
+            "Alias decoder: empty local name in alias literal '%s' — discarded",
+            s,
+        )
     return None
 
 
@@ -117,7 +153,8 @@ def entities_to_graph(entities: list[Entity], code_to_ns: dict[str, str]) -> Gra
     """Reconstruct an rdflib Graph from LLM-returned Entity list.
 
     Every URI element is decoded via code_to_ns.  Unknown codes fall back to
-    Literal; triples with a non-URIRef predicate are silently skipped.
+    Literal; triples whose subject or predicate does not decode as URIRef are
+    dropped with a warning.
     """
     valid = [e for e in entities if _is_valid_entity(e, code_to_ns)]
     if len(valid) < len(entities):
@@ -126,13 +163,31 @@ def entities_to_graph(entities: list[Entity], code_to_ns: dict[str, str]) -> Gra
             len(entities) - len(valid),
         )
     graph = Graph()
+    dropped_subj = 0
+    dropped_pred = 0
     for entity in valid:
         subj = _decode(entity.uri, code_to_ns)
         if not isinstance(subj, URIRef):
+            log.warning(
+                "Triple group dropped: subject '%s' did not decode as URI",
+                entity.uri,
+            )
+            dropped_subj += 1
             continue
         for _, p_coded, o_coded in entity.tuples:
             p = _decode(p_coded, code_to_ns)
             o = _decode(o_coded, code_to_ns)
             if isinstance(p, URIRef):
                 graph.add((subj, p, o))
+            else:
+                log.warning(
+                    "Triple dropped: predicate '%s' did not decode as URI (subject was '%s')",
+                    p_coded, entity.uri,
+                )
+                dropped_pred += 1
+    if dropped_subj or dropped_pred:
+        log.warning(
+            "entities_to_graph summary: dropped %d entities (bad subject) and %d triples (bad predicate)",
+            dropped_subj, dropped_pred,
+        )
     return graph
