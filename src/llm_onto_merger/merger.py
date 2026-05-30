@@ -109,12 +109,19 @@ class LLMOntologyMerger:
             total_alignments,
             total_alignments - applied_count,
         )
+        rejected_alignments = [
+            {"entity1": al.entity1, "entity2": al.entity2}
+            for i, applied in enumerate(alignment_applied_flags)
+            if not applied
+            for al in merge_environments[i].alignments
+        ]
         (out_dir / "alignment_stats.json").write_text(
             json.dumps(
                 {
                     "total_alignments": total_alignments,
                     "applied_count": applied_count,
                     "per_env": alignment_applied_flags,
+                    "rejected_alignments": rejected_alignments,
                 },
                 indent=2,
             ),

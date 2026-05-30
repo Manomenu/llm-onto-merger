@@ -593,6 +593,67 @@ def _compute_self_metrics(
     }
 
 
+def _compute_suspected_counts(
+    g: Graph,
+    onto1_entities: set[URIRef],
+    onto2_entities: set[URIRef],
+    tainted_uris: set[URIRef],
+) -> dict[str, int]:
+    """Count metric contributions tied to alignments the LLM later rejected.
+
+    `tainted_uris` are the merged URIs in applied_alignments.owl that originate
+    from rejected alignment pairs (entity1 of each rejected pair — entity2 was
+    collapsed into entity1 by apply_alignments).  Triples involving any tainted
+    URI are likely incorrect since they conflate concepts the LLM considers
+    semantically distinct.
+    """
+    if not tainted_uris:
+        return {}
+
+    onto1_locals = {_local(e) for e in onto1_entities}
+    onto2_locals = {_local(e) for e in onto2_entities}
+    _, new_to_source = _build_alias_maps(g, onto1_locals, onto2_locals)
+
+    def _from_onto1(u) -> bool:
+        if not isinstance(u, URIRef):
+            return False
+        if u in onto1_entities:
+            return True
+        if u in onto2_entities:
+            return False
+        return new_to_source.get(_local(u)) in ("onto1", "both")
+
+    def _from_onto2(u) -> bool:
+        if not isinstance(u, URIRef):
+            return False
+        if u in onto2_entities:
+            return True
+        if u in onto1_entities:
+            return False
+        return new_to_source.get(_local(u)) in ("onto2", "both")
+
+    def _is_tainted(u) -> bool:
+        return isinstance(u, URIRef) and u in tainted_uris
+
+    cross_sub_susp = sum(
+        1
+        for s, _, o in g.triples((None, _SUB, None))
+        if (_is_tainted(s) or _is_tainted(o))
+        and ((_from_onto1(s) and _from_onto2(o)) or (_from_onto2(s) and _from_onto1(o)))
+    )
+    cross_rel_susp = sum(
+        1
+        for s, _, o in g
+        if (_is_tainted(s) or _is_tainted(o))
+        and ((_from_onto1(s) and _from_onto2(o)) or (_from_onto2(s) and _from_onto1(o)))
+    )
+
+    return {
+        "cross_onto_subclassof_count": cross_sub_susp,
+        "cross_onto_relations_count": cross_rel_susp,
+    }
+
+
 # ── HermiT reasoner check ─────────────────────────────────────────────────────
 
 # XSD datatypes absent from the OWL 2 datatype map — HermiT rejects them.
@@ -721,6 +782,8 @@ _HTML_TEMPLATE = """\
   .dot  {{ width: 13px; height: 13px; border-radius: 2px; display: inline-block; flex-shrink: 0; }}
   .src-dot {{ width: 4px; height: 18px; border-radius: 2px; display: inline-block; flex-shrink: 0; }}
   .note {{ margin-top: 1rem; font-size: 0.8rem; color: #888; font-style: italic; }}
+  .susp {{ color: #c0392b; font-size: 0.78rem; font-weight: 600;
+           font-variant-numeric: tabular-nums; margin-left: 0.2rem; cursor: help; }}
 </style>
 </head>
 <body>
@@ -782,12 +845,29 @@ def _cat_badges(categories: list[str]) -> str:
     return "".join(parts)
 
 
+def _fmt_applied(v: float | None, suspected: int) -> str:
+    """Like _fmt, but appends '(X suspected)' badge when LLM rejected alignments."""
+    if v is None:
+        return '<td class="na">N/A</td>'
+    base = f"{int(v)}" if v == int(v) and abs(v) < 1e9 else f"{v:.4f}"
+    if suspected > 0:
+        return (
+            f'<td class="num">{base} '
+            f'<span class="susp" title="liczba przyczynków metryki wynikających z alignmentów '
+            f'odrzuconych przez LLM — prawdopodobnie semantycznie błędnych">'
+            f'({suspected} suspected)</span></td>'
+        )
+    return f'<td class="num">{base}</td>'
+
+
 def _write_html(
     rows: list[dict],
     out_path: Path,
     folder: str,
     has_applied: bool,
+    suspected_counts: dict[str, int] | None = None,
 ) -> None:
+    suspected_counts = suspected_counts or {}
     by_metric: dict[str, dict[str, float]] = defaultdict(dict)
     for r in rows:
         by_metric[r["metric"]][r["graph"]] = r["value"]
@@ -802,7 +882,8 @@ def _write_html(
             continue
         border = _SOURCE_BORDER.get(meta["source"], "#ccc")
         badges = _cat_badges(meta["categories"])
-        applied_cell = _fmt(a_val) if has_applied else ""
+        susp = suspected_counts.get(metric_name, 0)
+        applied_cell = _fmt_applied(a_val, susp) if has_applied else ""
 
         html_rows.append(
             f'    <tr style="border-left: 3px solid {border}">\n'
@@ -921,10 +1002,13 @@ def main() -> None:
         self_metrics[name].update(_reasoner_check(g, name))
 
     # ── Alignment application stats (from sidecar JSON written by merger) ─────
+    suspected_counts: dict[str, int] = {}
     if alignment_stats_path.exists():
         stats = json.loads(alignment_stats_path.read_text(encoding="utf-8"))
         total_align = float(stats.get("total_alignments", 0))
         applied_align = float(stats.get("applied_count", 0))
+        rejected_count = int(total_align - applied_align)
+        rejected = stats.get("rejected_alignments", [])
         # union_input: no alignments by definition
         if "union_input" in self_metrics:
             self_metrics["union_input"]["applied_alignments"] = 0.0
@@ -937,6 +1021,19 @@ def main() -> None:
         print(
             f"  alignment_stats: {int(applied_align)}/{int(total_align)} accepted by LLM"
         )
+
+        # Suspected counts for the applied_alignments column: every rejected
+        # alignment's entity1 (entity2 was collapsed into it) is a "tainted" URI.
+        if applied is not None and rejected:
+            tainted_uris = {URIRef(a["entity1"]) for a in rejected}
+            suspected_counts = _compute_suspected_counts(
+                applied, onto1_entities, onto2_entities, tainted_uris
+            )
+            # applied_alignments metric itself: # of rejected alignments
+            suspected_counts["applied_alignments"] = rejected_count
+            print(
+                f"  suspected (applied_alignments column): {suspected_counts}"
+            )
     else:
         print("  alignment_stats.json not found — skipping applied_alignments metric")
 
@@ -988,7 +1085,7 @@ def main() -> None:
 
     # ── Write HTML ─────────────────────────────────────────────────────────────
     out_html = out_csv.with_suffix(".html")
-    _write_html(rows, out_html, folder, applied is not None)
+    _write_html(rows, out_html, folder, applied is not None, suspected_counts)
     print(f"Report  written to {out_html}\n")
 
     # ── Console summary ────────────────────────────────────────────────────────
