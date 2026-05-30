@@ -80,10 +80,9 @@ merge_agent = (
           from root to a leaf is longer (a hierarchy with depth 3-4 is generally better than depth 1).
 
         Understandability
-        - Every class and property in Merged_Ontology should have an rdfs:label and an rdfs:comment.
-        - rdfs:label should be a human-readable name for the entity (e.g. "Medical Surgery").
-        - rdfs:comment should be a short description of what the entity represents in the domain (e.g. "A surgical procedure performed for medical purposes").
-        - If an entity from the source ontologies already has a label or comment, preserve it (or improve it). If it does not, add one based on your domain knowledge.
+        - Every class and property in Merged_Ontology MUST have an rdfs:comment. No entity may appear in Merged_Ontology without one.
+        - If the source ontology already provides a comment, preserve it (or improve it). If it does not, you MUST add one based on your domain knowledge — a short description of what the entity represents (e.g. "A surgical procedure performed for medical purposes").
+        - Every class and property should also have an rdfs:label with a human-readable name (e.g. "Medical Surgery"). If the source already provides one, preserve it; otherwise add one.
 
         Besides good ontology qualities merged ontology should also meet other mandatory
         requirements related to Border_1 and Border_2:

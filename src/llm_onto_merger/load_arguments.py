@@ -58,7 +58,7 @@ def load_arguments() -> LoadedArguments:
             parser.error(f"Path for --{path_attr} is not a file: {path}")
 
     if settings.use_vllm:
-        output_dir = f"tests/vllm_outputs/{Path(args.base).stem}"
+        output_dir = f"tests/vllm_outputs/{Path(args.base).parent.name}"
     elif args.output is not None:
         output_dir = args.output
     else:

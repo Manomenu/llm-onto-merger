@@ -8,12 +8,12 @@ from ..logger import get_logger
 log = get_logger(__name__)
 
 
-def _relabel_entities(g: Graph) -> int:
+def _relabel_entities(g: Graph) -> dict[str, str]:
     """For every URI that carries an rdfs:label, replace its local name (the
     fragment after '#', or the last path segment after '/') with the label
     value — whitespace is replaced by '_'.  The label triple is removed after
     the rename.  Entities whose computed target URI is already occupied are
-    skipped to avoid silent merges.  Returns the count of renamed entities."""
+    skipped to avoid silent merges.  Returns a mapping of old URI → new URI."""
     renames: dict[URIRef, tuple[URIRef, object]] = {}
     seen_new: set[URIRef] = set()
     existing: frozenset[URIRef] = frozenset(
@@ -52,27 +52,31 @@ def _relabel_entities(g: Graph) -> int:
             g.add((s, p, new))
         g.remove((new, RDFS.label, label_o))
 
-    return len(renames)
+    return {str(old): str(new) for old, (new, _) in renames.items()}
 
 
-def create_ontology(ontology_path: Path) -> Graph:
+def create_ontology(ontology_path: Path) -> tuple[Graph, dict[str, str]]:
     """Load an OWL/RDF ontology from the given path.
 
     Post-load preprocessing:
     - Each entity with an rdfs:label has its URI local name replaced with the
       label (whitespace → '_'), and the label triple is removed so the name is
       not duplicated in the serialised representation.
+
+    Returns (graph, rename_map) where rename_map is {old_uri: new_uri} for
+    every entity that was renamed, so callers can update external references
+    (e.g. alignment URIs) to match the relabeled graph.
     """
     g = Graph()
     g.parse(str(ontology_path))
-    renamed = _relabel_entities(g)
+    rename_map = _relabel_entities(g)
     log.info(
         "Ontology loaded from %s (%d triples, %d entities relabelled)",
         ontology_path,
         len(g),
-        renamed,
+        len(rename_map),
     )
-    return g
+    return g, rename_map
 
 
 def save_ontology(graph: Graph, out_dir: Path, name: str = "merged_ontology") -> Path:

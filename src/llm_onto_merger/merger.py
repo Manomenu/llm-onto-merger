@@ -16,6 +16,7 @@ from llm_onto_merger.integrate_environments import integrate_environments
 from llm_onto_merger.load_arguments import LoadedArguments
 from llm_onto_merger.logger import get_logger
 from llm_onto_merger.merge_environments.module import MergeEnvironmentsModule
+from llm_onto_merger.alignment.alignment import Alignment
 from llm_onto_merger.ontology import apply_alignments, create_ontology, save_ontology
 from llm_onto_merger.settings import settings
 
@@ -31,12 +32,28 @@ class LLMOntologyMerger:
         out_dir = Path(args.output_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
 
-        onto_1 = create_ontology(Path(args.base_path))
-        onto_2 = create_ontology(Path(args.candidate_path))
+        onto_1, renames_1 = create_ontology(Path(args.base_path))
+        onto_2, renames_2 = create_ontology(Path(args.candidate_path))
 
         alignments = await alignment_module.create_alignment(
             args.base_path, args.candidate_path
         )
+
+        all_renames = {**renames_1, **renames_2}
+        if all_renames:
+            alignments = [
+                Alignment(
+                    entity1=all_renames.get(a.entity1, a.entity1),
+                    entity2=all_renames.get(a.entity2, a.entity2),
+                    measure=a.measure,
+                    relation=a.relation,
+                )
+                for a in alignments
+            ]
+            log.info(
+                "Alignment URIs updated after relabeling: %d renames available",
+                len(all_renames),
+            )
 
         applied_onto = apply_alignments(onto_1, onto_2, alignments)
         save_ontology(applied_onto, out_dir, name="applied_alignments")
