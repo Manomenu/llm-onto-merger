@@ -8,6 +8,7 @@ from .graph import (
 )
 from .kg2code import (
     KG2CODE_PREAMBLE,
+    DropReport,
     Entity,
     entities_to_graph,
     graph_to_string,
@@ -21,6 +22,7 @@ __all__ = [
     "namespace_of",
     # kg2code
     "KG2CODE_PREAMBLE",
+    "DropReport",
     "Entity",
     "graph_to_string",
     "entities_to_graph",

@@ -3,7 +3,7 @@ from rdflib import OWL, Graph, URIRef
 
 from llm_onto_merger.extract_environments.merge_environment import MergeEnvironment
 from llm_onto_merger.logger import get_logger
-from llm_onto_merger.ontology import Entity, entities_to_graph, local_name
+from llm_onto_merger.ontology import DropReport, Entity, entities_to_graph, local_name
 
 log = get_logger(__name__)
 
@@ -79,7 +79,7 @@ class MergeEnvironmentsModule:
         self._agent = agent
         self._instruction_len = len(agent.default_options.get("instructions") or "")
 
-    async def merge(self, merge_environment: MergeEnvironment, idx: int = 0, total: int = 0) -> Graph:
+    async def merge(self, merge_environment: MergeEnvironment, idx: int = 0, total: int = 0) -> tuple[Graph, DropReport]:
         request, code_to_uri = merge_environment.to_string()
         n_triples = len(merge_environment.onto_1) + len(merge_environment.onto_2)
         log.info(
@@ -98,6 +98,6 @@ class MergeEnvironmentsModule:
         )
         merged = MergedOntology.model_validate(response.value)
         log.info("Received %d entities in merged ontology", len(merged.Merged_Ontology))
-        merged_graph = entities_to_graph(merged.Merged_Ontology, code_to_uri)
+        merged_graph, drop_report = entities_to_graph(merged.Merged_Ontology, code_to_uri)
         _audit_merge(idx, merge_environment, merged_graph)
-        return merged_graph
+        return merged_graph, drop_report

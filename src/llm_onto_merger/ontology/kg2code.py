@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from rdflib import Graph, Literal, URIRef
+from rdflib import OWL, RDF, RDFS, Graph, Literal, URIRef
 
 from ..logger import get_logger
 from .uri import namespace_of
@@ -8,6 +8,34 @@ log = get_logger(__name__)
 
 ALIAS_PREDICATE_CODED = "zz::alias"
 ALIAS_PREDICATE = "http://merged#alias"
+
+# Well-known local names → canonical predicate URIRef. Used as a fallback when
+# the LLM emits a hallucinated code prefix (e.g. 'ha::alias' instead of
+# 'zz::alias', or 'am::type' instead of the actual rdf code). The local name
+# is unambiguous for these predicates so we recover the triple instead of
+# discarding it.
+_PREDICATE_FALLBACKS: dict[str, URIRef] = {
+    "alias": URIRef(ALIAS_PREDICATE),
+    "type": RDF.type,
+    "subClassOf": RDFS.subClassOf,
+    "subPropertyOf": RDFS.subPropertyOf,
+    "domain": RDFS.domain,
+    "range": RDFS.range,
+    "label": RDFS.label,
+    "comment": RDFS.comment,
+    "disjointWith": OWL.disjointWith,
+    "equivalentClass": OWL.equivalentClass,
+    "equivalentProperty": OWL.equivalentProperty,
+    "sameAs": OWL.sameAs,
+    "inverseOf": OWL.inverseOf,
+}
+
+
+def _try_predicate_fallback(p_coded: str) -> URIRef | None:
+    """Recover a predicate URIRef by local name when its code prefix is unknown."""
+    idx = p_coded.find("::")
+    local = p_coded[idx + 2:] if idx > 0 else p_coded
+    return _PREDICATE_FALLBACKS.get(local)
 
 KG2CODE_PREAMBLE = """
 Each ontology entity is represented as:
@@ -32,6 +60,16 @@ For entirely new concepts you may use 'zz::NewName'.
 class Entity(BaseModel):
     uri: str
     tuples: list[tuple[str, str, str]]
+
+
+class DropReport(BaseModel):
+    invalid_entities: list[str] = []
+    bad_subject_entities: list[str] = []
+    bad_predicate_triples: list[tuple[str, str]] = []
+
+    @property
+    def total(self) -> int:
+        return len(self.invalid_entities) + len(self.bad_subject_entities) + len(self.bad_predicate_triples)
 
 
 def _encode(uri: str, ns_to_code: dict[str, str]) -> str:
@@ -102,69 +140,94 @@ def _is_valid_entity(e: Entity, code_to_ns: dict[str, str]) -> bool:
 
 
 def _decode_alias_literal(s: str, code_to_ns: dict[str, str]) -> URIRef | None:
-    """Decode an alias literal encoded as 'code;;LocalName' → URIRef.
+    """Decode an alias literal → URIRef with progressive fallbacks.
 
-    Emits a warning on every failure path because an alias-predicate object is
-    always meant to encode an old URI — anything else is a malformed LLM
-    response (missing ';;' separator, unknown code, or empty local name).
+    Tries in order:
+      1. Correct format:  'code;;LocalName'
+      2. Wrong separator: 'code::LocalName'
+      3. Regex scan:      find first 'code::LocalName' pattern in prose
+    Logs a warning for every fallback used; returns None only if all fail.
     """
-    idx = s.find(";;")
-    if idx < 0:
-        log.warning(
-            "Alias decoder: missing ';;' separator in alias literal '%s' — discarded",
-            s,
-        )
+    import re
+
+    def _try(code: str, local: str, source: str) -> URIRef | None:
+        ns = code_to_ns.get(code)
+        if ns and local:
+            return URIRef(ns + local)
         return None
-    code, local = s[:idx], s[idx + 2:]
-    ns = code_to_ns.get(code)
-    if ns and local:
-        return URIRef(ns + local)
-    if not ns:
-        log.warning(
-            "Alias decoder: unknown namespace code '%s' in alias literal '%s' — discarded",
-            code, s,
-        )
-    elif not local:
-        log.warning(
-            "Alias decoder: empty local name in alias literal '%s' — discarded",
-            s,
-        )
+
+    # 1. canonical ;;
+    idx = s.find(";;")
+    if idx >= 0:
+        result = _try(s[:idx], s[idx + 2:], s)
+        if result:
+            return result
+
+    # 2. wrong separator ::
+    idx = s.find("::")
+    if idx >= 0:
+        result = _try(s[:idx], s[idx + 2:], s)
+        if result:
+            log.warning(
+                "Alias decoder: used '::' fallback (expected ';;') in '%s'", s
+            )
+            return result
+
+    # 3. scan prose for any 'code::LocalName' token
+    for m in re.finditer(r'\b([a-z]{2,})::([\w]+)', s):
+        result = _try(m.group(1), m.group(2), s)
+        if result:
+            log.warning(
+                "Alias decoder: extracted '%s::%s' from prose literal '%s'",
+                m.group(1), m.group(2), s,
+            )
+            return result
+
+    log.warning(
+        "Alias decoder: could not decode alias literal '%s' — discarded", s
+    )
     return None
 
 
 def build_alias_map(graphs: list[Graph], code_to_ns: dict[str, str]) -> dict[str, str]:
     """Extract alias triples and return {old_uri: new_uri}.
 
-    Scans for (subject, http://merged#alias, literal) triples where the literal
-    encodes an old URI in 'code;;LocalName' format.
+    Accepts both literal objects ('code;;LocalName' — correct format) and
+    URIRef objects (LLM used '::' instead of ';;' so the object was decoded
+    as a live URI).  Both cases are treated as the old URI.
     """
     alias_pred = URIRef(ALIAS_PREDICATE)
     result: dict[str, str] = {}
     for graph in graphs:
         for s, p, o in graph.triples((None, alias_pred, None)):
-            if isinstance(s, URIRef) and isinstance(o, Literal):
+            if not isinstance(s, URIRef):
+                continue
+            if isinstance(o, URIRef):
+                result[str(o)] = str(s)
+            elif isinstance(o, Literal):
                 old_uri = _decode_alias_literal(str(o), code_to_ns)
                 if old_uri:
                     result[str(old_uri)] = str(s)
     return result
 
 
-def entities_to_graph(entities: list[Entity], code_to_ns: dict[str, str]) -> Graph:
+def entities_to_graph(entities: list[Entity], code_to_ns: dict[str, str]) -> tuple[Graph, DropReport]:
     """Reconstruct an rdflib Graph from LLM-returned Entity list.
 
     Every URI element is decoded via code_to_ns.  Unknown codes fall back to
     Literal; triples whose subject or predicate does not decode as URIRef are
-    dropped with a warning.
+    dropped with a warning.  Returns (graph, drop_report).
     """
-    valid = [e for e in entities if _is_valid_entity(e, code_to_ns)]
-    if len(valid) < len(entities):
+    invalid = [e.uri for e in entities if not _is_valid_entity(e, code_to_ns)]
+    if invalid:
         log.warning(
             "Dropped %d invalid/placeholder entities from LLM response",
-            len(entities) - len(valid),
+            len(invalid),
         )
+    valid = [e for e in entities if _is_valid_entity(e, code_to_ns)]
     graph = Graph()
-    dropped_subj = 0
-    dropped_pred = 0
+    bad_subjects: list[str] = []
+    bad_preds: list[tuple[str, str]] = []
     for entity in valid:
         subj = _decode(entity.uri, code_to_ns)
         if not isinstance(subj, URIRef):
@@ -172,10 +235,18 @@ def entities_to_graph(entities: list[Entity], code_to_ns: dict[str, str]) -> Gra
                 "Triple group dropped: subject '%s' did not decode as URI",
                 entity.uri,
             )
-            dropped_subj += 1
+            bad_subjects.append(entity.uri)
             continue
         for _, p_coded, o_coded in entity.tuples:
             p = _decode(p_coded, code_to_ns)
+            if not isinstance(p, URIRef):
+                fallback = _try_predicate_fallback(p_coded)
+                if fallback is not None:
+                    log.warning(
+                        "Predicate fallback: '%s' → '%s' (LLM used wrong code prefix)",
+                        p_coded, str(fallback),
+                    )
+                    p = fallback
             o = _decode(o_coded, code_to_ns)
             if isinstance(p, URIRef):
                 graph.add((subj, p, o))
@@ -184,10 +255,14 @@ def entities_to_graph(entities: list[Entity], code_to_ns: dict[str, str]) -> Gra
                     "Triple dropped: predicate '%s' did not decode as URI (subject was '%s')",
                     p_coded, entity.uri,
                 )
-                dropped_pred += 1
-    if dropped_subj or dropped_pred:
+                bad_preds.append((entity.uri, p_coded))
+    if bad_subjects or bad_preds:
         log.warning(
             "entities_to_graph summary: dropped %d entities (bad subject) and %d triples (bad predicate)",
-            dropped_subj, dropped_pred,
+            len(bad_subjects), len(bad_preds),
         )
-    return graph
+    return graph, DropReport(
+        invalid_entities=invalid,
+        bad_subject_entities=bad_subjects,
+        bad_predicate_triples=bad_preds,
+    )

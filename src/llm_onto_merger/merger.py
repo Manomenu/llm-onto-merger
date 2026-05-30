@@ -4,6 +4,7 @@ from pathlib import Path
 from llm_onto_merger.alignment.alignment import AlignmentModule
 from llm_onto_merger.debug import (
     save_diff_debug,
+    save_insights_debug,
     save_post_merge_debug,
     save_pre_merge_debug,
 )
@@ -90,11 +91,13 @@ class LLMOntologyMerger:
                 log.info("Merged environment %d/%d", idx + 1, total)
                 return result
 
-        merged_environments = list(
+        results = list(
             await asyncio.gather(
                 *[_merge_single_env(env, i) for i, env in enumerate(merge_environments)]
             )
         )
+        merged_environments = [graph for graph, _ in results]
+        drop_reports = [report for _, report in results]
 
         if settings.debug:
             save_pre_merge_debug(
@@ -116,6 +119,7 @@ class LLMOntologyMerger:
                 merged_environments,
                 out_dir,
             )
+            save_insights_debug(merge_environments, merged_environments, drop_reports, out_dir)
 
         merged_onto = integrate_environments(
             merged_environments, onto_1_leftover, onto_2_leftover, code_to_ns
