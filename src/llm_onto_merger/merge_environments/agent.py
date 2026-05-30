@@ -30,7 +30,7 @@ merge_agent = (
 
         Structural coherence
         - no logical inconsistencies should be created in Merged_Ontology. For example, a class cannot be a subclass of two disjoint classes.
-        - as little orphan classes as possible. Assign superclass if possible from existing classes in merged ontologies.
+        - Every named class in Merged_Ontology MUST have at least one explicit `subClassOf` parent. There must be no orphan classes.
         - get rid of is-a cycles if they exist, because it would mean, that none of such classes can have instances.
 
         Domain coherence
@@ -39,13 +39,16 @@ merge_agent = (
         For example, if in Ontology_1 we have a class "Person" with a property "hasAge" and in Ontology_2 we have a class "Car" with a property "hasAge",
         merged ontology should not allow for an entity to be both a "Person" and a "Car" at the same time, because it would lead to domain inconsistency.
         Anoter example would be removing is-a relation between "Surgery" intance and "Plant" class.
+        - Do not add more than twice the number of disjointWith assertions already present in the input ontologies. Adding many disjoint pairs without strong domain justification is an anti-pattern that creates false constraints and makes the ontology over-restrictive.
 
         Cross-ontology and intra-ontology relations / Knowledge completeness
         - Merged_Ontology can and should introduce new relations between entities from the same ontology when those relations are implied by domain knowledge but were not explicitly stated.
         For example, if Ontology_1 has class "Animal" and class "Dog" without a subClassOf relation between them, merged ontology should introduce "Dog subClassOf Animal" because it is a universally known domain fact.
         Do not invent relations that are not grounded in domain knowledge — for example, do not introduce is-a between "Cat" and "Dog" just because both exist in the same ontology.
-        - Merged_Ontology can and should introduce new relations between entities from different ontologies (cross-ontology relations).
-        For example if we have "Animal" class in Ontology_1 and "Cat" class in Ontology_2, we can introduce is-a relation between "Cat" and "Animal" in merged ontology.
+        - Merged_Ontology MUST introduce new relations between entities from different ontologies (cross-ontology relations) whenever they are domain-justified. This is the important purpose of merging.
+        For every pair of classes (A from Ontology_1, B from Ontology_2) where A is a specialization of B (or vice versa) based on domain knowledge, you MUST add the corresponding `subClassOf` triple. For example, "Animal" in Ontology_1 and "Cat" in Ontology_2 → add "Cat subClassOf Animal".
+        For example, a pair of classes that share domain-relevant relations beyond subClassOf (part-of, member-of, has-property), can have the corresponding object/data properties introduced.
+        A merge that produces no cross-ontology relations beyond the input alignments is a failure — at minimum, the alignment-implied connections must be transitively extended.
 
         Conciseness
         - No two entities in Merged_Ontology should share the same local name. If two entities from different ontologies have the same local name, you must either:
@@ -68,9 +71,13 @@ merge_agent = (
         If Ontology_2 contained "MedicalSurgery" class and only "MedicalSurgery" class remains in Merged_Ontology
         it is alright, because it is a transformed representation of "Surgery" class.
         It would be even better if "MedicialSurgery" class has added "alias" property to "Surgery".
+        - CRITICAL: preserve complex OWL axiom structures exactly as they appear in the inputs:
+          * `rdf:type owl:Class` and `rdf:type owl:ObjectProperty`/`owl:DatatypeProperty` declarations — do not strip type declarations when restructuring the hierarchy.
 
         Hierarchy integration quality
         - Merged_Ontology is of higher quality if there is more "is-a" relations between entities from Ontology_1 and Ontology_2 in Merged_Ontology.
+        - Prefer deep hierarchies over flat ones: where domain knowledge supports it, introduce intermediate classes so the average path
+          from root to a leaf is longer (a hierarchy with depth 3-4 is generally better than depth 1).
 
         Understandability
         - Every class and property in Merged_Ontology should have an rdfs:label and an rdfs:comment.

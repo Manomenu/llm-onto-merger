@@ -382,6 +382,42 @@ def _hierarchy_stats(g: Graph, cls: set[URIRef]) -> dict[str, float]:
     }
 
 
+_ALIAS_PRED = "http://merged#alias"
+
+
+def _build_alias_maps(
+    g: Graph,
+    onto1_locals: set[str],
+    onto2_locals: set[str],
+) -> tuple[dict[str, str], dict[str, str]]:
+    """Build local-name alias maps from merged graph's `merged#alias` triples.
+
+    Returns (old_to_new, new_to_source) where:
+      old_to_new: OldLocalName → NewLocalName  (for renaming normalisation)
+      new_to_source: NewLocalName → 'onto1' | 'onto2' | 'both'  (attribution)
+    """
+    old_to_new: dict[str, str] = {}
+    new_to_source: dict[str, str] = {}
+    for s, p, o in g:
+        if str(p) != _ALIAS_PRED or not isinstance(s, URIRef) or not isinstance(o, Literal):
+            continue
+        parts = str(o).split(";;", 1)
+        if len(parts) != 2 or not parts[1]:
+            continue
+        old_local = parts[1]
+        new_local = _local(s)
+        old_to_new[old_local] = new_local
+        in1 = old_local in onto1_locals
+        in2 = old_local in onto2_locals
+        src = "both" if in1 and in2 else ("onto1" if in1 else ("onto2" if in2 else ""))
+        if src:
+            existing = new_to_source.get(new_local)
+            new_to_source[new_local] = (
+                "both" if existing and existing != src else src
+            )
+    return old_to_new, new_to_source
+
+
 def _compute_self_metrics(
     g: Graph,
     onto1_entities: set[URIRef],
@@ -391,6 +427,34 @@ def _compute_self_metrics(
     cls = _classes(g)
     prop = _properties(g)
     n_c = len(cls)
+
+    onto1_locals = {_local(e) for e in onto1_entities}
+    onto2_locals = {_local(e) for e in onto2_entities}
+
+    # Alias-aware source attribution.
+    #   - Original URI from onto1/onto2 → precise attribution by URI membership.
+    #   - New URI (introduced by the LLM, e.g. zz::MedicalSurgery): attribute by alias
+    #     triple, mapping back to the source ontology of the original local name.
+    # Without this, every LLM rename zeroes the cross-onto and intra-onto counters.
+    _, new_to_source = _build_alias_maps(g, onto1_locals, onto2_locals)
+
+    def _from_onto1(u) -> bool:
+        if not isinstance(u, URIRef):
+            return False
+        if u in onto1_entities:
+            return True
+        if u in onto2_entities:
+            return False
+        return new_to_source.get(_local(u)) in ("onto1", "both")
+
+    def _from_onto2(u) -> bool:
+        if not isinstance(u, URIRef):
+            return False
+        if u in onto2_entities:
+            return True
+        if u in onto1_entities:
+            return False
+        return new_to_source.get(_local(u)) in ("onto2", "both")
 
     # ARC — classes without a named parent
     has_named_parent = {
@@ -403,56 +467,33 @@ def _compute_self_metrics(
     }
     arc = float(len(cls - has_named_parent))
 
-    # Cycle count
     cycle_count = float(_count_cycles(g))
 
-    # Syntactic uniqueness ratio
     unique_local = len({_local(c) for c in cls})
     syntactic_uniqueness_ratio = unique_local / n_c if n_c else 1.0
 
-    # Cross-ontology metrics
+    # Cross-ontology metrics (alias-aware)
     cross_sub = sum(
         1
         for s, _, o in g.triples((None, _SUB, None))
-        if isinstance(s, URIRef)
-        and isinstance(o, URIRef)
-        and (
-            (s in onto1_entities and o in onto2_entities)
-            or (s in onto2_entities and o in onto1_entities)
-        )
+        if (_from_onto1(s) and _from_onto2(o)) or (_from_onto2(s) and _from_onto1(o))
     )
     cross_rel = sum(
         1
         for s, _, o in g
-        if isinstance(s, URIRef)
-        and isinstance(o, URIRef)
-        and (
-            (s in onto1_entities and o in onto2_entities)
-            or (s in onto2_entities and o in onto1_entities)
-        )
+        if (_from_onto1(s) and _from_onto2(o)) or (_from_onto2(s) and _from_onto1(o))
     )
 
-    # Connectivity ratio
     connectivity = _connectivity_ratio(g)
 
     # Triple preservation ratio vs union
     # BNode objects are excluded: their internal IDs differ across parse sessions,
     # so str(bnode) comparisons produce false negatives for restrictions/unions.
     if union is not None:
-        # Build local-name alias map from merged graph:
-        #   (new_uri, http://merged#alias, "code;;OldLocalName") → {OldLocalName: NewLocalName}
-        # This lets us normalize union triples before comparison so entities that
-        # were renamed by the LLM still count as preserved.
-        _ALIAS_PRED = "http://merged#alias"
-        alias_local: dict[str, str] = {}
-        for _s, _p, _o in g:
-            if str(_p) == _ALIAS_PRED and isinstance(_s, URIRef) and isinstance(_o, Literal):
-                parts = str(_o).split(";;", 1)
-                if len(parts) == 2 and parts[1]:
-                    alias_local[parts[1]] = _local(_s)
+        old_to_new, _ = _build_alias_maps(g, onto1_locals, onto2_locals)
 
         def _norm(local: str) -> str:
-            return alias_local.get(local, local)
+            return old_to_new.get(local, local)
 
         def _key(s, p, o) -> tuple[str, str, str]:
             return (
@@ -484,30 +525,32 @@ def _compute_self_metrics(
             else 1.0
         )
 
-        # New intra-ontology relations: triples where both S and O local names
-        # come from the same source ontology, but the triple is absent from union.
-        onto1_locals = {_local(e) for e in onto1_entities}
-        onto2_locals = {_local(e) for e in onto2_entities}
+        # New intra-ontology relations (alias-aware): triples in g where both S and O
+        # belong to the SAME source (including renamed entities), but the triple
+        # (by local-name key) is absent from union.
         union_keys = {
             (_local(s), _local(p), _local(o))
             for s, p, o in union
             if isinstance(s, URIRef) and isinstance(o, URIRef)
         }
-        new_intra_rel = float(sum(
-            1
-            for s, p, o in g
-            if isinstance(s, URIRef) and isinstance(o, URIRef)
-            and (
-                (_local(s) in onto1_locals and _local(o) in onto1_locals)
-                or (_local(s) in onto2_locals and _local(o) in onto2_locals)
+        new_intra_rel = float(
+            sum(
+                1
+                for s, p, o in g
+                if isinstance(s, URIRef)
+                and isinstance(o, URIRef)
+                and (
+                    (_from_onto1(s) and _from_onto1(o))
+                    or (_from_onto2(s) and _from_onto2(o))
+                )
+                and (_local(s), _local(p), _local(o)) not in union_keys
             )
-            and (_local(s), _local(p), _local(o)) not in union_keys
-        ))
+        )
+
     else:
-        tpr = 1.0  # union itself
+        tpr = 1.0
         new_intra_rel = 0.0
 
-    # Annotation coverage ratio
     entities = cls | prop
     n_e = len(entities)
     annotated = sum(
