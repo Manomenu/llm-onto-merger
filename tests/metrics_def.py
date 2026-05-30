@@ -399,7 +399,11 @@ def _build_alias_maps(
     old_to_new: dict[str, str] = {}
     new_to_source: dict[str, str] = {}
     for s, p, o in g:
-        if str(p) != _ALIAS_PRED or not isinstance(s, URIRef) or not isinstance(o, Literal):
+        if (
+            str(p) != _ALIAS_PRED
+            or not isinstance(s, URIRef)
+            or not isinstance(o, Literal)
+        ):
             continue
         parts = str(o).split(";;", 1)
         if len(parts) != 2 or not parts[1]:
@@ -412,9 +416,7 @@ def _build_alias_maps(
         src = "both" if in1 and in2 else ("onto1" if in1 else ("onto2" if in2 else ""))
         if src:
             existing = new_to_source.get(new_local)
-            new_to_source[new_local] = (
-                "both" if existing and existing != src else src
-            )
+            new_to_source[new_local] = "both" if existing and existing != src else src
     return old_to_new, new_to_source
 
 
@@ -827,13 +829,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Compute ontology quality metrics based on 7 academic quality dimensions."
     )
-    parser.add_argument("folder_name", help="Subfolder under tests/inputs/ and tests/outputs/")
+    parser.add_argument(
+        "folder_name", help="Subfolder under tests/inputs/ and tests/vllm_outputs/"
+    )
     args = parser.parse_args()
 
     folder = args.folder_name
     repo_root = Path(__file__).parent.parent
     input_dir = repo_root / "tests" / "inputs" / folder
-    output_dir = repo_root / "tests" / "outputs" / folder
+    output_dir = repo_root / "tests" / "vllm_outputs" / folder
     out_csv = output_dir / "metrics_def.csv"
 
     if not input_dir.exists():

@@ -10,6 +10,7 @@ log = get_logger(__name__)
 
 class MergedOntology(BaseModel):
     Merged_Ontology: list[Entity]
+    Was_Alignment_Applied: bool
 
 
 _MERGED_ONTOLOGY_SCHEMA = MergedOntology.model_json_schema()
@@ -79,12 +80,16 @@ class MergeEnvironmentsModule:
         self._agent = agent
         self._instruction_len = len(agent.default_options.get("instructions") or "")
 
-    async def merge(self, merge_environment: MergeEnvironment, idx: int = 0, total: int = 0) -> tuple[Graph, DropReport]:
+    async def merge(
+        self, merge_environment: MergeEnvironment, idx: int = 0, total: int = 0
+    ) -> tuple[Graph, DropReport]:
         request, code_to_uri = merge_environment.to_string()
         n_triples = len(merge_environment.onto_1) + len(merge_environment.onto_2)
         log.info(
             "Passing %d triples from merge environment %d/%d to agent",
-            n_triples, idx, total,
+            n_triples,
+            idx,
+            total,
         )
         log.info(
             "Sending merge request | instruction: %d chars | request: %d chars | total: %d chars",
@@ -98,6 +103,8 @@ class MergeEnvironmentsModule:
         )
         merged = MergedOntology.model_validate(response.value)
         log.info("Received %d entities in merged ontology", len(merged.Merged_Ontology))
-        merged_graph, drop_report = entities_to_graph(merged.Merged_Ontology, code_to_uri)
+        merged_graph, drop_report = entities_to_graph(
+            merged.Merged_Ontology, code_to_uri
+        )
         _audit_merge(idx, merge_environment, merged_graph)
         return merged_graph, drop_report
