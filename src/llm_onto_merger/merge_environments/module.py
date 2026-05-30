@@ -82,7 +82,7 @@ class MergeEnvironmentsModule:
 
     async def merge(
         self, merge_environment: MergeEnvironment, idx: int = 0, total: int = 0
-    ) -> tuple[Graph, DropReport]:
+    ) -> tuple[Graph, DropReport, bool]:
         request, code_to_uri = merge_environment.to_string()
         n_triples = len(merge_environment.onto_1) + len(merge_environment.onto_2)
         log.info(
@@ -103,8 +103,19 @@ class MergeEnvironmentsModule:
         )
         merged = MergedOntology.model_validate(response.value)
         log.info("Received %d entities in merged ontology", len(merged.Merged_Ontology))
+        if not merged.Was_Alignment_Applied:
+            seed_label = (
+                merge_environment.alignments[0].to_string()
+                if merge_environment.alignments
+                else "<unknown>"
+            )
+            log.info(
+                "env %d: alignment NOT applied by LLM (seed: %s) — pair kept as separate entities",
+                idx,
+                seed_label,
+            )
         merged_graph, drop_report = entities_to_graph(
             merged.Merged_Ontology, code_to_uri
         )
         _audit_merge(idx, merge_environment, merged_graph)
-        return merged_graph, drop_report
+        return merged_graph, drop_report, merged.Was_Alignment_Applied

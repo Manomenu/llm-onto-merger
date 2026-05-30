@@ -17,6 +17,7 @@ class EnvInsight(BaseModel):
     input_disjoint: int
     merged_disjoint: int
     drop_report: DropReport
+    alignment_applied: bool
 
     @property
     def disjoint_delta(self) -> int:
@@ -52,10 +53,12 @@ def _compute_insights(
     merge_environments: list[MergeEnvironment],
     merged_graphs: list[Graph],
     drop_reports: list[DropReport],
+    alignment_applied_flags: list[bool],
 ) -> list[EnvInsight]:
     rows = []
-    for idx, (env, merged, report) in enumerate(
-        zip(merge_environments, merged_graphs, drop_reports), start=1
+    for idx, (env, merged, report, applied) in enumerate(
+        zip(merge_environments, merged_graphs, drop_reports, alignment_applied_flags),
+        start=1,
     ):
         input_graph = Graph()
         for t in env.onto_1:
@@ -75,6 +78,7 @@ def _compute_insights(
             input_disjoint=sum(1 for _ in input_graph.triples((None, OWL.disjointWith, None))),
             merged_disjoint=sum(1 for _ in merged.triples((None, OWL.disjointWith, None))),
             drop_report=report,
+            alignment_applied=applied,
         ))
     return rows
 
@@ -85,7 +89,9 @@ def _write_csv(rows: list[EnvInsight], total: EnvInsight, out_dir: Path) -> Path
         "env", "input_triples", "kept", "added", "deleted",
         "retention_%", "disjoint_in", "disjoint_out", "disjoint_delta",
         "dropped_invalid", "dropped_bad_subject", "dropped_bad_pred", "dropped_total",
+        "alignment_applied",
     ]
+    applied_count = sum(1 for r in rows if r.alignment_applied)
     with path.open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(fields)
@@ -97,6 +103,7 @@ def _write_csv(rows: list[EnvInsight], total: EnvInsight, out_dir: Path) -> Path
                 len(r.drop_report.bad_subject_entities),
                 len(r.drop_report.bad_predicate_triples),
                 r.total_dropped,
+                "yes" if r.alignment_applied else "no",
             ])
         w.writerow([
             "TOTAL",
@@ -106,6 +113,7 @@ def _write_csv(rows: list[EnvInsight], total: EnvInsight, out_dir: Path) -> Path
             len(total.drop_report.bad_subject_entities),
             len(total.drop_report.bad_predicate_triples),
             total.total_dropped,
+            f"{applied_count}/{len(rows)}",
         ])
     return path
 
@@ -144,12 +152,21 @@ def _drop_details_html(rows: list[EnvInsight]) -> str:
 
 
 def _write_html(rows: list[EnvInsight], total: EnvInsight, out_dir: Path) -> Path:
-    def tr(r: EnvInsight, label: str, is_total: bool = False) -> str:
+    applied_count = sum(1 for r in rows if r.alignment_applied)
+
+    def tr(r: EnvInsight, label: str, is_total: bool = False, applied_override: str | None = None) -> str:
         row_cls = ' class="total"' if is_total else ""
         del_cls = _cell_class(r.deleted_triples, positive_bad=True)
         ret_cls = _cell_class(r.retention_pct)
         dj_cls = _cell_class(r.disjoint_delta, positive_bad=True)
         drop_cls = "bad" if r.total_dropped > 0 else ""
+        if applied_override is not None:
+            applied_cell = f'<td>{applied_override}</td>'
+        else:
+            applied_cell = (
+                '<td class="good">tak</td>' if r.alignment_applied
+                else '<td class="bad">nie</td>'
+            )
         return (
             f"<tr{row_cls}>"
             f"<td>{label}</td>"
@@ -162,11 +179,12 @@ def _write_html(rows: list[EnvInsight], total: EnvInsight, out_dir: Path) -> Pat
             f"<td>{r.merged_disjoint}</td>"
             f'<td class="{dj_cls}">{r.disjoint_delta:+d}</td>'
             f'<td class="{drop_cls}">{r.total_dropped}</td>'
+            f"{applied_cell}"
             f"</tr>"
         )
 
     rows_html = "\n".join(tr(r, f"env {r.env_idx}") for r in rows)
-    total_html = tr(total, "TOTAL", is_total=True)
+    total_html = tr(total, "TOTAL", is_total=True, applied_override=f"{applied_count}/{len(rows)}")
     drop_details = _drop_details_html(rows)
 
     html = f"""<!DOCTYPE html>
@@ -248,6 +266,7 @@ def _write_html(rows: list[EnvInsight], total: EnvInsight, out_dir: Path) -> Pat
         <th>disjointWith (out)</th>
         <th>disjointWith Δ</th>
         <th>odrzucone</th>
+        <th>alignment zastosowany</th>
       </tr>
     </thead>
     <tbody>
@@ -279,9 +298,12 @@ def save_insights_debug(
     merge_environments: list[MergeEnvironment],
     merged_graphs: list[Graph],
     drop_reports: list[DropReport],
+    alignment_applied_flags: list[bool],
     out_dir: Path,
 ) -> None:
-    rows = _compute_insights(merge_environments, merged_graphs, drop_reports)
+    rows = _compute_insights(
+        merge_environments, merged_graphs, drop_reports, alignment_applied_flags
+    )
     merged_report = DropReport(
         invalid_entities=[e for r in drop_reports for e in r.invalid_entities],
         bad_subject_entities=[e for r in drop_reports for e in r.bad_subject_entities],
@@ -296,6 +318,7 @@ def save_insights_debug(
         input_disjoint=sum(r.input_disjoint for r in rows),
         merged_disjoint=sum(r.merged_disjoint for r in rows),
         drop_report=merged_report,
+        alignment_applied=all(r.alignment_applied for r in rows),
     )
     csv_path = _write_csv(rows, total, out_dir)
     html_path = _write_html(rows, total, out_dir)

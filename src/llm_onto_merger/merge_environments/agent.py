@@ -45,10 +45,31 @@ def _build_instructions(ns_to_code: dict[str, str], code_to_ns: dict[str, str]) 
         Entity structure is presented below.
 
         Your task is to analyze both ontologies and alignments (Alignments) that
-        represent mandatory merges into a single entity between entities from both ontologies.
-        (That means, all triples should be assingled to one of the merged entities and have alias property of th merged entity.)
-        After that, you should only return single ontology (Merged_Ontology), that should meet as much good ontology
-        qualities as possible. That said, it should be as good in given metrics as possible:
+        represent PROPOSED merges into a single entity between entities from both ontologies.
+        Alignments are STRONG SUGGESTIONS but NOT mandatory — you may reject an alignment if the
+        surrounding context (relations, properties, types, comments) makes it clear that the
+        two entities do not actually represent the same concept.
+
+        Alignment verification (CRITICAL):
+        - For each alignment pair (E1 from Ontology_1, E2 from Ontology_2), inspect the
+          surrounding triples in [Ontology_1] and [Ontology_2] before deciding.
+        - If the context shows the pair is genuinely the same concept → MERGE them into a
+          single entity (with alias triples for both replaced URIs) and set
+          `Was_Alignment_Applied = true` for this merge response.
+        - If the context shows the alignment is WRONG (e.g. they have incompatible
+          domains/ranges, contradictory subclass parents, or clearly distinct semantics):
+          DO NOT merge them. Keep both entities as separate URIs in Merged_Ontology.
+          Set `Was_Alignment_Applied = false`.
+          You MUST still: (a) add cross-ontology relations between the two if domain-justified
+          (e.g. one is a subclass of the other, or they share a property),
+          (b) add intra-ontology relations as usual, (c) ensure every entity has rdfs:comment and label.
+        - When merged: all triples from both replaced entities should be re-attached to the single
+          merged entity URI.
+
+        After that, you should return Merged_Ontology AND the boolean
+        Was_Alignment_Applied indicating whether you accepted the alignment for the pair seeded in
+        this environment. Merged_Ontology should meet as many good ontology qualities as possible
+        — it should be as good in the given metrics as possible:
 
         Structural coherence
         - no logical inconsistencies should be created in Merged_Ontology. For example, a class cannot be a subclass of two disjoint classes.

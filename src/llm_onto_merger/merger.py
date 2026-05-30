@@ -1,4 +1,5 @@
 import asyncio
+import json
 from pathlib import Path
 
 from llm_onto_merger.alignment.alignment import AlignmentModule
@@ -96,8 +97,29 @@ class LLMOntologyMerger:
                 *[_merge_single_env(env, i) for i, env in enumerate(merge_environments)]
             )
         )
-        merged_environments = [graph for graph, _ in results]
-        drop_reports = [report for _, report in results]
+        merged_environments = [graph for graph, _, _ in results]
+        drop_reports = [report for _, report, _ in results]
+        alignment_applied_flags = [applied for _, _, applied in results]
+
+        applied_count = sum(alignment_applied_flags)
+        total_alignments = len(alignment_applied_flags)
+        log.info(
+            "Alignment application summary: %d/%d applied by LLM (%d rejected)",
+            applied_count,
+            total_alignments,
+            total_alignments - applied_count,
+        )
+        (out_dir / "alignment_stats.json").write_text(
+            json.dumps(
+                {
+                    "total_alignments": total_alignments,
+                    "applied_count": applied_count,
+                    "per_env": alignment_applied_flags,
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
 
         if settings.debug:
             save_pre_merge_debug(
@@ -119,7 +141,10 @@ class LLMOntologyMerger:
                 merged_environments,
                 out_dir,
             )
-            save_insights_debug(merge_environments, merged_environments, drop_reports, out_dir)
+            save_insights_debug(
+                merge_environments, merged_environments, drop_reports,
+                alignment_applied_flags, out_dir,
+            )
 
         merged_onto = integrate_environments(
             merged_environments, onto_1_leftover, onto_2_leftover, code_to_ns

@@ -27,6 +27,7 @@ Writes:
 
 import argparse
 import csv
+import json
 import sys
 from collections import defaultdict, deque
 from pathlib import Path
@@ -216,6 +217,19 @@ _REGISTRY: dict[str, dict] = {
             "(porównanie po lokalnych nazwach S/P/O, z normalizacją przez alias LLM) "
             "obecnych w scalonej ontologii / całkowita liczba trójek w Onto1 ∪ Onto2. "
             "Docelowo = 1.0. Niska wartość = duże straty wiedzy źródłowej wymagające uzasadnienia."
+        ),
+    },
+    # ── Domain Coherence ──────────────────────────────────────────────────────
+    "applied_alignments": {
+        "source": "self-implemented",
+        "categories": ["Domain Coherence"],
+        "target": "context-dependent",
+        "interpretation": (
+            "Liczba alignmentów faktycznie zastosowanych przez LLM (Was_Alignment_Applied=true). "
+            "Kolumna applied_alignments = wszystkie alignmenty wejściowe (każdy zastosowany "
+            "bezwarunkowo na etapie apply_alignments). Kolumna merged_ontology = ile LLM zaakceptował "
+            "po weryfikacji kontekstu (relacji, properties, typów). "
+            "Różnica wskazuje ile par alignmentu LLM uznał za niepoprawne i pozostawił rozdzielone."
         ),
     },
     # ── Understandability ─────────────────────────────────────────────────────
@@ -854,6 +868,7 @@ def main() -> None:
 
     merged_path = output_dir / "merged_ontology.owl"
     applied_path = output_dir / "applied_alignments.owl"
+    alignment_stats_path = output_dir / "alignment_stats.json"
 
     if not merged_path.exists():
         print(f"merged_ontology.owl not found in {output_dir}", file=sys.stderr)
@@ -904,6 +919,26 @@ def main() -> None:
     print("\nRunning HermiT reasoner …")
     for name, g in graph_objects.items():
         self_metrics[name].update(_reasoner_check(g, name))
+
+    # ── Alignment application stats (from sidecar JSON written by merger) ─────
+    if alignment_stats_path.exists():
+        stats = json.loads(alignment_stats_path.read_text(encoding="utf-8"))
+        total_align = float(stats.get("total_alignments", 0))
+        applied_align = float(stats.get("applied_count", 0))
+        # union_input: no alignments by definition
+        if "union_input" in self_metrics:
+            self_metrics["union_input"]["applied_alignments"] = 0.0
+        # applied_alignments.owl was built by applying ALL alignments unconditionally
+        if "applied_alignments" in self_metrics:
+            self_metrics["applied_alignments"]["applied_alignments"] = total_align
+        # merged_ontology: only alignments LLM accepted after context verification
+        if "merged_ontology" in self_metrics:
+            self_metrics["merged_ontology"]["applied_alignments"] = applied_align
+        print(
+            f"  alignment_stats: {int(applied_align)}/{int(total_align)} accepted by LLM"
+        )
+    else:
+        print("  alignment_stats.json not found — skipping applied_alignments metric")
 
     # ── Assemble rows ──────────────────────────────────────────────────────────
     graph_names = ["union_input", "merged_ontology"] + (
