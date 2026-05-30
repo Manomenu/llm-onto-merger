@@ -32,10 +32,23 @@ _PREDICATE_FALLBACKS: dict[str, URIRef] = {
 
 
 def _try_predicate_fallback(p_coded: str) -> URIRef | None:
-    """Recover a predicate URIRef by local name when its code prefix is unknown."""
+    """Recover a predicate URIRef by local name when its code prefix is unknown.
+
+    Handles three formats the LLM sometimes emits instead of canonical 'code::Local':
+      'code::label'   — wrong code (e.g. 'ha::alias')
+      'rdfs:label'    — Turtle-style single colon (NOT what the prompt asks for)
+      'label'         — bare local name
+    """
+    # Canonical or wrong-code: 'xx::Local'
     idx = p_coded.find("::")
-    local = p_coded[idx + 2:] if idx > 0 else p_coded
-    return _PREDICATE_FALLBACKS.get(local)
+    if idx > 0:
+        return _PREDICATE_FALLBACKS.get(p_coded[idx + 2:])
+    # Turtle-style: 'rdfs:label' (single colon, but not a full http: URI)
+    idx = p_coded.find(":")
+    if idx > 0 and not p_coded.startswith("http"):
+        return _PREDICATE_FALLBACKS.get(p_coded[idx + 1:])
+    # Bare local name
+    return _PREDICATE_FALLBACKS.get(p_coded)
 
 KG2CODE_PREAMBLE = """
 Each ontology entity is represented as:
