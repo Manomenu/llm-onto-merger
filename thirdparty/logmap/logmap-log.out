@@ -1,0 +1,34 @@
+2026-05-31 02:01:46 INFO  [main                          ] 483  in Parameters           - Reading LogMap parameters from file.
+2026-05-31 02:01:47 INFO  [main                          ] 1307 in OWLRDFConsumer       - dumping remaining triples
+2026-05-31 02:01:47 INFO  [main                          ] 1341 in OWLRDFConsumer       - done dumping remaining triples
+2026-05-31 02:01:47 INFO  [main                          ] 1307 in OWLRDFConsumer       - dumping remaining triples
+2026-05-31 02:01:47 INFO  [main                          ] 1298 in OWLRDFConsumer       - _:genid95 -> http://www.w3.org/1999/02/22-rdf-syntax-ns#type -> http://www.w3.org/2002/07/owl#AllDifferent
+2026-05-31 02:01:47 INFO  [main                          ] 1341 in OWLRDFConsumer       - done dumping remaining triples
+2026-05-31 02:05:18 INFO  [main                          ] 483  in Parameters           - Reading LogMap parameters from file.
+2026-05-31 02:05:18 INFO  [main                          ] 1307 in OWLRDFConsumer       - dumping remaining triples
+2026-05-31 02:05:18 INFO  [main                          ] 1341 in OWLRDFConsumer       - done dumping remaining triples
+2026-05-31 02:05:19 INFO  [main                          ] 1307 in OWLRDFConsumer       - dumping remaining triples
+2026-05-31 02:05:19 INFO  [main                          ] 1298 in OWLRDFConsumer       - _:genid95 -> http://www.w3.org/1999/02/22-rdf-syntax-ns#type -> http://www.w3.org/2002/07/owl#AllDifferent
+2026-05-31 02:05:19 INFO  [main                          ] 1341 in OWLRDFConsumer       - done dumping remaining triples
+2026-05-31 02:35:31 INFO  [main                          ] 483  in Parameters           - Reading LogMap parameters from file.
+2026-05-31 02:35:32 INFO  [main                          ] 203  in AbstractState        - Notice: root element does not have an xml:base. Relative IRIs will be resolved against file:/Users/maniumek/repos/llm-onto-merger/tests/inputs/acm-union/acm.owl
+2026-05-31 02:35:32 INFO  [main                          ] 1307 in OWLRDFConsumer       - dumping remaining triples
+2026-05-31 02:35:32 INFO  [main                          ] 1341 in OWLRDFConsumer       - done dumping remaining triples
+2026-05-31 02:35:32 INFO  [main                          ] 203  in AbstractState        - Notice: root element does not have an xml:base. Relative IRIs will be resolved against file:/Users/maniumek/repos/llm-onto-merger/tests/inputs/acm-union/union.owl
+2026-05-31 02:35:32 INFO  [main                          ] 1307 in OWLRDFConsumer       - dumping remaining triples
+2026-05-31 02:35:32 INFO  [main                          ] 1298 in OWLRDFConsumer       - _:genid-nodeid-Nc80dabfa8ce044e09a9bb866dd93a10f -> http://www.w3.org/1999/02/22-rdf-syntax-ns#type -> http://www.w3.org/2002/07/owl#AllDifferent
+2026-05-31 02:35:32 INFO  [main                          ] 1341 in OWLRDFConsumer       - done dumping remaining triples
+2026-05-31 02:37:13 INFO  [main                          ] 483  in Parameters           - Reading LogMap parameters from file.
+2026-05-31 02:37:13 INFO  [main                          ] 203  in AbstractState        - Notice: root element does not have an xml:base. Relative IRIs will be resolved against file:/Users/maniumek/repos/llm-onto-merger/tests/inputs/acm-union/acm.owl
+2026-05-31 02:37:13 INFO  [main                          ] 1307 in OWLRDFConsumer       - dumping remaining triples
+2026-05-31 02:37:13 INFO  [main                          ] 1341 in OWLRDFConsumer       - done dumping remaining triples
+2026-05-31 02:37:14 INFO  [main                          ] 203  in AbstractState        - Notice: root element does not have an xml:base. Relative IRIs will be resolved against file:/Users/maniumek/repos/llm-onto-merger/tests/inputs/acm-union/union.owl
+2026-05-31 02:37:14 INFO  [main                          ] 1307 in OWLRDFConsumer       - dumping remaining triples
+2026-05-31 02:37:14 INFO  [main                          ] 1298 in OWLRDFConsumer       - _:genid-nodeid-Nc80dabfa8ce044e09a9bb866dd93a10f -> http://www.w3.org/1999/02/22-rdf-syntax-ns#type -> http://www.w3.org/2002/07/owl#AllDifferent
+2026-05-31 02:37:14 INFO  [main                          ] 1341 in OWLRDFConsumer       - done dumping remaining triples
+2026-05-31 14:14:07 INFO  [main                          ] 483  in Parameters           - Reading LogMap parameters from file.
+2026-05-31 14:14:08 INFO  [main                          ] 1307 in OWLRDFConsumer       - dumping remaining triples
+2026-05-31 14:14:08 INFO  [main                          ] 1341 in OWLRDFConsumer       - done dumping remaining triples
+2026-05-31 14:14:08 INFO  [main                          ] 1307 in OWLRDFConsumer       - dumping remaining triples
+2026-05-31 14:14:08 INFO  [main                          ] 1298 in OWLRDFConsumer       - _:genid95 -> http://www.w3.org/1999/02/22-rdf-syntax-ns#type -> http://www.w3.org/2002/07/owl#AllDifferent
+2026-05-31 14:14:08 INFO  [main                          ] 1341 in OWLRDFConsumer       - done dumping remaining triples

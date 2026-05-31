@@ -8,7 +8,8 @@ dist/
 build/
 
 tests/**outputs/
-artifacts/*
+tests/**/**outputs/
+**/artifacts/*
 !artifacts/.gitkeep
 logs/
 
