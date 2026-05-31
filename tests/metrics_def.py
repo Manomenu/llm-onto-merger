@@ -795,6 +795,7 @@ _HTML_TEMPLATE = """\
       <th>Metric</th>
       <th>union_input</th>
       {applied_col_header}
+      {boomer_col_header}
       <th>merged_ontology</th>
       <th>Target</th>
       <th>Source</th>
@@ -866,6 +867,7 @@ def _write_html(
     folder: str,
     has_applied: bool,
     suspected_counts: dict[str, int] | None = None,
+    has_boomer: bool = False,
 ) -> None:
     suspected_counts = suspected_counts or {}
     by_metric: dict[str, dict[str, float]] = defaultdict(dict)
@@ -878,18 +880,21 @@ def _write_html(
         u_val = vals.get("union_input")
         m_val = vals.get("merged_ontology")
         a_val = vals.get("applied_alignments") if has_applied else None
-        if u_val is None and m_val is None and a_val is None:
+        b_val = vals.get("boomer_ontology") if has_boomer else None
+        if all(v is None for v in (u_val, m_val, a_val, b_val)):
             continue
         border = _SOURCE_BORDER.get(meta["source"], "#ccc")
         badges = _cat_badges(meta["categories"])
         susp = suspected_counts.get(metric_name, 0)
         applied_cell = _fmt_applied(a_val, susp) if has_applied else ""
+        boomer_cell = _fmt(b_val) if has_boomer else ""
 
         html_rows.append(
             f'    <tr style="border-left: 3px solid {border}">\n'
             f"      <td><strong>{metric_name}</strong></td>\n"
             f"      {_fmt(u_val)}\n"
             f"      {applied_cell}\n"
+            f"      {boomer_cell}\n"
             f"      {_fmt(m_val)}\n"
             f'      <td class="tgt">{meta["target"]}</td>\n'
             f'      <td class="src">{meta["source"]}</td>\n'
@@ -899,6 +904,7 @@ def _write_html(
         )
 
     applied_col_header = "<th>applied_alignments</th>" if has_applied else ""
+    boomer_col_header = "<th>boomer_ontology</th>" if has_boomer else ""
 
     cat_legend_lines = []
     for cat, (_, color) in _CATEGORIES.items():
@@ -911,6 +917,7 @@ def _write_html(
     html = _HTML_TEMPLATE.format(
         folder=folder,
         applied_col_header=applied_col_header,
+        boomer_col_header=boomer_col_header,
         rows="\n".join(html_rows),
         legend=legend,
     )
@@ -949,7 +956,9 @@ def main() -> None:
 
     merged_path = output_dir / "merged_ontology.owl"
     applied_path = output_dir / "applied_alignments.owl"
+    boomer_path = output_dir / "boomer_ontology.owl"
     alignment_stats_path = output_dir / "alignment_stats.json"
+    boomer_stats_path = output_dir / "boomer_stats.json"
 
     if not merged_path.exists():
         print(f"merged_ontology.owl not found in {output_dir}", file=sys.stderr)
@@ -965,6 +974,7 @@ def main() -> None:
         union.add(t)
     merged = _load_graph(str(merged_path))
     applied = _load_graph(str(applied_path)) if applied_path.exists() else None
+    boomer = _load_graph(str(boomer_path)) if boomer_path.exists() else None
 
     print(f"  onto1:              {len(onto1)} triples")
     print(f"  onto2:              {len(onto2)} triples")
@@ -974,6 +984,10 @@ def main() -> None:
         print(f"  applied_alignments: {len(applied)} triples")
     else:
         print("  applied_alignments: not found — skipped")
+    if boomer is not None:
+        print(f"  boomer_ontology:    {len(boomer)} triples")
+    else:
+        print("  boomer_ontology:    not found — skipped")
 
     # Entity sets for cross-ontology metrics (URI-based source attribution)
     onto1_entities: set[URIRef] = {s for s, _, _ in onto1 if isinstance(s, URIRef)}
@@ -987,6 +1001,8 @@ def main() -> None:
     }
     if applied is not None:
         graph_objects["applied_alignments"] = applied
+    if boomer is not None:
+        graph_objects["boomer_ontology"] = boomer
 
     self_metrics: dict[str, dict[str, float | None]] = {}
     for name, g in graph_objects.items():
@@ -1037,10 +1053,24 @@ def main() -> None:
     else:
         print("  alignment_stats.json not found — skipping applied_alignments metric")
 
+    # ── Boomer accepted count (from sidecar JSON written by apply_boomer.py) ──
+    if boomer_stats_path.exists() and "boomer_ontology" in self_metrics:
+        bstats = json.loads(boomer_stats_path.read_text(encoding="utf-8"))
+        self_metrics["boomer_ontology"]["applied_alignments"] = float(
+            bstats.get("accepted_equiv_count", 0)
+        )
+        print(
+            f"  boomer_stats: {int(bstats.get('accepted_equiv_count', 0))} "
+            f"equivalence axioms accepted by Boomer"
+        )
+
     # ── Assemble rows ──────────────────────────────────────────────────────────
-    graph_names = ["union_input", "merged_ontology"] + (
-        ["applied_alignments"] if applied is not None else []
-    )
+    graph_names = ["union_input"]
+    if applied is not None:
+        graph_names.append("applied_alignments")
+    if boomer is not None:
+        graph_names.append("boomer_ontology")
+    graph_names.append("merged_ontology")
 
     rows: list[dict] = []
     for graph_name in graph_names:
@@ -1085,7 +1115,10 @@ def main() -> None:
 
     # ── Write HTML ─────────────────────────────────────────────────────────────
     out_html = out_csv.with_suffix(".html")
-    _write_html(rows, out_html, folder, applied is not None, suspected_counts)
+    _write_html(
+        rows, out_html, folder, applied is not None, suspected_counts,
+        has_boomer=boomer is not None,
+    )
     print(f"Report  written to {out_html}\n")
 
     # ── Console summary ────────────────────────────────────────────────────────
@@ -1094,13 +1127,16 @@ def main() -> None:
         by_metric[r["metric"]][r["graph"]] = r["value"]
 
     has_app = applied is not None
+    has_boom = boomer is not None
     col = max(len(m) for m in _REGISTRY)
-    hdr = (
-        f"{'metric':<{col}}  {'union_input':>15}  {'applied_alignments':>20}"
-        f"  {'merged_ontology':>16}  target"
-        if has_app
-        else f"{'metric':<{col}}  {'union_input':>15}  {'merged_ontology':>16}  target"
-    )
+    hdr_parts = [f"{'metric':<{col}}", f"{'union_input':>15}"]
+    if has_app:
+        hdr_parts.append(f"{'applied_alignments':>20}")
+    if has_boom:
+        hdr_parts.append(f"{'boomer_ontology':>17}")
+    hdr_parts.append(f"{'merged_ontology':>16}")
+    hdr_parts.append("target")
+    hdr = "  ".join(hdr_parts)
     print(hdr)
     print("─" * len(hdr))
     for metric_name, meta in _REGISTRY.items():
@@ -1120,12 +1156,13 @@ def main() -> None:
         u_s = _fs(u, 15)
         m_s = _fs(m, 16)
         tgt = meta["target"]
+        parts = [f"{metric_name:<{col}}", u_s]
         if has_app:
-            a = vals.get("applied_alignments")
-            a_s = _fs(a, 20)
-            print(f"{metric_name:<{col}}{u_s}{a_s}{m_s}  {tgt}")
-        else:
-            print(f"{metric_name:<{col}}{u_s}{m_s}  {tgt}")
+            parts.append(_fs(vals.get("applied_alignments"), 20))
+        if has_boom:
+            parts.append(_fs(vals.get("boomer_ontology"), 17))
+        parts.append(m_s)
+        print(f"{'  '.join(parts)}  {tgt}")
 
 
 if __name__ == "__main__":

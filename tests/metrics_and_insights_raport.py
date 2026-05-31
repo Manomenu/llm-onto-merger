@@ -64,15 +64,20 @@ def _compute_scenario(
         return None
 
     applied_path = out_dir / "applied_alignments.owl"
+    boomer_path = out_dir / "boomer_ontology.owl"
     insights_path = out_dir / "insights.csv"
     alignment_stats_path = out_dir / "alignment_stats.json"
+    boomer_stats_path = out_dir / "boomer_stats.json"
 
     merged = _load_graph(str(merged_path))
     applied = _load_graph(str(applied_path)) if applied_path.exists() else None
+    boomer = _load_graph(str(boomer_path)) if boomer_path.exists() else None
 
     graphs: dict[str, Graph] = {"union_input": union, "merged_ontology": merged}
     if applied is not None:
         graphs["applied_alignments"] = applied
+    if boomer is not None:
+        graphs["boomer_ontology"] = boomer
 
     metrics: dict[str, dict[str, float | None]] = {}
     for name, g in graphs.items():
@@ -108,6 +113,13 @@ def _compute_scenario(
             )
             suspected_counts["applied_alignments"] = rejected_count
 
+    # Boomer accepted-equiv count (from sidecar written by apply_boomer.py)
+    if boomer_stats_path.exists() and "boomer_ontology" in metrics:
+        bstats = json.loads(boomer_stats_path.read_text(encoding="utf-8"))
+        metrics["boomer_ontology"]["applied_alignments"] = float(
+            bstats.get("accepted_equiv_count", 0)
+        )
+
     insights_rows: list[dict] = []
     if insights_path.exists():
         with insights_path.open(encoding="utf-8") as f:
@@ -121,6 +133,7 @@ def _compute_scenario(
         "insights_rows": insights_rows,
         "alignment_stats": alignment_stats,
         "has_applied": applied is not None,
+        "has_boomer": boomer is not None,
     }
 
 
@@ -215,6 +228,7 @@ def _render_metrics_table(scenario: dict) -> str:
     metrics = scenario["metrics"]
     suspected = scenario["suspected_counts"]
     has_applied = scenario["has_applied"]
+    has_boomer = scenario["has_boomer"]
     for metric_name, meta in _REGISTRY.items():
         u_val = metrics.get("union_input", {}).get(metric_name)
         m_val = metrics.get("merged_ontology", {}).get(metric_name)
@@ -223,17 +237,24 @@ def _render_metrics_table(scenario: dict) -> str:
             if has_applied
             else None
         )
-        if u_val is None and m_val is None and a_val is None:
+        b_val = (
+            metrics.get("boomer_ontology", {}).get(metric_name)
+            if has_boomer
+            else None
+        )
+        if all(v is None for v in (u_val, m_val, a_val, b_val)):
             continue
         border = _SOURCE_BORDER.get(meta["source"], "#ccc")
         badges = _cat_badges(meta["categories"])
         susp = suspected.get(metric_name, 0)
         applied_cell = _fmt_applied(a_val, susp) if has_applied else ""
+        boomer_cell = _fmt(b_val) if has_boomer else ""
         rows_html.append(
             f'    <tr style="border-left: 3px solid {border}">'
             f"<td><strong>{metric_name}</strong></td>"
             f"{_fmt(u_val)}"
             f"{applied_cell}"
+            f"{boomer_cell}"
             f"{_fmt(m_val)}"
             f'<td class="tgt">{meta["target"]}</td>'
             f'<td class="src">{meta["source"]}</td>'
@@ -242,9 +263,10 @@ def _render_metrics_table(scenario: dict) -> str:
             f"</tr>"
         )
     applied_header = "<th>applied_alignments</th>" if has_applied else ""
+    boomer_header = "<th>boomer_ontology</th>" if has_boomer else ""
     return f"""<table>
   <thead><tr>
-    <th>Metric</th><th>union_input</th>{applied_header}<th>merged_ontology</th>
+    <th>Metric</th><th>union_input</th>{applied_header}{boomer_header}<th>merged_ontology</th>
     <th>Target</th><th>Source</th><th>Categories</th><th>Interpretation</th>
   </tr></thead>
   <tbody>
@@ -272,7 +294,8 @@ def _render_insights_table(scenario: dict) -> str:
 </table>"""
 
 
-def _render_comparison_table(scenarios: list[dict]) -> str:
+def _render_comparison_table(scenarios: list[dict], graph_name: str) -> str:
+    """Render comparison table for a specific graph column ('merged_ontology' or 'boomer_ontology')."""
     baseline = scenarios[0]
     labels = [s["label"] for s in scenarios]
 
@@ -284,9 +307,9 @@ def _render_comparison_table(scenarios: list[dict]) -> str:
 
     body_rows: list[str] = []
     for metric_name, meta in _REGISTRY.items():
-        baseline_val = baseline["metrics"].get("merged_ontology", {}).get(metric_name)
+        baseline_val = baseline["metrics"].get(graph_name, {}).get(metric_name)
         scenario_vals = [
-            s["metrics"].get("merged_ontology", {}).get(metric_name) for s in scenarios
+            s["metrics"].get(graph_name, {}).get(metric_name) for s in scenarios
         ]
         if all(v is None for v in scenario_vals):
             continue
@@ -352,12 +375,14 @@ def _align_stats_label(stats: dict | None) -> str:
 
 def _scenario_metrics_block(s: dict) -> str:
     applied_mark = "✓" if s["has_applied"] else "✗"
+    boomer_mark = "✓" if s["has_boomer"] else "✗"
     align_label = _align_stats_label(s["alignment_stats"])
     return (
         f'<div class="scenario-section"><h3>Scenariusz: <code>{s["label"]}</code></h3>'
         f'<div class="scenario-meta">'
         f"merged_ontology.owl: ✓ &nbsp; "
         f"applied_alignments.owl: {applied_mark} &nbsp; "
+        f"boomer_ontology.owl: {boomer_mark} &nbsp; "
         f"alignment_stats: {align_label}"
         f"</div>"
         f"{_render_metrics_table(s)}</div>"
@@ -378,9 +403,17 @@ def _build_html(scenarios: list[dict], inputs_dir: Path) -> str:
     )
     sec3 = (
         '<div class="scenario-section">'
-        + _render_comparison_table(scenarios)
+        + _render_comparison_table(scenarios, "merged_ontology")
         + "</div>"
     )
+    sec4_html = ""
+    if any(s["has_boomer"] for s in scenarios):
+        sec4_html = (
+            "<h2>4. Porównanie <code>boomer_ontology</code> — wszystkie scenariusze</h2>\n"
+            '<div class="scenario-section">'
+            + _render_comparison_table(scenarios, "boomer_ontology")
+            + "</div>"
+        )
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -400,6 +433,8 @@ def _build_html(scenarios: list[dict], inputs_dir: Path) -> str:
 
 <h2>3. Porównanie <code>merged_ontology</code> — wszystkie scenariusze</h2>
 {sec3}
+
+{sec4_html}
 
 {_render_legend()}
 </body>
@@ -442,37 +477,42 @@ def _build_csv_rows(scenarios: list[dict]) -> list[list[str]]:
         for r in s["insights_rows"]:
             rows.append(["insights", s["label"]] + [r[h] for h in header])
 
-    rows.append([])
-    rows.append(
-        ["# section: comparison (merged_ontology metric values across scenarios)"]
-    )
-    baseline = scenarios[0]
-    labels = [s["label"] for s in scenarios]
-    header = ["metric", labels[0] + "_baseline"]
-    for label in labels[1:]:
-        header += [label, label + "_delta_vs_baseline", label + "_direction"]
-    rows.append(header)
-    for metric_name in _REGISTRY:
-        baseline_val = baseline["metrics"].get("merged_ontology", {}).get(metric_name)
-        scenario_vals = [
-            s["metrics"].get("merged_ontology", {}).get(metric_name) for s in scenarios
-        ]
-        if all(v is None for v in scenario_vals):
-            continue
-        row = [
-            metric_name,
-            "" if scenario_vals[0] is None else str(scenario_vals[0]),
-        ]
-        for v in scenario_vals[1:]:
-            if v is None or baseline_val is None:
-                row += ["", "", ""]
-            else:
-                row += [
-                    str(v),
-                    f"{v - baseline_val:+g}",
-                    _delta_direction(metric_name, baseline_val, v),
-                ]
-        rows.append(row)
+    def _emit_comparison_section(graph_name: str) -> None:
+        rows.append([])
+        rows.append(
+            [f"# section: comparison ({graph_name} metric values across scenarios)"]
+        )
+        baseline = scenarios[0]
+        labels = [s["label"] for s in scenarios]
+        header = ["metric", labels[0] + "_baseline"]
+        for label in labels[1:]:
+            header += [label, label + "_delta_vs_baseline", label + "_direction"]
+        rows.append(header)
+        for metric_name in _REGISTRY:
+            baseline_val = baseline["metrics"].get(graph_name, {}).get(metric_name)
+            scenario_vals = [
+                s["metrics"].get(graph_name, {}).get(metric_name) for s in scenarios
+            ]
+            if all(v is None for v in scenario_vals):
+                continue
+            row = [
+                metric_name,
+                "" if scenario_vals[0] is None else str(scenario_vals[0]),
+            ]
+            for v in scenario_vals[1:]:
+                if v is None or baseline_val is None:
+                    row += ["", "", ""]
+                else:
+                    row += [
+                        str(v),
+                        f"{v - baseline_val:+g}",
+                        _delta_direction(metric_name, baseline_val, v),
+                    ]
+            rows.append(row)
+
+    _emit_comparison_section("merged_ontology")
+    if any(s["has_boomer"] for s in scenarios):
+        _emit_comparison_section("boomer_ontology")
     return rows
 
 

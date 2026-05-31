@@ -106,14 +106,24 @@ if [ -f "$OFN_FILE" ]; then
   echo
   echo "========================================"
   echo "  Post-processing"
-  echo "    .ofn → $OUT_DIR_ABS/merged_ontology.owl"
+  echo "    .ofn → raw → apply equivalences → merged_ontology.owl"
   echo "========================================"
   if [ ! -x "$OWLTOOLS" ]; then
     echo "Error: $OWLTOOLS not found/executable — needed for OFN → RDF/XML conversion" >&2
     exit 1
   fi
-  "$OWLTOOLS" "$OFN_FILE" -o "file://$OUT_DIR_ABS/merged_ontology.owl"
+  # Step 1: OFN → RDF/XML (raw Boomer output: declarations + equivalentClass axioms)
+  BOOMER_RAW="$ARTIFACTS_DIR/boomer_raw.owl"
+  "$OWLTOOLS" "$OFN_FILE" -o "file://$BOOMER_RAW"
   rm -f "$OFN_FILE"
+  # Step 2: apply Boomer's accepted equivalences to source ontologies (like
+  # apply_alignments does for AML/LogMap) so the result is a full merged ontology
+  # comparable to applied_alignments.owl and the LLM's merged_ontology.owl.
+  uv run python "$BOOMER_DIR/apply_boomer.py" \
+    --onto1 "$ONT1_ABS" \
+    --onto2 "$ONT2_ABS" \
+    --boomer-raw "$BOOMER_RAW" \
+    --output "$OUT_DIR_ABS/merged_ontology.owl"
 fi
 if [ -f "$MD_FILE" ]; then
   mv "$MD_FILE" "$OUT_DIR_ABS/report.md"

@@ -1,21 +1,32 @@
 #!/usr/bin/env bash
-# Scenario #1: max-env-chars × alignment-tool grid (4 runs) for any dataset.
+# Scenario #1: max-env-chars × alignment-tool grid (4 runs) + Boomer for any dataset.
 #
 # Usage:
-#   tests/scenarios/scenario_1.sh                # prompts for dataset name
-#   tests/scenarios/scenario_1.sh conference     # uses tests/inputs/conference
+#   tests/scenarios/scenario_1.sh                          # prompts for dataset name
+#   tests/scenarios/scenario_1.sh conference               # uses tests/inputs/conference
+#   tests/scenarios/scenario_1.sh --skip-mine conference   # reuse existing LLM outputs, just rerun Boomer + report
+#
+# Flags:
+#   --skip-mine    skip the LLM merger step (reuse existing merged_ontology.owl
+#                  in each scenario dir).  Still runs Boomer + regenerates the
+#                  combined report.  Useful when LLM runs are expensive and
+#                  you just want fresh metrics / a fresh Boomer column.
 #
 # Runs (per dataset <name>):
-#   <name>_10k_aml       max-env-chars=10000  alignment-tool=aml
-#   <name>_20k_aml       max-env-chars=20000  alignment-tool=aml
-#   <name>_10k_logmap    max-env-chars=10000  alignment-tool=logmap
-#   <name>_20k_logmap    max-env-chars=20000  alignment-tool=logmap
+#   <name>_10k_aml       max-env-chars=10000  alignment-tool=aml      (LLM)
+#   <name>_20k_aml       max-env-chars=20000  alignment-tool=aml      (LLM)
+#   <name>_10k_logmap    max-env-chars=10000  alignment-tool=logmap   (LLM)
+#   <name>_20k_logmap    max-env-chars=20000  alignment-tool=logmap   (LLM)
 #
-# Inputs (same for all 4 runs):
+# Boomer runs once per unique alignment tool (aml, logmap) — same Boomer output
+# is copied into every scenario folder that uses that tool, as boomer_ontology.owl.
+#
+# Inputs (same for all runs):
 #   tests/inputs/<name>/*.owl     (exactly 2 ontologies, sorted alphabetically)
 #
 # Outputs (all under tests/scenarios/outputs/ — gitignored):
-#   tests/scenarios/outputs/<name>/<name>_<tag>/         merged_ontology.owl + insights + …
+#   tests/scenarios/outputs/<name>/<name>_<tag>/         merged_ontology.owl + insights + boomer_ontology.owl + …
+#   tests/scenarios/outputs/<name>/.boomer_<tool>/       Boomer's own output (cache, reused across scenarios)
 #   tests/scenarios/outputs/<name>/m_i_raport_<name>_1.html   combined report
 #   tests/scenarios/outputs/<name>/m_i_raport_<name>_1.csv
 
@@ -24,9 +35,37 @@ shopt -s nullglob
 
 cd "$(dirname "$0")/../.."
 
-DATASET="${1:-}"
+# ── Arg parsing ──────────────────────────────────────────────────────────────
+SKIP_MINE=0
+DATASET=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --skip-mine)
+      SKIP_MINE=1
+      shift
+      ;;
+    --help|-h)
+      sed -n '2,/^$/p' "$0" | sed 's/^# *//' >&2
+      exit 0
+      ;;
+    -*)
+      echo "Unknown option: $1" >&2
+      exit 1
+      ;;
+    *)
+      if [ -z "$DATASET" ]; then
+        DATASET="$1"
+      else
+        echo "Too many positional arguments (got '$1' after '$DATASET')" >&2
+        exit 1
+      fi
+      shift
+      ;;
+  esac
+done
+
 if [ -z "$DATASET" ]; then
-  echo "Available datasets:"
+  echo "Available input folders:"
   for d in tests/inputs/*/; do
     echo "  - $(basename "$d")"
   done
@@ -63,6 +102,27 @@ SCENARIOS=(
   "20k_logmap  20000  logmap"
 )
 
+# ── Boomer per-tool cache (avoids running Boomer 4x when only 2 tools are used) ──
+BOOMER_AML_DIR=""
+BOOMER_LOGMAP_DIR=""
+
+run_boomer_once() {
+  local tool="$1"
+  local cache_dir="$OUT_BASE/.boomer_$tool"
+  if [ ! -f "$cache_dir/merged_ontology.owl" ]; then
+    echo "  → running Boomer ($tool) → $cache_dir"
+    mkdir -p "$cache_dir"
+    ./thirdparty/boomer/boomer.sh "$BASE" "$CANDIDATE" "$cache_dir" "$tool" \
+      >"$cache_dir/run.log" 2>&1
+  else
+    echo "  → reusing cached Boomer ($tool) from $cache_dir"
+  fi
+  case "$tool" in
+    aml)    BOOMER_AML_DIR="$cache_dir" ;;
+    logmap) BOOMER_LOGMAP_DIR="$cache_dir" ;;
+  esac
+}
+
 OUT_DIRS=()
 for spec in "${SCENARIOS[@]}"; do
   read -r tag chars tool <<< "$spec"
@@ -70,6 +130,7 @@ for spec in "${SCENARIOS[@]}"; do
   OUT_DIRS+=( "$out" )
   mkdir -p "$out"
   log_file="$out/run.log"
+
   echo
   echo "========================================"
   echo "  Scenario: ${DATASET}_$tag"
@@ -79,16 +140,45 @@ for spec in "${SCENARIOS[@]}"; do
   echo "    max env chars:  $chars"
   echo "    output dir:     $out"
   echo "    log:            $log_file"
+  echo "    skip-mine:      $([ "$SKIP_MINE" = "1" ] && echo yes || echo no)"
   echo "========================================"
-  uv run llm-onto-merger \
-    --base "$BASE" \
-    --candidate "$CANDIDATE" \
-    --alignment-tool "$tool" \
-    --output "$out" \
-    --max-env-chars "$chars" \
-    >"$log_file" 2>&1
+
+  # ── LLM merger ──────────────────────────────────────────────────────────
+  if [ "$SKIP_MINE" = "1" ]; then
+    if [ -f "$out/merged_ontology.owl" ]; then
+      echo "  --skip-mine: $out/merged_ontology.owl exists — skipping LLM merger"
+    else
+      echo "  WARNING: --skip-mine set but $out/merged_ontology.owl missing —" \
+           "scenario will be incomplete (no LLM data for report)"
+    fi
+  else
+    uv run llm-onto-merger \
+      --base "$BASE" \
+      --candidate "$CANDIDATE" \
+      --alignment-tool "$tool" \
+      --output "$out" \
+      --max-env-chars "$chars" \
+      >"$log_file" 2>&1
+  fi
+
+  # ── Boomer (per-tool cache, copied into each scenario dir) ──────────────
+  run_boomer_once "$tool"
+  case "$tool" in
+    aml)    cache_dir="$BOOMER_AML_DIR" ;;
+    logmap) cache_dir="$BOOMER_LOGMAP_DIR" ;;
+  esac
+  if [ -f "$cache_dir/merged_ontology.owl" ]; then
+    cp "$cache_dir/merged_ontology.owl" "$out/boomer_ontology.owl"
+    if [ -f "$cache_dir/boomer_stats.json" ]; then
+      cp "$cache_dir/boomer_stats.json" "$out/boomer_stats.json"
+    fi
+    echo "  → boomer_ontology.owl ← $cache_dir/merged_ontology.owl"
+  else
+    echo "  WARNING: Boomer output missing at $cache_dir/merged_ontology.owl — skipping copy"
+  fi
 done
 
+# ── Combined report (always runs) ────────────────────────────────────────────
 REPORT_LOG="$SCENARIO_DIR/m_i_raport_${DATASET}_1.log"
 echo
 echo "========================================"

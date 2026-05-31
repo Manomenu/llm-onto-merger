@@ -32,3 +32,15 @@
 2026-05-31 14:14:08 INFO  [main                          ] 1307 in OWLRDFConsumer       - dumping remaining triples
 2026-05-31 14:14:08 INFO  [main                          ] 1298 in OWLRDFConsumer       - _:genid95 -> http://www.w3.org/1999/02/22-rdf-syntax-ns#type -> http://www.w3.org/2002/07/owl#AllDifferent
 2026-05-31 14:14:08 INFO  [main                          ] 1341 in OWLRDFConsumer       - done dumping remaining triples
+2026-05-31 15:26:27 INFO  [main                          ] 483  in Parameters           - Reading LogMap parameters from file.
+2026-05-31 15:26:27 INFO  [main                          ] 1307 in OWLRDFConsumer       - dumping remaining triples
+2026-05-31 15:26:27 INFO  [main                          ] 1341 in OWLRDFConsumer       - done dumping remaining triples
+2026-05-31 15:26:28 INFO  [main                          ] 1307 in OWLRDFConsumer       - dumping remaining triples
+2026-05-31 15:26:28 INFO  [main                          ] 1298 in OWLRDFConsumer       - _:genid95 -> http://www.w3.org/1999/02/22-rdf-syntax-ns#type -> http://www.w3.org/2002/07/owl#AllDifferent
+2026-05-31 15:26:28 INFO  [main                          ] 1341 in OWLRDFConsumer       - done dumping remaining triples
+2026-05-31 15:37:11 INFO  [main                          ] 483  in Parameters           - Reading LogMap parameters from file.
+2026-05-31 15:37:11 INFO  [main                          ] 1307 in OWLRDFConsumer       - dumping remaining triples
+2026-05-31 15:37:11 INFO  [main                          ] 1341 in OWLRDFConsumer       - done dumping remaining triples
+2026-05-31 15:37:11 INFO  [main                          ] 1307 in OWLRDFConsumer       - dumping remaining triples
+2026-05-31 15:37:11 INFO  [main                          ] 1298 in OWLRDFConsumer       - _:genid95 -> http://www.w3.org/1999/02/22-rdf-syntax-ns#type -> http://www.w3.org/2002/07/owl#AllDifferent
+2026-05-31 15:37:11 INFO  [main                          ] 1341 in OWLRDFConsumer       - done dumping remaining triples
