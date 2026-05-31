@@ -65,25 +65,36 @@ def _compute_scenario(
 
     applied_path = out_dir / "applied_alignments.owl"
     boomer_path = out_dir / "boomer_ontology.owl"
+    arom_path = out_dir / "arom_ontology.owl"
     insights_path = out_dir / "insights.csv"
     alignment_stats_path = out_dir / "alignment_stats.json"
     boomer_stats_path = out_dir / "boomer_stats.json"
+    arom_stats_path = out_dir / "arom_stats.json"
 
     merged = _load_graph(str(merged_path))
     applied = _load_graph(str(applied_path)) if applied_path.exists() else None
     boomer = _load_graph(str(boomer_path)) if boomer_path.exists() else None
+    arom = _load_graph(str(arom_path)) if arom_path.exists() else None
+    arom_provenance: dict[str, dict[str, str]] | None = None
+    if arom is not None and arom_stats_path.exists():
+        arom_provenance = json.loads(
+            arom_stats_path.read_text(encoding="utf-8")
+        ).get("code_provenance")
 
     graphs: dict[str, Graph] = {"union_input": union, "merged_ontology": merged}
     if applied is not None:
         graphs["applied_alignments"] = applied
+    if arom is not None:
+        graphs["arom_ontology"] = arom
     if boomer is not None:
         graphs["boomer_ontology"] = boomer
 
     metrics: dict[str, dict[str, float | None]] = {}
     for name, g in graphs.items():
         union_arg = None if name == "union_input" else union
+        prov = arom_provenance if name == "arom_ontology" else None
         metrics[name] = _compute_self_metrics(
-            g, onto1_entities, onto2_entities, union_arg
+            g, onto1_entities, onto2_entities, union_arg, arom_provenance=prov
         )
 
     print(f"  running HermiT for {out_dir.name} …")
@@ -105,6 +116,9 @@ def _compute_scenario(
             metrics["applied_alignments"]["applied_alignments"] = total
         if "merged_ontology" in metrics:
             metrics["merged_ontology"]["applied_alignments"] = applied_count
+        # AROM has no rejection — applies all alignments ≥ threshold (default 0.0)
+        if "arom_ontology" in metrics:
+            metrics["arom_ontology"]["applied_alignments"] = total
 
         if applied is not None and rejected:
             tainted_uris = {URIRef(a["entity1"]) for a in rejected}
@@ -134,6 +148,7 @@ def _compute_scenario(
         "alignment_stats": alignment_stats,
         "has_applied": applied is not None,
         "has_boomer": boomer is not None,
+        "has_arom": arom is not None,
     }
 
 
@@ -229,6 +244,7 @@ def _render_metrics_table(scenario: dict) -> str:
     suspected = scenario["suspected_counts"]
     has_applied = scenario["has_applied"]
     has_boomer = scenario["has_boomer"]
+    has_arom = scenario["has_arom"]
     for metric_name, meta in _REGISTRY.items():
         u_val = metrics.get("union_input", {}).get(metric_name)
         m_val = metrics.get("merged_ontology", {}).get(metric_name)
@@ -242,18 +258,25 @@ def _render_metrics_table(scenario: dict) -> str:
             if has_boomer
             else None
         )
-        if all(v is None for v in (u_val, m_val, a_val, b_val)):
+        ar_val = (
+            metrics.get("arom_ontology", {}).get(metric_name)
+            if has_arom
+            else None
+        )
+        if all(v is None for v in (u_val, m_val, a_val, b_val, ar_val)):
             continue
         border = _SOURCE_BORDER.get(meta["source"], "#ccc")
         badges = _cat_badges(meta["categories"])
         susp = suspected.get(metric_name, 0)
         applied_cell = _fmt_applied(a_val, susp) if has_applied else ""
+        arom_cell = _fmt(ar_val) if has_arom else ""
         boomer_cell = _fmt(b_val) if has_boomer else ""
         rows_html.append(
             f'    <tr style="border-left: 3px solid {border}">'
             f"<td><strong>{metric_name}</strong></td>"
             f"{_fmt(u_val)}"
             f"{applied_cell}"
+            f"{arom_cell}"
             f"{boomer_cell}"
             f"{_fmt(m_val)}"
             f'<td class="tgt">{meta["target"]}</td>'
@@ -263,10 +286,11 @@ def _render_metrics_table(scenario: dict) -> str:
             f"</tr>"
         )
     applied_header = "<th>applied_alignments</th>" if has_applied else ""
+    arom_header = "<th>arom_ontology</th>" if has_arom else ""
     boomer_header = "<th>boomer_ontology</th>" if has_boomer else ""
     return f"""<table>
   <thead><tr>
-    <th>Metric</th><th>union_input</th>{applied_header}{boomer_header}<th>merged_ontology</th>
+    <th>Metric</th><th>union_input</th>{applied_header}{arom_header}{boomer_header}<th>merged_ontology</th>
     <th>Target</th><th>Source</th><th>Categories</th><th>Interpretation</th>
   </tr></thead>
   <tbody>
@@ -375,6 +399,7 @@ def _align_stats_label(stats: dict | None) -> str:
 
 def _scenario_metrics_block(s: dict) -> str:
     applied_mark = "✓" if s["has_applied"] else "✗"
+    arom_mark = "✓" if s["has_arom"] else "✗"
     boomer_mark = "✓" if s["has_boomer"] else "✗"
     align_label = _align_stats_label(s["alignment_stats"])
     return (
@@ -382,6 +407,7 @@ def _scenario_metrics_block(s: dict) -> str:
         f'<div class="scenario-meta">'
         f"merged_ontology.owl: ✓ &nbsp; "
         f"applied_alignments.owl: {applied_mark} &nbsp; "
+        f"arom_ontology.owl: {arom_mark} &nbsp; "
         f"boomer_ontology.owl: {boomer_mark} &nbsp; "
         f"alignment_stats: {align_label}"
         f"</div>"
@@ -414,6 +440,14 @@ def _build_html(scenarios: list[dict], inputs_dir: Path) -> str:
             + _render_comparison_table(scenarios, "boomer_ontology")
             + "</div>"
         )
+    sec5_html = ""
+    if any(s["has_arom"] for s in scenarios):
+        sec5_html = (
+            "<h2>5. Porównanie <code>arom_ontology</code> — wszystkie scenariusze</h2>\n"
+            '<div class="scenario-section">'
+            + _render_comparison_table(scenarios, "arom_ontology")
+            + "</div>"
+        )
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -435,6 +469,8 @@ def _build_html(scenarios: list[dict], inputs_dir: Path) -> str:
 {sec3}
 
 {sec4_html}
+
+{sec5_html}
 
 {_render_legend()}
 </body>
@@ -513,6 +549,8 @@ def _build_csv_rows(scenarios: list[dict]) -> list[list[str]]:
     _emit_comparison_section("merged_ontology")
     if any(s["has_boomer"] for s in scenarios):
         _emit_comparison_section("boomer_ontology")
+    if any(s["has_arom"] for s in scenarios):
+        _emit_comparison_section("arom_ontology")
     return rows
 
 

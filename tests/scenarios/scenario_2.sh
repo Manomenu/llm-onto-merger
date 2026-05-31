@@ -81,6 +81,7 @@ OUT_DIR="$SCENARIO_DIR/${DATASET}_$TAG"
 REPORT_HTML="$SCENARIO_DIR/m_i_raport_${DATASET}_2.html"
 REPORT_LOG="$SCENARIO_DIR/m_i_raport_${DATASET}_2.log"
 BOOMER_CACHE="$SCENARIO_DIR/.boomer_$TOOL"
+AROM_CACHE="$SCENARIO_DIR/.arom"
 
 mkdir -p "$OUT_DIR"
 
@@ -130,6 +131,23 @@ if [ -f "$BOOMER_CACHE/merged_ontology.owl" ]; then
     cp "$BOOMER_CACHE/boomer_stats.json" "$OUT_DIR/boomer_stats.json"
   fi
   echo "  → boomer_ontology.owl ← $BOOMER_CACHE/merged_ontology.owl"
+fi
+
+# ── AROM (cached) ──────────────────────────────────────────────────────────
+if [ ! -f "$AROM_CACHE/arom_ontology.owl" ]; then
+  echo "  → running AROM → $AROM_CACHE"
+  mkdir -p "$AROM_CACHE"
+  ./thirdparty/arom/arom.sh "$BASE" "$CANDIDATE" "$AROM_CACHE" \
+    >"$AROM_CACHE/run.log" 2>&1
+else
+  echo "  → reusing cached AROM from $AROM_CACHE"
+fi
+if [ -f "$AROM_CACHE/arom_ontology.owl" ]; then
+  cp "$AROM_CACHE/arom_ontology.owl" "$OUT_DIR/arom_ontology.owl"
+  if [ -f "$AROM_CACHE/arom_stats.json" ]; then
+    cp "$AROM_CACHE/arom_stats.json" "$OUT_DIR/arom_stats.json"
+  fi
+  echo "  → arom_ontology.owl ← $AROM_CACHE/arom_ontology.owl"
 fi
 
 # ── Report (single-scenario: metrics + insights + Boomer column) ────────────

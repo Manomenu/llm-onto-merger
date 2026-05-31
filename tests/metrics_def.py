@@ -403,8 +403,14 @@ def _build_alias_maps(
     g: Graph,
     onto1_locals: set[str],
     onto2_locals: set[str],
+    arom_provenance: dict[str, dict[str, str]] | None = None,
 ) -> tuple[dict[str, str], dict[str, str]]:
-    """Build local-name alias maps from merged graph's `merged#alias` triples.
+    """Build local-name alias maps from the merged graph.
+
+    Two formats supported:
+      1. LLM merger format — `merged#alias` triples with literal "code;;LocalName"
+      2. AROM format — `code_provenance` dict from arom_stats.json (keyed by URI,
+         values are {"<ontology_n>": "<local_name>"}).  Passed via arom_provenance.
 
     Returns (old_to_new, new_to_source) where:
       old_to_new: OldLocalName → NewLocalName  (for renaming normalisation)
@@ -412,6 +418,8 @@ def _build_alias_maps(
     """
     old_to_new: dict[str, str] = {}
     new_to_source: dict[str, str] = {}
+
+    # Format 1: LLM merger (zz::alias / merged#alias triples)
     for s, p, o in g:
         if (
             str(p) != _ALIAS_PRED
@@ -431,6 +439,22 @@ def _build_alias_maps(
         if src:
             existing = new_to_source.get(new_local)
             new_to_source[new_local] = "both" if existing and existing != src else src
+
+    # Format 2: AROM provenance map (Code_X URIs with per-source rdfs:label)
+    if arom_provenance:
+        for code_uri, by_onto in arom_provenance.items():
+            new_local = _local(URIRef(code_uri))
+            in1 = "1" in by_onto
+            in2 = "2" in by_onto
+            src = "both" if in1 and in2 else ("onto1" if in1 else ("onto2" if in2 else ""))
+            if src:
+                existing = new_to_source.get(new_local)
+                new_to_source[new_local] = "both" if existing and existing != src else src
+            # Make old→new mappings so triple_preservation_ratio normalises correctly:
+            # source URIs (e.g. http://cmt#Person) collapse to the AROM code (Code_6).
+            for onto_n, source_local in by_onto.items():
+                old_to_new[source_local] = new_local
+
     return old_to_new, new_to_source
 
 
@@ -439,6 +463,7 @@ def _compute_self_metrics(
     onto1_entities: set[URIRef],
     onto2_entities: set[URIRef],
     union: Graph | None = None,
+    arom_provenance: dict[str, dict[str, str]] | None = None,
 ) -> dict[str, float]:
     cls = _classes(g)
     prop = _properties(g)
@@ -451,8 +476,11 @@ def _compute_self_metrics(
     #   - Original URI from onto1/onto2 → precise attribution by URI membership.
     #   - New URI (introduced by the LLM, e.g. zz::MedicalSurgery): attribute by alias
     #     triple, mapping back to the source ontology of the original local name.
-    # Without this, every LLM rename zeroes the cross-onto and intra-onto counters.
-    _, new_to_source = _build_alias_maps(g, onto1_locals, onto2_locals)
+    #   - AROM Code_N URI: attribute via rdfs:label provenance map (arom_provenance).
+    # Without this, every rename zeroes the cross-onto and intra-onto counters.
+    _, new_to_source = _build_alias_maps(
+        g, onto1_locals, onto2_locals, arom_provenance=arom_provenance
+    )
 
     def _from_onto1(u) -> bool:
         if not isinstance(u, URIRef):
@@ -506,7 +534,9 @@ def _compute_self_metrics(
     # BNode objects are excluded: their internal IDs differ across parse sessions,
     # so str(bnode) comparisons produce false negatives for restrictions/unions.
     if union is not None:
-        old_to_new, _ = _build_alias_maps(g, onto1_locals, onto2_locals)
+        old_to_new, _ = _build_alias_maps(
+            g, onto1_locals, onto2_locals, arom_provenance=arom_provenance
+        )
 
         def _norm(local: str) -> str:
             return old_to_new.get(local, local)
@@ -795,6 +825,7 @@ _HTML_TEMPLATE = """\
       <th>Metric</th>
       <th>union_input</th>
       {applied_col_header}
+      {arom_col_header}
       {boomer_col_header}
       <th>merged_ontology</th>
       <th>Target</th>
@@ -868,6 +899,7 @@ def _write_html(
     has_applied: bool,
     suspected_counts: dict[str, int] | None = None,
     has_boomer: bool = False,
+    has_arom: bool = False,
 ) -> None:
     suspected_counts = suspected_counts or {}
     by_metric: dict[str, dict[str, float]] = defaultdict(dict)
@@ -881,12 +913,14 @@ def _write_html(
         m_val = vals.get("merged_ontology")
         a_val = vals.get("applied_alignments") if has_applied else None
         b_val = vals.get("boomer_ontology") if has_boomer else None
-        if all(v is None for v in (u_val, m_val, a_val, b_val)):
+        ar_val = vals.get("arom_ontology") if has_arom else None
+        if all(v is None for v in (u_val, m_val, a_val, b_val, ar_val)):
             continue
         border = _SOURCE_BORDER.get(meta["source"], "#ccc")
         badges = _cat_badges(meta["categories"])
         susp = suspected_counts.get(metric_name, 0)
         applied_cell = _fmt_applied(a_val, susp) if has_applied else ""
+        arom_cell = _fmt(ar_val) if has_arom else ""
         boomer_cell = _fmt(b_val) if has_boomer else ""
 
         html_rows.append(
@@ -894,6 +928,7 @@ def _write_html(
             f"      <td><strong>{metric_name}</strong></td>\n"
             f"      {_fmt(u_val)}\n"
             f"      {applied_cell}\n"
+            f"      {arom_cell}\n"
             f"      {boomer_cell}\n"
             f"      {_fmt(m_val)}\n"
             f'      <td class="tgt">{meta["target"]}</td>\n'
@@ -904,6 +939,7 @@ def _write_html(
         )
 
     applied_col_header = "<th>applied_alignments</th>" if has_applied else ""
+    arom_col_header = "<th>arom_ontology</th>" if has_arom else ""
     boomer_col_header = "<th>boomer_ontology</th>" if has_boomer else ""
 
     cat_legend_lines = []
@@ -917,6 +953,7 @@ def _write_html(
     html = _HTML_TEMPLATE.format(
         folder=folder,
         applied_col_header=applied_col_header,
+        arom_col_header=arom_col_header,
         boomer_col_header=boomer_col_header,
         rows="\n".join(html_rows),
         legend=legend,
@@ -957,8 +994,10 @@ def main() -> None:
     merged_path = output_dir / "merged_ontology.owl"
     applied_path = output_dir / "applied_alignments.owl"
     boomer_path = output_dir / "boomer_ontology.owl"
+    arom_path = output_dir / "arom_ontology.owl"
     alignment_stats_path = output_dir / "alignment_stats.json"
     boomer_stats_path = output_dir / "boomer_stats.json"
+    arom_stats_path = output_dir / "arom_stats.json"
 
     if not merged_path.exists():
         print(f"merged_ontology.owl not found in {output_dir}", file=sys.stderr)
@@ -975,6 +1014,12 @@ def main() -> None:
     merged = _load_graph(str(merged_path))
     applied = _load_graph(str(applied_path)) if applied_path.exists() else None
     boomer = _load_graph(str(boomer_path)) if boomer_path.exists() else None
+    arom = _load_graph(str(arom_path)) if arom_path.exists() else None
+    arom_provenance: dict[str, dict[str, str]] | None = None
+    if arom is not None and arom_stats_path.exists():
+        arom_provenance = json.loads(arom_stats_path.read_text(encoding="utf-8")).get(
+            "code_provenance"
+        )
 
     print(f"  onto1:              {len(onto1)} triples")
     print(f"  onto2:              {len(onto2)} triples")
@@ -988,6 +1033,10 @@ def main() -> None:
         print(f"  boomer_ontology:    {len(boomer)} triples")
     else:
         print("  boomer_ontology:    not found — skipped")
+    if arom is not None:
+        print(f"  arom_ontology:      {len(arom)} triples")
+    else:
+        print("  arom_ontology:      not found — skipped")
 
     # Entity sets for cross-ontology metrics (URI-based source attribution)
     onto1_entities: set[URIRef] = {s for s, _, _ in onto1 if isinstance(s, URIRef)}
@@ -1001,14 +1050,17 @@ def main() -> None:
     }
     if applied is not None:
         graph_objects["applied_alignments"] = applied
+    if arom is not None:
+        graph_objects["arom_ontology"] = arom
     if boomer is not None:
         graph_objects["boomer_ontology"] = boomer
 
     self_metrics: dict[str, dict[str, float | None]] = {}
     for name, g in graph_objects.items():
         union_arg = None if name == "union_input" else union
+        prov = arom_provenance if name == "arom_ontology" else None
         self_metrics[name] = _compute_self_metrics(
-            g, onto1_entities, onto2_entities, union_arg
+            g, onto1_entities, onto2_entities, union_arg, arom_provenance=prov
         )
         print(f"  {name}: done")
 
@@ -1034,6 +1086,10 @@ def main() -> None:
         # merged_ontology: only alignments LLM accepted after context verification
         if "merged_ontology" in self_metrics:
             self_metrics["merged_ontology"]["applied_alignments"] = applied_align
+        # arom_ontology: AROM has no rejection — applies all alignments ≥ threshold.
+        # With default threshold=0.0 that equals total_align.
+        if "arom_ontology" in self_metrics:
+            self_metrics["arom_ontology"]["applied_alignments"] = total_align
         print(
             f"  alignment_stats: {int(applied_align)}/{int(total_align)} accepted by LLM"
         )
@@ -1065,9 +1121,14 @@ def main() -> None:
         )
 
     # ── Assemble rows ──────────────────────────────────────────────────────────
+    # Order encodes "pipeline progression":
+    #   union_input → applied_alignments (naive) → arom_ontology (algorithmic)
+    #   → boomer_ontology (probabilistic) → merged_ontology (LLM, final).
     graph_names = ["union_input"]
     if applied is not None:
         graph_names.append("applied_alignments")
+    if arom is not None:
+        graph_names.append("arom_ontology")
     if boomer is not None:
         graph_names.append("boomer_ontology")
     graph_names.append("merged_ontology")
@@ -1118,6 +1179,7 @@ def main() -> None:
     _write_html(
         rows, out_html, folder, applied is not None, suspected_counts,
         has_boomer=boomer is not None,
+        has_arom=arom is not None,
     )
     print(f"Report  written to {out_html}\n")
 
@@ -1127,11 +1189,14 @@ def main() -> None:
         by_metric[r["metric"]][r["graph"]] = r["value"]
 
     has_app = applied is not None
+    has_arom = arom is not None
     has_boom = boomer is not None
     col = max(len(m) for m in _REGISTRY)
     hdr_parts = [f"{'metric':<{col}}", f"{'union_input':>15}"]
     if has_app:
         hdr_parts.append(f"{'applied_alignments':>20}")
+    if has_arom:
+        hdr_parts.append(f"{'arom_ontology':>15}")
     if has_boom:
         hdr_parts.append(f"{'boomer_ontology':>17}")
     hdr_parts.append(f"{'merged_ontology':>16}")
@@ -1159,6 +1224,8 @@ def main() -> None:
         parts = [f"{metric_name:<{col}}", u_s]
         if has_app:
             parts.append(_fs(vals.get("applied_alignments"), 20))
+        if has_arom:
+            parts.append(_fs(vals.get("arom_ontology"), 15))
         if has_boom:
             parts.append(_fs(vals.get("boomer_ontology"), 17))
         parts.append(m_s)

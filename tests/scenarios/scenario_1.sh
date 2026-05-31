@@ -131,6 +131,20 @@ run_boomer_once() {
   esac
 }
 
+# ── AROM cache (single run per dataset — alignment always from AML) ──
+AROM_DIR_CACHE="$OUT_BASE/.arom"
+run_arom_once() {
+  if [ ! -f "$AROM_DIR_CACHE/arom_ontology.owl" ]; then
+    echo "  → running AROM → $AROM_DIR_CACHE"
+    mkdir -p "$AROM_DIR_CACHE"
+    ./thirdparty/arom/arom.sh "$BASE" "$CANDIDATE" "$AROM_DIR_CACHE" \
+      >"$AROM_DIR_CACHE/run.log" 2>&1
+  else
+    echo "  → reusing cached AROM from $AROM_DIR_CACHE"
+  fi
+}
+run_arom_once
+
 OUT_DIRS=()
 for spec in "${SCENARIOS[@]}"; do
   read -r tag chars tool <<< "$spec"
@@ -183,6 +197,15 @@ for spec in "${SCENARIOS[@]}"; do
     echo "  → boomer_ontology.owl ← $cache_dir/merged_ontology.owl"
   else
     echo "  WARNING: Boomer output missing at $cache_dir/merged_ontology.owl — skipping copy"
+  fi
+
+  # ── AROM (single cache, same for every scenario) ───────────────────────
+  if [ -f "$AROM_DIR_CACHE/arom_ontology.owl" ]; then
+    cp "$AROM_DIR_CACHE/arom_ontology.owl" "$out/arom_ontology.owl"
+    if [ -f "$AROM_DIR_CACHE/arom_stats.json" ]; then
+      cp "$AROM_DIR_CACHE/arom_stats.json" "$out/arom_stats.json"
+    fi
+    echo "  → arom_ontology.owl ← $AROM_DIR_CACHE/arom_ontology.owl"
   fi
 done
 
