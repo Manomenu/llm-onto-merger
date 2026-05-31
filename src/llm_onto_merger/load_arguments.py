@@ -16,6 +16,7 @@ class LoadedArguments(BaseModel):
     alignment_tool: str = "aml"
     output_dir: str
     merge_env_max_chars: int = 10_000
+    parallel_llm_request_count: int = 4
 
 
 def load_arguments() -> LoadedArguments:
@@ -47,6 +48,16 @@ def load_arguments() -> LoadedArguments:
         default=10_000,
         help="Max characters per MergeEnvironment string (default: 10000)",
     )
+    parser.add_argument(
+        "--parallel-llm-request-count",
+        type=int,
+        default=None,
+        help=(
+            f"Number of concurrent LLM requests.  When omitted, falls back to "
+            f"the PARALLEL_LLM_REQUEST_COUNT value from .env / settings "
+            f"(current: {settings.parallel_llm_request_count})."
+        ),
+    )
     args = parser.parse_args()
 
     # Validation
@@ -64,20 +75,28 @@ def load_arguments() -> LoadedArguments:
     else:
         output_dir = "tests/outputs"
 
+    parallel_llm_request_count = (
+        args.parallel_llm_request_count
+        if args.parallel_llm_request_count is not None
+        else settings.parallel_llm_request_count
+    )
+
     loaded = LoadedArguments(
         base_path=args.base,
         candidate_path=args.candidate,
         alignment_tool=args.alignment_tool,
         output_dir=output_dir,
         merge_env_max_chars=args.max_env_chars,
+        parallel_llm_request_count=parallel_llm_request_count,
     )
     log.info(
-        "Arguments loaded | base: %s | candidate: %s | alignment_tool: %s (default: aml)"
-        " | output_dir: %s | max_env_chars: %d (default: 10000)",
+        "Arguments loaded | base: %s | candidate: %s | alignment_tool: %s"
+        " | output_dir: %s | max_env_chars: %d | parallel_llm_request_count: %d",
         loaded.base_path,
         loaded.candidate_path,
         loaded.alignment_tool,
         loaded.output_dir,
         loaded.merge_env_max_chars,
+        loaded.parallel_llm_request_count,
     )
     return loaded

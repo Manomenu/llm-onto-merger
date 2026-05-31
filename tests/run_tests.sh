@@ -4,6 +4,13 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+if [ -f "$ROOT/.env" ]; then
+  set -a
+  # shellcheck source=../.env
+  source "$ROOT/.env"
+  set +a
+fi
+
 run_merge() {
     local name="$1"; shift
     echo ""

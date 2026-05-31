@@ -33,7 +33,15 @@
 set -euo pipefail
 shopt -s nullglob
 
-cd "$(dirname "$0")/../.."
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$REPO_ROOT"
+
+if [ -f "$REPO_ROOT/.env" ]; then
+  set -a
+  # shellcheck source=../../.env
+  source "$REPO_ROOT/.env"
+  set +a
+fi
 
 # ── Arg parsing ──────────────────────────────────────────────────────────────
 SKIP_MINE=0

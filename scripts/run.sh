@@ -16,11 +16,22 @@
 set -euo pipefail
 shopt -s nullglob
 
-cd "$(dirname "$0")/.."
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$REPO_ROOT"
+
+if [ -f "$REPO_ROOT/.env" ]; then
+  set -a
+  # shellcheck source=../.env
+  source "$REPO_ROOT/.env"
+  set +a
+fi
 
 DEFAULT_ALIGNMENT_TOOL="aml"
 DEFAULT_MAX_CHARS=15000
 DEFAULT_OUTPUT_SUBFOLDER="outputs"
+# parallel_llm_request_count default = wartość z .env (PARALLEL_LLM_REQUEST_COUNT),
+# fallback do 4 jeśli .env nie ustawia.
+DEFAULT_PARALLEL_LLM_REQUESTS="${PARALLEL_LLM_REQUEST_COUNT:-4}"
 
 INPUT_NAME="${1:-}"
 if [ -z "$INPUT_NAME" ]; then
@@ -64,15 +75,19 @@ MAX_CHARS="${MAX_CHARS:-$DEFAULT_MAX_CHARS}"
 read -r -p "Output subfolder under tests/ [$DEFAULT_OUTPUT_SUBFOLDER]: " OUTPUT_SUBFOLDER
 OUTPUT_SUBFOLDER="${OUTPUT_SUBFOLDER:-$DEFAULT_OUTPUT_SUBFOLDER}"
 
+read -r -p "Parallel LLM requests [$DEFAULT_PARALLEL_LLM_REQUESTS]: " PARALLEL_REQUESTS
+PARALLEL_REQUESTS="${PARALLEL_REQUESTS:-$DEFAULT_PARALLEL_LLM_REQUESTS}"
+
 OUTPUT_DIR="tests/$OUTPUT_SUBFOLDER/$INPUT_NAME"
 
 echo
 echo "Running with:"
-echo "  base:           $BASE"
-echo "  candidate:      $CANDIDATE"
-echo "  alignment tool: $ALIGNMENT_TOOL"
-echo "  max env chars:  $MAX_CHARS"
-echo "  output dir:     $OUTPUT_DIR"
+echo "  base:                       $BASE"
+echo "  candidate:                  $CANDIDATE"
+echo "  alignment tool:             $ALIGNMENT_TOOL"
+echo "  max env chars:              $MAX_CHARS"
+echo "  parallel llm request count: $PARALLEL_REQUESTS"
+echo "  output dir:                 $OUTPUT_DIR"
 echo
 
 exec uv run llm-onto-merger \
@@ -80,4 +95,5 @@ exec uv run llm-onto-merger \
   --candidate "$CANDIDATE" \
   --alignment-tool "$ALIGNMENT_TOOL" \
   --output "$OUTPUT_DIR" \
-  --max-env-chars "$MAX_CHARS"
+  --max-env-chars "$MAX_CHARS" \
+  --parallel-llm-request-count "$PARALLEL_REQUESTS"
