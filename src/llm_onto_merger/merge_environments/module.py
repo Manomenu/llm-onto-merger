@@ -3,7 +3,13 @@ from rdflib import OWL, Graph, URIRef
 
 from llm_onto_merger.extract_environments.merge_environment import MergeEnvironment
 from llm_onto_merger.logger import get_logger
-from llm_onto_merger.ontology import DropReport, Entity, entities_to_graph, local_name
+from llm_onto_merger.ontology import (
+    DropReport,
+    Entity,
+    apply_alignments,
+    entities_to_graph,
+    local_name,
+)
 
 log = get_logger(__name__)
 
@@ -97,11 +103,21 @@ class MergeEnvironmentsModule:
             len(request),
             self._instruction_len + len(request),
         )
-        response = await self._agent.run(
-            request,
-            options={"response_format": _MERGED_ONTOLOGY_SCHEMA},
-        )
-        merged = MergedOntology.model_validate(response.value)
+
+        # The LLM occasionally returns malformed JSON despite the structured-output
+        # schema (e.g. unterminated strings, truncated responses).  When that happens
+        # agent_framework raises ValueError from response.value access, or pydantic
+        # raises ValidationError on model_validate.  We also defensively catch broader
+        # Exception so a single bad env doesn't crash the whole pipeline.
+        try:
+            response = await self._agent.run(
+                request,
+                options={"response_format": _MERGED_ONTOLOGY_SCHEMA},
+            )
+            merged = MergedOntology.model_validate(response.value)
+        except Exception as exc:
+            return self._fallback_merge(merge_environment, idx, exc)
+
         log.info("Received %d entities in merged ontology", len(merged.Merged_Ontology))
         if not merged.Was_Alignment_Applied:
             seed_label = (
@@ -119,3 +135,39 @@ class MergeEnvironmentsModule:
         )
         _audit_merge(idx, merge_environment, merged_graph)
         return merged_graph, drop_report, merged.Was_Alignment_Applied
+
+    @staticmethod
+    def _fallback_merge(
+        env: MergeEnvironment, idx: int, exc: Exception
+    ) -> tuple[Graph, DropReport, bool]:
+        """Robust fallback when the LLM response can't be parsed.
+
+        Builds a deterministic merge by unioning the env's interior graphs and
+        collapsing each alignment pair (entity2 → entity1) — exactly what
+        `apply_alignments` does for the whole-ontology baseline.  The result
+        always contains valid triples and preserves every input triple; cost
+        is that no cross-onto enhancement or comments are added.
+        """
+        seed_label = (
+            env.alignments[0].to_string() if env.alignments else "<unknown>"
+        )
+        log.warning(
+            "env %d: LLM response could not be parsed (%s: %s) — "
+            "falling back to apply_alignments-style merge for this env "
+            "(seed: %s, %d alignment(s)).",
+            idx,
+            exc.__class__.__name__,
+            str(exc).split("\n", 1)[0][:200],
+            seed_label,
+            len(env.alignments),
+        )
+        fallback_graph = apply_alignments(env.onto_1, env.onto_2, env.alignments)
+        log.warning(
+            "env %d: fallback produced %d triples (input was %d)",
+            idx,
+            len(fallback_graph),
+            len(env.onto_1) + len(env.onto_2),
+        )
+        # Treat the fallback as "alignments were applied" — apply_alignments
+        # unconditionally collapses every pair.
+        return fallback_graph, DropReport(llm_failed=True), True

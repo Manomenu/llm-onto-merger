@@ -79,6 +79,12 @@ class DropReport(BaseModel):
     invalid_entities: list[str] = []
     bad_subject_entities: list[str] = []
     bad_predicate_triples: list[tuple[str, str]] = []
+    # True iff the LLM response could not be parsed at all (invalid JSON,
+    # schema validation failure, ...) and the merger fell back to a naive
+    # apply_alignments-style merge for the env.  Doesn't include suspected_
+    # /per-triple drops — those are mid-flight parsing issues handled by
+    # _try_predicate_fallback / _decode_alias_literal etc.
+    llm_failed: bool = False
 
     @property
     def total(self) -> int:
