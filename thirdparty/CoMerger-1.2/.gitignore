@@ -1,0 +1,8 @@
+# Maven build artifacts and project-local repository — see build.sh.
+# Everything stays inside this folder; nothing global.
+.m2-local/
+Source_Code/target/
+Source_Code/.excluded_sources/
+Source_Code/pom.xml.bak*
+.DS_Store
+artifacts/

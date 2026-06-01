@@ -145,6 +145,20 @@ run_arom_once() {
 }
 run_arom_once
 
+# ── CoMerger cache (single run per dataset — alignment from AML) ──
+COMERGER_DIR_CACHE="$OUT_BASE/.comerger"
+run_comerger_once() {
+  if [ ! -f "$COMERGER_DIR_CACHE/merged_ontology.owl" ]; then
+    echo "  → running CoMerger → $COMERGER_DIR_CACHE"
+    mkdir -p "$COMERGER_DIR_CACHE"
+    ./thirdparty/CoMerger-1.2/comerger.sh "$BASE" "$CANDIDATE" "$COMERGER_DIR_CACHE" \
+      >"$COMERGER_DIR_CACHE/run.log" 2>&1
+  else
+    echo "  → reusing cached CoMerger from $COMERGER_DIR_CACHE"
+  fi
+}
+run_comerger_once
+
 OUT_DIRS=()
 for spec in "${SCENARIOS[@]}"; do
   read -r tag chars tool <<< "$spec"

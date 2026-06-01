@@ -106,6 +106,10 @@ if [ "$SKIP_MINE" = "1" ]; then
          "report will be incomplete"
   fi
 else
+  # Stream progress (per-env merge completions) to console while still capturing
+  # full log to file.  grep --line-buffered keeps progress visible in real time;
+  # PIPESTATUS preserves the merger's exit code (tee/grep would otherwise mask it).
+  set +o pipefail
   uv run llm-onto-merger \
     --base "$BASE" \
     --candidate "$CANDIDATE" \
@@ -113,7 +117,15 @@ else
     --output "$OUT_DIR" \
     --max-env-chars "$MAX_CHARS" \
     --parallel-llm-request-count "$PARALLEL" \
-    >"$OUT_DIR/run.log" 2>&1
+    2>&1 \
+    | tee "$OUT_DIR/run.log" \
+    | { grep --line-buffered -E "Merged environment|Alignment application summary|env [0-9]+: alignment NOT applied|env [0-9]+: LLM response could not be parsed|ERROR" || true; }
+  merger_rc="${PIPESTATUS[0]}"
+  set -o pipefail
+  if [ "$merger_rc" -ne 0 ]; then
+    echo "  WARNING: llm-onto-merger exited with code $merger_rc — see $OUT_DIR/run.log" >&2
+    exit "$merger_rc"
+  fi
 fi
 
 # ── Boomer (cached per tool) ────────────────────────────────────────────────
