@@ -1006,6 +1006,7 @@ def main() -> None:
     alignment_stats_path = output_dir / "alignment_stats.json"
     boomer_stats_path = output_dir / "boomer_stats.json"
     arom_stats_path = output_dir / "arom_stats.json"
+    comerger_stats_path = output_dir / "comerger_stats.json"
 
     if not merged_path.exists():
         print(f"merged_ontology.owl not found in {output_dir}", file=sys.stderr)
@@ -1105,11 +1106,33 @@ def main() -> None:
         # With default threshold=0.0 that equals total_align.
         if "arom_ontology" in self_metrics:
             self_metrics["arom_ontology"]["applied_alignments"] = total_align
-        # comerger_ontology: count owl:equivalentClass triples in the output.
-        # CoMerger consistency-checks alignments and may reject some.
+        # comerger_ontology: read authoritative count from comerger_stats.json
+        # (written by CoMergerRunner via HModel.getEqClasses() etc.).  Counting
+        # owl:equivalentClass in the output OWL is UNRELIABLE on large
+        # ontologies — CoMerger doesn't always materialize every collapsed
+        # equiv group as a triple in the final file (silent under-count).
         if "comerger_ontology" in self_metrics and comerger is not None:
-            equiv_count = sum(1 for _ in comerger.triples((None, OWL.equivalentClass, None)))
-            self_metrics["comerger_ontology"]["applied_alignments"] = float(equiv_count)
+            if comerger_stats_path.exists():
+                cstats = json.loads(comerger_stats_path.read_text(encoding="utf-8"))
+                self_metrics["comerger_ontology"]["applied_alignments"] = float(
+                    cstats.get("applied_equiv_total", 0)
+                )
+                print(
+                    f"  comerger_stats: applied_equiv_total = "
+                    f"{cstats.get('applied_equiv_total', 0)} "
+                    f"(classes={cstats.get('applied_equiv_classes', 0)}, "
+                    f"obj_pro={cstats.get('applied_equiv_object_properties', 0)}, "
+                    f"data_pro={cstats.get('applied_equiv_data_properties', 0)})"
+                )
+            else:
+                # Fallback: count owl:equivalentClass triples (unreliable for big ontos)
+                equiv_count = sum(1 for _ in comerger.triples((None, OWL.equivalentClass, None)))
+                self_metrics["comerger_ontology"]["applied_alignments"] = float(equiv_count)
+                print(
+                    "  comerger_stats.json missing — falling back to "
+                    f"owl:equivalentClass count ({equiv_count}); rebuild CoMerger Runner "
+                    "to get authoritative number"
+                )
         print(
             f"  alignment_stats: {int(applied_align)}/{int(total_align)} accepted by LLM"
         )

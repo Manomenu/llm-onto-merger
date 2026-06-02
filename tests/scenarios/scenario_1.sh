@@ -225,6 +225,9 @@ for spec in "${SCENARIOS[@]}"; do
   # ── CoMerger (single cache, same for every scenario) ───────────────────
   if [ -f "$COMERGER_DIR_CACHE/merged_ontology.owl" ]; then
     cp "$COMERGER_DIR_CACHE/merged_ontology.owl" "$out/comerger_ontology.owl"
+    if [ -f "$COMERGER_DIR_CACHE/comerger_stats.json" ]; then
+      cp "$COMERGER_DIR_CACHE/comerger_stats.json" "$out/comerger_stats.json"
+    fi
     echo "  → comerger_ontology.owl ← $COMERGER_DIR_CACHE/merged_ontology.owl"
   fi
 done

@@ -197,6 +197,9 @@ else
 fi
 if [ -f "$COMERGER_CACHE/merged_ontology.owl" ]; then
   cp "$COMERGER_CACHE/merged_ontology.owl" "$OUT_DIR/comerger_ontology.owl"
+  if [ -f "$COMERGER_CACHE/comerger_stats.json" ]; then
+    cp "$COMERGER_CACHE/comerger_stats.json" "$OUT_DIR/comerger_stats.json"
+  fi
   echo "  → comerger_ontology.owl ← $COMERGER_CACHE/merged_ontology.owl"
 fi
 

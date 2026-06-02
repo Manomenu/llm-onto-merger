@@ -71,6 +71,7 @@ def _compute_scenario(
     alignment_stats_path = out_dir / "alignment_stats.json"
     boomer_stats_path = out_dir / "boomer_stats.json"
     arom_stats_path = out_dir / "arom_stats.json"
+    comerger_stats_path = out_dir / "comerger_stats.json"
 
     merged = _load_graph(str(merged_path))
     applied = _load_graph(str(applied_path)) if applied_path.exists() else None
@@ -123,11 +124,20 @@ def _compute_scenario(
         # AROM has no rejection — applies all alignments ≥ threshold (default 0.0)
         if "arom_ontology" in metrics:
             metrics["arom_ontology"]["applied_alignments"] = total
-        # CoMerger: count owl:equivalentClass triples (it may filter via consistency)
+        # CoMerger: prefer authoritative count from comerger_stats.json sidecar
+        # (HModel.getEqClasses() etc.).  owl:equivalentClass count in output OWL
+        # is unreliable for large ontologies — CoMerger may not materialize all
+        # collapsed equiv groups as triples.
         if "comerger_ontology" in metrics and comerger is not None:
-            from rdflib.namespace import OWL as _OWL
-            equiv_count = sum(1 for _ in comerger.triples((None, _OWL.equivalentClass, None)))
-            metrics["comerger_ontology"]["applied_alignments"] = float(equiv_count)
+            if comerger_stats_path.exists():
+                cstats = json.loads(comerger_stats_path.read_text(encoding="utf-8"))
+                metrics["comerger_ontology"]["applied_alignments"] = float(
+                    cstats.get("applied_equiv_total", 0)
+                )
+            else:
+                from rdflib.namespace import OWL as _OWL
+                equiv_count = sum(1 for _ in comerger.triples((None, _OWL.equivalentClass, None)))
+                metrics["comerger_ontology"]["applied_alignments"] = float(equiv_count)
 
         if applied is not None and rejected:
             tainted_uris = {URIRef(a["entity1"]) for a in rejected}
