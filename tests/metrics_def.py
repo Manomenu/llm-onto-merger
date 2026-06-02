@@ -826,6 +826,7 @@ _HTML_TEMPLATE = """\
       <th>union_input</th>
       {applied_col_header}
       {arom_col_header}
+      {comerger_col_header}
       {boomer_col_header}
       <th>merged_ontology</th>
       <th>Target</th>
@@ -900,6 +901,7 @@ def _write_html(
     suspected_counts: dict[str, int] | None = None,
     has_boomer: bool = False,
     has_arom: bool = False,
+    has_comerger: bool = False,
 ) -> None:
     suspected_counts = suspected_counts or {}
     by_metric: dict[str, dict[str, float]] = defaultdict(dict)
@@ -914,13 +916,15 @@ def _write_html(
         a_val = vals.get("applied_alignments") if has_applied else None
         b_val = vals.get("boomer_ontology") if has_boomer else None
         ar_val = vals.get("arom_ontology") if has_arom else None
-        if all(v is None for v in (u_val, m_val, a_val, b_val, ar_val)):
+        c_val = vals.get("comerger_ontology") if has_comerger else None
+        if all(v is None for v in (u_val, m_val, a_val, b_val, ar_val, c_val)):
             continue
         border = _SOURCE_BORDER.get(meta["source"], "#ccc")
         badges = _cat_badges(meta["categories"])
         susp = suspected_counts.get(metric_name, 0)
         applied_cell = _fmt_applied(a_val, susp) if has_applied else ""
         arom_cell = _fmt(ar_val) if has_arom else ""
+        comerger_cell = _fmt(c_val) if has_comerger else ""
         boomer_cell = _fmt(b_val) if has_boomer else ""
 
         html_rows.append(
@@ -929,6 +933,7 @@ def _write_html(
             f"      {_fmt(u_val)}\n"
             f"      {applied_cell}\n"
             f"      {arom_cell}\n"
+            f"      {comerger_cell}\n"
             f"      {boomer_cell}\n"
             f"      {_fmt(m_val)}\n"
             f'      <td class="tgt">{meta["target"]}</td>\n'
@@ -940,6 +945,7 @@ def _write_html(
 
     applied_col_header = "<th>applied_alignments</th>" if has_applied else ""
     arom_col_header = "<th>arom_ontology</th>" if has_arom else ""
+    comerger_col_header = "<th>comerger_ontology</th>" if has_comerger else ""
     boomer_col_header = "<th>boomer_ontology</th>" if has_boomer else ""
 
     cat_legend_lines = []
@@ -954,6 +960,7 @@ def _write_html(
         folder=folder,
         applied_col_header=applied_col_header,
         arom_col_header=arom_col_header,
+        comerger_col_header=comerger_col_header,
         boomer_col_header=boomer_col_header,
         rows="\n".join(html_rows),
         legend=legend,
@@ -995,6 +1002,7 @@ def main() -> None:
     applied_path = output_dir / "applied_alignments.owl"
     boomer_path = output_dir / "boomer_ontology.owl"
     arom_path = output_dir / "arom_ontology.owl"
+    comerger_path = output_dir / "comerger_ontology.owl"
     alignment_stats_path = output_dir / "alignment_stats.json"
     boomer_stats_path = output_dir / "boomer_stats.json"
     arom_stats_path = output_dir / "arom_stats.json"
@@ -1015,6 +1023,7 @@ def main() -> None:
     applied = _load_graph(str(applied_path)) if applied_path.exists() else None
     boomer = _load_graph(str(boomer_path)) if boomer_path.exists() else None
     arom = _load_graph(str(arom_path)) if arom_path.exists() else None
+    comerger = _load_graph(str(comerger_path)) if comerger_path.exists() else None
     arom_provenance: dict[str, dict[str, str]] | None = None
     if arom is not None and arom_stats_path.exists():
         arom_provenance = json.loads(arom_stats_path.read_text(encoding="utf-8")).get(
@@ -1037,6 +1046,10 @@ def main() -> None:
         print(f"  arom_ontology:      {len(arom)} triples")
     else:
         print("  arom_ontology:      not found — skipped")
+    if comerger is not None:
+        print(f"  comerger_ontology:  {len(comerger)} triples")
+    else:
+        print("  comerger_ontology:  not found — skipped")
 
     # Entity sets for cross-ontology metrics (URI-based source attribution)
     onto1_entities: set[URIRef] = {s for s, _, _ in onto1 if isinstance(s, URIRef)}
@@ -1052,6 +1065,8 @@ def main() -> None:
         graph_objects["applied_alignments"] = applied
     if arom is not None:
         graph_objects["arom_ontology"] = arom
+    if comerger is not None:
+        graph_objects["comerger_ontology"] = comerger
     if boomer is not None:
         graph_objects["boomer_ontology"] = boomer
 
@@ -1090,6 +1105,11 @@ def main() -> None:
         # With default threshold=0.0 that equals total_align.
         if "arom_ontology" in self_metrics:
             self_metrics["arom_ontology"]["applied_alignments"] = total_align
+        # comerger_ontology: count owl:equivalentClass triples in the output.
+        # CoMerger consistency-checks alignments and may reject some.
+        if "comerger_ontology" in self_metrics and comerger is not None:
+            equiv_count = sum(1 for _ in comerger.triples((None, OWL.equivalentClass, None)))
+            self_metrics["comerger_ontology"]["applied_alignments"] = float(equiv_count)
         print(
             f"  alignment_stats: {int(applied_align)}/{int(total_align)} accepted by LLM"
         )
@@ -1122,13 +1142,15 @@ def main() -> None:
 
     # ── Assemble rows ──────────────────────────────────────────────────────────
     # Order encodes "pipeline progression":
-    #   union_input → applied_alignments (naive) → arom_ontology (algorithmic)
-    #   → boomer_ontology (probabilistic) → merged_ontology (LLM, final).
+    #   union_input → applied_alignments (naive) → arom_ontology / comerger_ontology
+    #   (algorithmic) → boomer_ontology (probabilistic) → merged_ontology (LLM, final).
     graph_names = ["union_input"]
     if applied is not None:
         graph_names.append("applied_alignments")
     if arom is not None:
         graph_names.append("arom_ontology")
+    if comerger is not None:
+        graph_names.append("comerger_ontology")
     if boomer is not None:
         graph_names.append("boomer_ontology")
     graph_names.append("merged_ontology")
@@ -1180,6 +1202,7 @@ def main() -> None:
         rows, out_html, folder, applied is not None, suspected_counts,
         has_boomer=boomer is not None,
         has_arom=arom is not None,
+        has_comerger=comerger is not None,
     )
     print(f"Report  written to {out_html}\n")
 
@@ -1190,6 +1213,7 @@ def main() -> None:
 
     has_app = applied is not None
     has_arom = arom is not None
+    has_comerger = comerger is not None
     has_boom = boomer is not None
     col = max(len(m) for m in _REGISTRY)
     hdr_parts = [f"{'metric':<{col}}", f"{'union_input':>15}"]
@@ -1197,6 +1221,8 @@ def main() -> None:
         hdr_parts.append(f"{'applied_alignments':>20}")
     if has_arom:
         hdr_parts.append(f"{'arom_ontology':>15}")
+    if has_comerger:
+        hdr_parts.append(f"{'comerger_ontology':>19}")
     if has_boom:
         hdr_parts.append(f"{'boomer_ontology':>17}")
     hdr_parts.append(f"{'merged_ontology':>16}")
@@ -1226,6 +1252,8 @@ def main() -> None:
             parts.append(_fs(vals.get("applied_alignments"), 20))
         if has_arom:
             parts.append(_fs(vals.get("arom_ontology"), 15))
+        if has_comerger:
+            parts.append(_fs(vals.get("comerger_ontology"), 19))
         if has_boom:
             parts.append(_fs(vals.get("boomer_ontology"), 17))
         parts.append(m_s)

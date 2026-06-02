@@ -1,26 +1,27 @@
 #!/usr/bin/env bash
-# Scenario #2: single-config run for the human-mouse dataset.
+# Scenario #2: single-config run for any large dataset (no grid).
 #
-# human-mouse is a big ontology pair (anatomy ontologies, thousands of classes)
-# — a 2×2 grid like scenario_1 would burn through the LLM budget for marginal
-# insight.  This scenario runs ONE configuration and produces a metrics +
-# insights report comparing it against the naive applied_alignments baseline
-# and the Boomer probabilistic resolver.
+# Designed for big ontology pairs (anatomy, large bio) where the 2x2 grid in
+# scenario_1 would burn through the LLM budget for marginal insight.  Runs ONE
+# configuration and produces a metrics + insights report comparing it against
+# applied_alignments / AROM / Boomer / CoMerger baselines.
 #
-# Hardcoded config:
-#   dataset:                    human-mouse
+# Hardcoded config (same for any dataset):
 #   alignment tool:             aml
 #   max env chars:              15000
 #   parallel llm request count: 24
 #
 # Usage:
-#   tests/scenarios/scenario_2.sh                # full run (LLM + Boomer + report)
-#   tests/scenarios/scenario_2.sh --skip-mine    # reuse existing LLM output, rerun Boomer + report
+#   tests/scenarios/scenario_2.sh                          # prompts for dataset
+#   tests/scenarios/scenario_2.sh human-mouse              # explicit dataset
+#   tests/scenarios/scenario_2.sh --skip-mine human-mouse  # reuse existing LLM output
 #
-# Outputs (all under tests/scenarios/outputs/human-mouse/ — gitignored):
-#   human-mouse_aml_15k_p24/    LLM merger output + boomer_ontology.owl + insights
-#   .boomer_aml/                Boomer's own output (cache)
-#   m_i_raport_human-mouse_2.html / .csv / .log
+# Outputs (under tests/scenarios/outputs/<dataset>-s2/ — gitignored).
+# The `-s2` suffix keeps scenario_2 results separate from scenario_1's outputs
+# for the same dataset (so you can run both side-by-side on the same data).
+#   <dataset>-s2_aml_15k_p24/   LLM merger output + boomer/arom/comerger + insights
+#   .boomer_aml/  .arom/  .comerger/   cached baseline outputs
+#   m_i_raport_<dataset>-s2.html / .csv / .log
 
 set -euo pipefail
 shopt -s nullglob
@@ -35,28 +36,49 @@ if [ -f "$REPO_ROOT/.env" ]; then
   set +a
 fi
 
-# ── Hardcoded config ────────────────────────────────────────────────────────
-DATASET="human-mouse"
+# ── Hardcoded config (NOT dataset — that's parametric) ─────────────────────
 TOOL="aml"
 MAX_CHARS=15000
 PARALLEL=24
 TAG="aml_15k_p24"
 
-# ── Arg parsing ─────────────────────────────────────────────────────────────
+# ── Arg parsing (mirrors scenario_1.sh: --skip-mine + positional DATASET) ──
 SKIP_MINE=0
+DATASET=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    --skip-mine) SKIP_MINE=1; shift ;;
+    --skip-mine)
+      SKIP_MINE=1
+      shift
+      ;;
     --help|-h)
       sed -n '2,/^$/p' "$0" | sed 's/^# *//' >&2
       exit 0
       ;;
-    *)
-      echo "Unknown arg: $1" >&2
+    -*)
+      echo "Unknown option: $1" >&2
       exit 1
+      ;;
+    *)
+      if [ -z "$DATASET" ]; then
+        DATASET="$1"
+      else
+        echo "Too many positional arguments (got '$1' after '$DATASET')" >&2
+        exit 1
+      fi
+      shift
       ;;
   esac
 done
+
+if [ -z "$DATASET" ]; then
+  echo "Available input folders:"
+  for d in tests/inputs/*/; do
+    echo "  - $(basename "$d")"
+  done
+  echo
+  read -r -p "Dataset name: " DATASET
+fi
 
 # ── Resolve inputs ──────────────────────────────────────────────────────────
 INPUT_DIR="tests/inputs/$DATASET"
@@ -75,18 +97,20 @@ unset IFS
 BASE="${OWL_SORTED[0]}"
 CANDIDATE="${OWL_SORTED[1]}"
 
-# ── Output paths ────────────────────────────────────────────────────────────
-SCENARIO_DIR="tests/scenarios/outputs/$DATASET"
-OUT_DIR="$SCENARIO_DIR/${DATASET}_$TAG"
-REPORT_HTML="$SCENARIO_DIR/m_i_raport_${DATASET}_2.html"
-REPORT_LOG="$SCENARIO_DIR/m_i_raport_${DATASET}_2.log"
+# ── Output paths (`-s2` suffix keeps scenario_2 separate from scenario_1) ──
+DATASET_S2="${DATASET}-s2"
+SCENARIO_DIR="tests/scenarios/outputs/$DATASET_S2"
+OUT_DIR="$SCENARIO_DIR/${DATASET_S2}_$TAG"
+REPORT_HTML="$SCENARIO_DIR/m_i_raport_${DATASET_S2}.html"
+REPORT_LOG="$SCENARIO_DIR/m_i_raport_${DATASET_S2}.log"
 BOOMER_CACHE="$SCENARIO_DIR/.boomer_$TOOL"
 AROM_CACHE="$SCENARIO_DIR/.arom"
+COMERGER_CACHE="$SCENARIO_DIR/.comerger"
 
 mkdir -p "$OUT_DIR"
 
 echo "========================================"
-echo "  Scenario 2 / ${DATASET}_$TAG"
+echo "  Scenario 2 / ${DATASET_S2}_$TAG"
 echo "    base:                       $BASE"
 echo "    candidate:                  $CANDIDATE"
 echo "    alignment tool:             $TOOL"
@@ -160,6 +184,20 @@ if [ -f "$AROM_CACHE/arom_ontology.owl" ]; then
     cp "$AROM_CACHE/arom_stats.json" "$OUT_DIR/arom_stats.json"
   fi
   echo "  → arom_ontology.owl ← $AROM_CACHE/arom_ontology.owl"
+fi
+
+# ── CoMerger (cached) ──────────────────────────────────────────────────────
+if [ ! -f "$COMERGER_CACHE/merged_ontology.owl" ]; then
+  echo "  → running CoMerger → $COMERGER_CACHE"
+  mkdir -p "$COMERGER_CACHE"
+  ./thirdparty/CoMerger-1.2/comerger.sh "$BASE" "$CANDIDATE" "$COMERGER_CACHE" \
+    >"$COMERGER_CACHE/run.log" 2>&1
+else
+  echo "  → reusing cached CoMerger from $COMERGER_CACHE"
+fi
+if [ -f "$COMERGER_CACHE/merged_ontology.owl" ]; then
+  cp "$COMERGER_CACHE/merged_ontology.owl" "$OUT_DIR/comerger_ontology.owl"
+  echo "  → comerger_ontology.owl ← $COMERGER_CACHE/merged_ontology.owl"
 fi
 
 # ── Report (single-scenario: metrics + insights + Boomer column) ────────────

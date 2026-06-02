@@ -221,6 +221,12 @@ for spec in "${SCENARIOS[@]}"; do
     fi
     echo "  → arom_ontology.owl ← $AROM_DIR_CACHE/arom_ontology.owl"
   fi
+
+  # ── CoMerger (single cache, same for every scenario) ───────────────────
+  if [ -f "$COMERGER_DIR_CACHE/merged_ontology.owl" ]; then
+    cp "$COMERGER_DIR_CACHE/merged_ontology.owl" "$out/comerger_ontology.owl"
+    echo "  → comerger_ontology.owl ← $COMERGER_DIR_CACHE/merged_ontology.owl"
+  fi
 done
 
 # ── Combined report (always runs) ────────────────────────────────────────────

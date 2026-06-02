@@ -61,7 +61,7 @@
                 "--candidate", "tests/inputs/hp-mp/mp.owl",
                 "--alignment-tool", "aml",
                 "--output", "tests/outputs/hp-mp",
-                "--max-env-chars", "60000"
+                "--max-env-chars", "15000"
             ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src"

@@ -66,6 +66,7 @@ def _compute_scenario(
     applied_path = out_dir / "applied_alignments.owl"
     boomer_path = out_dir / "boomer_ontology.owl"
     arom_path = out_dir / "arom_ontology.owl"
+    comerger_path = out_dir / "comerger_ontology.owl"
     insights_path = out_dir / "insights.csv"
     alignment_stats_path = out_dir / "alignment_stats.json"
     boomer_stats_path = out_dir / "boomer_stats.json"
@@ -75,6 +76,7 @@ def _compute_scenario(
     applied = _load_graph(str(applied_path)) if applied_path.exists() else None
     boomer = _load_graph(str(boomer_path)) if boomer_path.exists() else None
     arom = _load_graph(str(arom_path)) if arom_path.exists() else None
+    comerger = _load_graph(str(comerger_path)) if comerger_path.exists() else None
     arom_provenance: dict[str, dict[str, str]] | None = None
     if arom is not None and arom_stats_path.exists():
         arom_provenance = json.loads(
@@ -86,6 +88,8 @@ def _compute_scenario(
         graphs["applied_alignments"] = applied
     if arom is not None:
         graphs["arom_ontology"] = arom
+    if comerger is not None:
+        graphs["comerger_ontology"] = comerger
     if boomer is not None:
         graphs["boomer_ontology"] = boomer
 
@@ -119,6 +123,11 @@ def _compute_scenario(
         # AROM has no rejection — applies all alignments ≥ threshold (default 0.0)
         if "arom_ontology" in metrics:
             metrics["arom_ontology"]["applied_alignments"] = total
+        # CoMerger: count owl:equivalentClass triples (it may filter via consistency)
+        if "comerger_ontology" in metrics and comerger is not None:
+            from rdflib.namespace import OWL as _OWL
+            equiv_count = sum(1 for _ in comerger.triples((None, _OWL.equivalentClass, None)))
+            metrics["comerger_ontology"]["applied_alignments"] = float(equiv_count)
 
         if applied is not None and rejected:
             tainted_uris = {URIRef(a["entity1"]) for a in rejected}
@@ -149,6 +158,7 @@ def _compute_scenario(
         "has_applied": applied is not None,
         "has_boomer": boomer is not None,
         "has_arom": arom is not None,
+        "has_comerger": comerger is not None,
     }
 
 
@@ -245,31 +255,34 @@ def _render_metrics_table(scenario: dict) -> str:
     has_applied = scenario["has_applied"]
     has_boomer = scenario["has_boomer"]
     has_arom = scenario["has_arom"]
+    has_comerger = scenario["has_comerger"]
     for metric_name, meta in _REGISTRY.items():
         u_val = metrics.get("union_input", {}).get(metric_name)
         m_val = metrics.get("merged_ontology", {}).get(metric_name)
         a_val = (
             metrics.get("applied_alignments", {}).get(metric_name)
-            if has_applied
-            else None
+            if has_applied else None
         )
         b_val = (
             metrics.get("boomer_ontology", {}).get(metric_name)
-            if has_boomer
-            else None
+            if has_boomer else None
         )
         ar_val = (
             metrics.get("arom_ontology", {}).get(metric_name)
-            if has_arom
-            else None
+            if has_arom else None
         )
-        if all(v is None for v in (u_val, m_val, a_val, b_val, ar_val)):
+        c_val = (
+            metrics.get("comerger_ontology", {}).get(metric_name)
+            if has_comerger else None
+        )
+        if all(v is None for v in (u_val, m_val, a_val, b_val, ar_val, c_val)):
             continue
         border = _SOURCE_BORDER.get(meta["source"], "#ccc")
         badges = _cat_badges(meta["categories"])
         susp = suspected.get(metric_name, 0)
         applied_cell = _fmt_applied(a_val, susp) if has_applied else ""
         arom_cell = _fmt(ar_val) if has_arom else ""
+        comerger_cell = _fmt(c_val) if has_comerger else ""
         boomer_cell = _fmt(b_val) if has_boomer else ""
         rows_html.append(
             f'    <tr style="border-left: 3px solid {border}">'
@@ -277,6 +290,7 @@ def _render_metrics_table(scenario: dict) -> str:
             f"{_fmt(u_val)}"
             f"{applied_cell}"
             f"{arom_cell}"
+            f"{comerger_cell}"
             f"{boomer_cell}"
             f"{_fmt(m_val)}"
             f'<td class="tgt">{meta["target"]}</td>'
@@ -287,10 +301,11 @@ def _render_metrics_table(scenario: dict) -> str:
         )
     applied_header = "<th>applied_alignments</th>" if has_applied else ""
     arom_header = "<th>arom_ontology</th>" if has_arom else ""
+    comerger_header = "<th>comerger_ontology</th>" if has_comerger else ""
     boomer_header = "<th>boomer_ontology</th>" if has_boomer else ""
     return f"""<table>
   <thead><tr>
-    <th>Metric</th><th>union_input</th>{applied_header}{arom_header}{boomer_header}<th>merged_ontology</th>
+    <th>Metric</th><th>union_input</th>{applied_header}{arom_header}{comerger_header}{boomer_header}<th>merged_ontology</th>
     <th>Target</th><th>Source</th><th>Categories</th><th>Interpretation</th>
   </tr></thead>
   <tbody>
@@ -400,6 +415,7 @@ def _align_stats_label(stats: dict | None) -> str:
 def _scenario_metrics_block(s: dict) -> str:
     applied_mark = "✓" if s["has_applied"] else "✗"
     arom_mark = "✓" if s["has_arom"] else "✗"
+    comerger_mark = "✓" if s["has_comerger"] else "✗"
     boomer_mark = "✓" if s["has_boomer"] else "✗"
     align_label = _align_stats_label(s["alignment_stats"])
     return (
@@ -408,6 +424,7 @@ def _scenario_metrics_block(s: dict) -> str:
         f"merged_ontology.owl: ✓ &nbsp; "
         f"applied_alignments.owl: {applied_mark} &nbsp; "
         f"arom_ontology.owl: {arom_mark} &nbsp; "
+        f"comerger_ontology.owl: {comerger_mark} &nbsp; "
         f"boomer_ontology.owl: {boomer_mark} &nbsp; "
         f"alignment_stats: {align_label}"
         f"</div>"
@@ -448,6 +465,14 @@ def _build_html(scenarios: list[dict], inputs_dir: Path) -> str:
             + _render_comparison_table(scenarios, "arom_ontology")
             + "</div>"
         )
+    sec6_html = ""
+    if any(s["has_comerger"] for s in scenarios):
+        sec6_html = (
+            "<h2>6. Porównanie <code>comerger_ontology</code> — wszystkie scenariusze</h2>\n"
+            '<div class="scenario-section">'
+            + _render_comparison_table(scenarios, "comerger_ontology")
+            + "</div>"
+        )
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -471,6 +496,8 @@ def _build_html(scenarios: list[dict], inputs_dir: Path) -> str:
 {sec4_html}
 
 {sec5_html}
+
+{sec6_html}
 
 {_render_legend()}
 </body>
@@ -551,6 +578,8 @@ def _build_csv_rows(scenarios: list[dict]) -> list[list[str]]:
         _emit_comparison_section("boomer_ontology")
     if any(s["has_arom"] for s in scenarios):
         _emit_comparison_section("arom_ontology")
+    if any(s["has_comerger"] for s in scenarios):
+        _emit_comparison_section("comerger_ontology")
     return rows
 
 
