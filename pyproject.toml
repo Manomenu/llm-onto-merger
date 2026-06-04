@@ -19,7 +19,8 @@ dependencies = [
   "rdflib",
   "pyvis>=0.3.2",
   "agent-framework",
-  "owlready2"
+  "owlready2",
+  "matplotlib>=3.8"
 ]
 
 [project.scripts]

@@ -33,6 +33,7 @@ from rdflib import Graph, URIRef
 sys.path.insert(0, str(Path(__file__).parent))
 from metrics_def import (  # noqa: E402
     _CATEGORIES,
+    _COLUMN_DISPLAY,
     _REGISTRY,
     _SOURCE_BORDER,
     _cat_badges,
@@ -309,13 +310,13 @@ def _render_metrics_table(scenario: dict) -> str:
             f'<td class="interp">{meta["interpretation"]}</td>'
             f"</tr>"
         )
-    applied_header = "<th>applied_alignments</th>" if has_applied else ""
-    arom_header = "<th>arom_ontology</th>" if has_arom else ""
-    comerger_header = "<th>comerger_ontology</th>" if has_comerger else ""
-    boomer_header = "<th>boomer_ontology</th>" if has_boomer else ""
+    applied_header  = f"<th>{_COLUMN_DISPLAY['applied_alignments']}</th>"  if has_applied else ""
+    arom_header     = f"<th>{_COLUMN_DISPLAY['arom_ontology']}</th>"       if has_arom else ""
+    comerger_header = f"<th>{_COLUMN_DISPLAY['comerger_ontology']}</th>"   if has_comerger else ""
+    boomer_header   = f"<th>{_COLUMN_DISPLAY['boomer_ontology']}</th>"     if has_boomer else ""
     return f"""<table>
   <thead><tr>
-    <th>Metric</th><th>union_input</th>{applied_header}{arom_header}{comerger_header}{boomer_header}<th>merged_ontology</th>
+    <th>Metric</th><th>{_COLUMN_DISPLAY['union_input']}</th>{applied_header}{arom_header}{comerger_header}{boomer_header}<th>{_COLUMN_DISPLAY['merged_ontology']}</th>
     <th>Target</th><th>Source</th><th>Categories</th><th>Interpretation</th>
   </tr></thead>
   <tbody>
@@ -462,7 +463,7 @@ def _build_html(scenarios: list[dict], inputs_dir: Path) -> str:
     sec4_html = ""
     if any(s["has_boomer"] for s in scenarios):
         sec4_html = (
-            "<h2>4. Porównanie <code>boomer_ontology</code> — wszystkie scenariusze</h2>\n"
+            f"<h2>4. Porównanie <code>{_COLUMN_DISPLAY['boomer_ontology']}</code> — wszystkie scenariusze</h2>\n"
             '<div class="scenario-section">'
             + _render_comparison_table(scenarios, "boomer_ontology")
             + "</div>"
@@ -470,7 +471,7 @@ def _build_html(scenarios: list[dict], inputs_dir: Path) -> str:
     sec5_html = ""
     if any(s["has_arom"] for s in scenarios):
         sec5_html = (
-            "<h2>5. Porównanie <code>arom_ontology</code> — wszystkie scenariusze</h2>\n"
+            f"<h2>5. Porównanie <code>{_COLUMN_DISPLAY['arom_ontology']}</code> — wszystkie scenariusze</h2>\n"
             '<div class="scenario-section">'
             + _render_comparison_table(scenarios, "arom_ontology")
             + "</div>"
@@ -478,7 +479,7 @@ def _build_html(scenarios: list[dict], inputs_dir: Path) -> str:
     sec6_html = ""
     if any(s["has_comerger"] for s in scenarios):
         sec6_html = (
-            "<h2>6. Porównanie <code>comerger_ontology</code> — wszystkie scenariusze</h2>\n"
+            f"<h2>6. Porównanie <code>{_COLUMN_DISPLAY['comerger_ontology']}</code> — wszystkie scenariusze</h2>\n"
             '<div class="scenario-section">'
             + _render_comparison_table(scenarios, "comerger_ontology")
             + "</div>"
@@ -500,7 +501,7 @@ def _build_html(scenarios: list[dict], inputs_dir: Path) -> str:
 <h2>2. Insights per scenariusz</h2>
 {sec2}
 
-<h2>3. Porównanie <code>merged_ontology</code> — wszystkie scenariusze</h2>
+<h2>3. Porównanie <code>{_COLUMN_DISPLAY['merged_ontology']}</code> — wszystkie scenariusze</h2>
 {sec3}
 
 {sec4_html}
@@ -593,6 +594,181 @@ def _build_csv_rows(scenarios: list[dict]) -> list[list[str]]:
     return rows
 
 
+# ── Charts (cross-scenario bar charts per category) ───────────────────────────
+
+# Single best category per metric (user-provided mapping — distinct from
+# _REGISTRY[m]["categories"] which sometimes lists two).  Charts are grouped
+# by these keys: 7 files per scenario run, one per category.
+_CATEGORY_TO_METRICS: dict[str, list[str]] = {
+    "Structural Coherence":          ["unsatisfiable_classes", "cycle_count"],
+    "Hierarchy Integration Quality": [
+        "ARC", "connectivity_ratio", "average_depth",
+        "max_depth", "average_breadth", "max_breadth",
+    ],
+    "Knowledge Completeness": [
+        "cross_onto_relations_count",
+        "new_intra_onto_relations_count",
+        "cross_onto_subclassof_count",
+    ],
+    "Conciseness":         ["syntactic_uniqueness_ratio", "ALC"],
+    "Accuracy":            ["triple_preservation_ratio"],
+    "Domain Coherence":    ["applied_alignments"],
+    "Understandability":   ["annotation_coverage_ratio"],
+}
+_CATEGORY_SLUG: dict[str, str] = {
+    "Structural Coherence":          "structural_coherence",
+    "Hierarchy Integration Quality": "hierarchy_integration_quality",
+    "Knowledge Completeness":        "knowledge_completeness",
+    "Conciseness":                   "conciseness",
+    "Accuracy":                      "accuracy",
+    "Domain Coherence":              "domain_coherence",
+    "Understandability":             "understandability",
+}
+# Color per method.  "Our Solution" multi-config variants get green shades.
+_METHOD_COLORS: dict[str, str] = {
+    "Naive Union":              "#7f8c8d",
+    "Naive Applied Alignments": "#bdc3c7",
+    "AROM":                     "#3498db",
+    "CoMerger":                 "#9b59b6",
+    "Boomer":                   "#e67e22",
+    "Our Solution":             "#27ae60",
+}
+_OUR_SOLUTION_PALETTE = ["#27ae60", "#1e8449", "#52be80", "#16a085", "#0e6655", "#82e0aa"]
+
+
+def _is_ratio_metric(metric_name: str) -> bool:
+    """Detect whether a metric's value is conventionally in [0, 1] (ratio)."""
+    target = _REGISTRY.get(metric_name, {}).get("target", "").lower()
+    return ("= 1.0" in target) or ("ratio" in metric_name.lower())
+
+
+def _render_category_charts(scenarios: list[dict], out_dir: Path, file_prefix: str) -> list[Path]:
+    """Generate cross-scenario bar-chart JPGs grouped by quality category.
+
+    For each of the 7 categories, emit one JPG file containing subplots = metrics
+    in that category.  Each subplot shows bars per method:
+      - 5 baselines from scenarios[0] (Naive Union, Naive Applied Alignments,
+        AROM, CoMerger, Boomer) — these are dataset-wide, identical across
+        scenarios.
+      - N variants of "Our Solution (<scenario_label>)" — one per scenario.
+
+    Returns list of written paths.
+    """
+    # Import matplotlib lazily so consumers without it can still read the module.
+    import math
+    import matplotlib
+    matplotlib.use("Agg")  # no display needed
+    import matplotlib.pyplot as plt
+
+    if not scenarios:
+        return []
+
+    baseline = scenarios[0]
+    bmetrics = baseline["metrics"]
+
+    # Build the (label, color, getter) list once — shared for every metric/chart.
+    methods: list[tuple[str, str, str]] = []  # (display_label, color, graph_key)
+    if "union_input" in bmetrics:
+        methods.append((_COLUMN_DISPLAY["union_input"], _METHOD_COLORS["Naive Union"], "union_input"))
+    if baseline.get("has_applied") and "applied_alignments" in bmetrics:
+        methods.append(
+            (_COLUMN_DISPLAY["applied_alignments"], _METHOD_COLORS["Naive Applied Alignments"], "applied_alignments")
+        )
+    if baseline.get("has_arom") and "arom_ontology" in bmetrics:
+        methods.append((_COLUMN_DISPLAY["arom_ontology"], _METHOD_COLORS["AROM"], "arom_ontology"))
+    if baseline.get("has_comerger") and "comerger_ontology" in bmetrics:
+        methods.append((_COLUMN_DISPLAY["comerger_ontology"], _METHOD_COLORS["CoMerger"], "comerger_ontology"))
+    if baseline.get("has_boomer") and "boomer_ontology" in bmetrics:
+        methods.append((_COLUMN_DISPLAY["boomer_ontology"], _METHOD_COLORS["Boomer"], "boomer_ontology"))
+
+    # Append one "Our Solution (scenario_label)" per scenario.  If only one
+    # scenario, label is the bare "Our Solution".
+    our_label_format = (
+        lambda s: _COLUMN_DISPLAY["merged_ontology"]
+        if len(scenarios) == 1
+        else f"{_COLUMN_DISPLAY['merged_ontology']} ({s['label']})"
+    )
+    our_solutions: list[tuple[dict, str, str]] = []  # (scenario, display_label, color)
+    for i, s in enumerate(scenarios):
+        color = _OUR_SOLUTION_PALETTE[i % len(_OUR_SOLUTION_PALETTE)]
+        our_solutions.append((s, our_label_format(s), color))
+
+    charts_dir = out_dir / "charts"
+    charts_dir.mkdir(parents=True, exist_ok=True)
+
+    written: list[Path] = []
+
+    for category, category_metrics in _CATEGORY_TO_METRICS.items():
+        # Only keep metrics that exist in at least one scenario.
+        present_metrics = [
+            m for m in category_metrics
+            if any(s["metrics"].get("merged_ontology", {}).get(m) is not None for s in scenarios)
+        ]
+        if not present_metrics:
+            continue
+
+        n = len(present_metrics)
+        cols = 1 if n == 1 else 2
+        rows = math.ceil(n / cols)
+        fig, axes = plt.subplots(rows, cols, figsize=(7.5 * cols, 4.5 * rows), squeeze=False)
+        fig.suptitle(category, fontsize=15, fontweight="bold")
+
+        # Build labels + colors lists (same order for every subplot)
+        all_labels = [m[0] for m in methods] + [o[1] for o in our_solutions]
+        all_colors = [m[1] for m in methods] + [o[2] for o in our_solutions]
+
+        for idx, metric_name in enumerate(present_metrics):
+            ax = axes[idx // cols][idx % cols]
+            values: list[float] = []
+            for _label, _color, key in methods:
+                v = bmetrics.get(key, {}).get(metric_name)
+                values.append(float(v) if v is not None else 0.0)
+            for s, _label, _color in our_solutions:
+                v = s["metrics"].get("merged_ontology", {}).get(metric_name)
+                values.append(float(v) if v is not None else 0.0)
+
+            bars = ax.bar(range(len(all_labels)), values, color=all_colors)
+            ax.set_xticks(range(len(all_labels)))
+            ax.set_xticklabels(all_labels, rotation=45, ha="right", fontsize=9)
+            ax.set_title(metric_name, fontsize=11)
+            ax.set_ylabel("ratio" if _is_ratio_metric(metric_name) else "value")
+            ax.grid(axis="y", alpha=0.3)
+            fmt = "%.3f" if _is_ratio_metric(metric_name) else "%g"
+            ax.bar_label(bars, fmt=fmt, fontsize=8, padding=2)
+            # Show metric target as subtle annotation
+            target = _REGISTRY.get(metric_name, {}).get("target", "")
+            if target:
+                ax.text(
+                    0.99, 0.97, f"target: {target}",
+                    transform=ax.transAxes, fontsize=8, color="#666",
+                    ha="right", va="top",
+                )
+
+        # Hide any unused axes when n is odd and cols=2.
+        for idx in range(n, rows * cols):
+            axes[idx // cols][idx % cols].axis("off")
+
+        # Shared legend (color → method) at the bottom — outside subplots.
+        legend_handles = [
+            plt.Rectangle((0, 0), 1, 1, color=c, label=lbl)
+            for lbl, c in zip(all_labels, all_colors)
+        ]
+        fig.legend(
+            handles=legend_handles, loc="lower center",
+            ncol=min(len(all_labels), 4),
+            bbox_to_anchor=(0.5, -0.02), fontsize=9, frameon=False,
+        )
+
+        slug = _CATEGORY_SLUG[category]
+        out_path = charts_dir / f"{file_prefix}_{slug}.jpg"
+        fig.tight_layout(rect=(0, 0.04, 1, 0.96))
+        fig.savefig(out_path, dpi=150, format="jpg", bbox_inches="tight")
+        plt.close(fig)
+        written.append(out_path)
+
+    return written
+
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 
@@ -662,6 +838,16 @@ def main() -> None:
         writer = csv.writer(f)
         writer.writerows(_build_csv_rows(scenarios))
     print(f"Report CSV:  {out_csv}")
+
+    # ── Charts (per-category JPGs, side-by-side methods + Our Solution variants) ──
+    # File prefix derived from output basename: e.g. m_i_raport_conference_1.html
+    # → prefix "conference_1" (drop leading "m_i_raport_" if present).
+    prefix = out_html.stem
+    if prefix.startswith("m_i_raport_"):
+        prefix = prefix[len("m_i_raport_"):]
+    chart_paths = _render_category_charts(scenarios, out_html.parent, prefix)
+    if chart_paths:
+        print(f"Charts:      {len(chart_paths)} JPG file(s) → {chart_paths[0].parent}/")
 
 
 if __name__ == "__main__":

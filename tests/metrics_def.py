@@ -58,6 +58,19 @@ _CATEGORIES: dict[str, tuple[str, str]] = {
     "Understandability": ("un", "#7f8c8d"),
 }
 
+# Display names for tool columns (used in HTML headers, console summary, and
+# downstream by metrics_and_insights_raport.py / chart legends).  Internal
+# dictionary keys stay technical (union_input / merged_ontology / ...) — this
+# map is rendering-only.
+_COLUMN_DISPLAY: dict[str, str] = {
+    "union_input":         "Naive Union",
+    "applied_alignments":  "Naive Applied Alignments",
+    "arom_ontology":       "AROM",
+    "comerger_ontology":   "CoMerger",
+    "boomer_ontology":     "Boomer",
+    "merged_ontology":     "Our Solution",
+}
+
 # ── Metric registry ────────────────────────────────────────────────────────────
 _REGISTRY: dict[str, dict] = {
     # ── Structural Coherence ───────────────────────────────────────────────────
@@ -823,12 +836,12 @@ _HTML_TEMPLATE = """\
   <thead>
     <tr>
       <th>Metric</th>
-      <th>union_input</th>
+      <th>Naive Union</th>
       {applied_col_header}
       {arom_col_header}
       {comerger_col_header}
       {boomer_col_header}
-      <th>merged_ontology</th>
+      <th>Our Solution</th>
       <th>Target</th>
       <th>Source</th>
       <th>Categories</th>
@@ -943,10 +956,10 @@ def _write_html(
             f"    </tr>"
         )
 
-    applied_col_header = "<th>applied_alignments</th>" if has_applied else ""
-    arom_col_header = "<th>arom_ontology</th>" if has_arom else ""
-    comerger_col_header = "<th>comerger_ontology</th>" if has_comerger else ""
-    boomer_col_header = "<th>boomer_ontology</th>" if has_boomer else ""
+    applied_col_header  = f"<th>{_COLUMN_DISPLAY['applied_alignments']}</th>" if has_applied else ""
+    arom_col_header     = f"<th>{_COLUMN_DISPLAY['arom_ontology']}</th>"      if has_arom else ""
+    comerger_col_header = f"<th>{_COLUMN_DISPLAY['comerger_ontology']}</th>"  if has_comerger else ""
+    boomer_col_header   = f"<th>{_COLUMN_DISPLAY['boomer_ontology']}</th>"    if has_boomer else ""
 
     cat_legend_lines = []
     for cat, (_, color) in _CATEGORIES.items():
@@ -1239,16 +1252,17 @@ def main() -> None:
     has_comerger = comerger is not None
     has_boom = boomer is not None
     col = max(len(m) for m in _REGISTRY)
-    hdr_parts = [f"{'metric':<{col}}", f"{'union_input':>15}"]
+    # Column widths chosen to fit the longest display name in each slot.
+    hdr_parts = [f"{'metric':<{col}}", f"{_COLUMN_DISPLAY['union_input']:>15}"]
     if has_app:
-        hdr_parts.append(f"{'applied_alignments':>20}")
+        hdr_parts.append(f"{_COLUMN_DISPLAY['applied_alignments']:>24}")
     if has_arom:
-        hdr_parts.append(f"{'arom_ontology':>15}")
+        hdr_parts.append(f"{_COLUMN_DISPLAY['arom_ontology']:>10}")
     if has_comerger:
-        hdr_parts.append(f"{'comerger_ontology':>19}")
+        hdr_parts.append(f"{_COLUMN_DISPLAY['comerger_ontology']:>12}")
     if has_boom:
-        hdr_parts.append(f"{'boomer_ontology':>17}")
-    hdr_parts.append(f"{'merged_ontology':>16}")
+        hdr_parts.append(f"{_COLUMN_DISPLAY['boomer_ontology']:>10}")
+    hdr_parts.append(f"{_COLUMN_DISPLAY['merged_ontology']:>14}")
     hdr_parts.append("target")
     hdr = "  ".join(hdr_parts)
     print(hdr)
@@ -1268,17 +1282,17 @@ def main() -> None:
             return f"{v:>{w}.4f}"
 
         u_s = _fs(u, 15)
-        m_s = _fs(m, 16)
+        m_s = _fs(m, 14)
         tgt = meta["target"]
         parts = [f"{metric_name:<{col}}", u_s]
         if has_app:
-            parts.append(_fs(vals.get("applied_alignments"), 20))
+            parts.append(_fs(vals.get("applied_alignments"), 24))
         if has_arom:
-            parts.append(_fs(vals.get("arom_ontology"), 15))
+            parts.append(_fs(vals.get("arom_ontology"), 10))
         if has_comerger:
-            parts.append(_fs(vals.get("comerger_ontology"), 19))
+            parts.append(_fs(vals.get("comerger_ontology"), 12))
         if has_boom:
-            parts.append(_fs(vals.get("boomer_ontology"), 17))
+            parts.append(_fs(vals.get("boomer_ontology"), 10))
         parts.append(m_s)
         print(f"{'  '.join(parts)}  {tgt}")
 

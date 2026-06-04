@@ -14,7 +14,8 @@
 # Usage:
 #   tests/scenarios/scenario_2.sh                          # prompts for dataset
 #   tests/scenarios/scenario_2.sh human-mouse              # explicit dataset
-#   tests/scenarios/scenario_2.sh --skip-mine human-mouse  # reuse existing LLM output
+#   tests/scenarios/scenario_2.sh --skip-mine human-mouse  # reuse LLM, rerun Boomer/AROM/CoMerger
+#   tests/scenarios/scenario_2.sh --skip-all human-mouse   # reuse ALL caches, only regenerate report+charts
 #
 # Outputs (under tests/scenarios/outputs/<dataset>-s2/ — gitignored).
 # The `-s2` suffix keeps scenario_2 results separate from scenario_1's outputs
@@ -42,13 +43,21 @@ MAX_CHARS=15000
 PARALLEL=24
 TAG="aml_15k_p24"
 
-# ── Arg parsing (mirrors scenario_1.sh: --skip-mine + positional DATASET) ──
+# ── Arg parsing (mirrors scenario_1.sh: --skip-mine / --skip-all + DATASET) ──
 SKIP_MINE=0
+SKIP_ALL=0
 DATASET=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --skip-mine)
       SKIP_MINE=1
+      shift
+      ;;
+    --skip-all)
+      # Implies --skip-mine: don't run LLM, Boomer, AROM, or CoMerger.
+      # Just regenerate the report + charts from cached outputs.
+      SKIP_MINE=1
+      SKIP_ALL=1
       shift
       ;;
     --help|-h)
@@ -119,6 +128,7 @@ echo "    parallel llm request count: $PARALLEL"
 echo "    output dir:                 $OUT_DIR"
 echo "    log:                        $OUT_DIR/run.log"
 echo "    skip-mine:                  $([ "$SKIP_MINE" = "1" ] && echo yes || echo no)"
+echo "    skip-all:                   $([ "$SKIP_ALL" = "1" ] && echo yes || echo no)"
 echo "========================================"
 
 # ── LLM merger ──────────────────────────────────────────────────────────────
@@ -153,7 +163,13 @@ else
 fi
 
 # ── Boomer (cached per tool) ────────────────────────────────────────────────
-if [ ! -f "$BOOMER_CACHE/merged_ontology.owl" ]; then
+if [ "$SKIP_ALL" = "1" ]; then
+  if [ -f "$BOOMER_CACHE/merged_ontology.owl" ]; then
+    echo "  → --skip-all: reusing cached Boomer ($TOOL) from $BOOMER_CACHE"
+  else
+    echo "  WARNING: --skip-all but $BOOMER_CACHE/merged_ontology.owl missing — Boomer column will be absent"
+  fi
+elif [ ! -f "$BOOMER_CACHE/merged_ontology.owl" ]; then
   echo "  → running Boomer ($TOOL) → $BOOMER_CACHE"
   mkdir -p "$BOOMER_CACHE"
   ./thirdparty/boomer/boomer.sh "$BASE" "$CANDIDATE" "$BOOMER_CACHE" "$TOOL" \
@@ -170,7 +186,13 @@ if [ -f "$BOOMER_CACHE/merged_ontology.owl" ]; then
 fi
 
 # ── AROM (cached) ──────────────────────────────────────────────────────────
-if [ ! -f "$AROM_CACHE/arom_ontology.owl" ]; then
+if [ "$SKIP_ALL" = "1" ]; then
+  if [ -f "$AROM_CACHE/arom_ontology.owl" ]; then
+    echo "  → --skip-all: reusing cached AROM from $AROM_CACHE"
+  else
+    echo "  WARNING: --skip-all but $AROM_CACHE/arom_ontology.owl missing — AROM column will be absent"
+  fi
+elif [ ! -f "$AROM_CACHE/arom_ontology.owl" ]; then
   echo "  → running AROM → $AROM_CACHE"
   mkdir -p "$AROM_CACHE"
   ./thirdparty/arom/arom.sh "$BASE" "$CANDIDATE" "$AROM_CACHE" \
@@ -187,7 +209,13 @@ if [ -f "$AROM_CACHE/arom_ontology.owl" ]; then
 fi
 
 # ── CoMerger (cached) ──────────────────────────────────────────────────────
-if [ ! -f "$COMERGER_CACHE/merged_ontology.owl" ]; then
+if [ "$SKIP_ALL" = "1" ]; then
+  if [ -f "$COMERGER_CACHE/merged_ontology.owl" ]; then
+    echo "  → --skip-all: reusing cached CoMerger from $COMERGER_CACHE"
+  else
+    echo "  WARNING: --skip-all but $COMERGER_CACHE/merged_ontology.owl missing — CoMerger column will be absent"
+  fi
+elif [ ! -f "$COMERGER_CACHE/merged_ontology.owl" ]; then
   echo "  → running CoMerger → $COMERGER_CACHE"
   mkdir -p "$COMERGER_CACHE"
   ./thirdparty/CoMerger-1.2/comerger.sh "$BASE" "$CANDIDATE" "$COMERGER_CACHE" \

@@ -8,9 +8,11 @@
 #
 # Flags:
 #   --skip-mine    skip the LLM merger step (reuse existing merged_ontology.owl
-#                  in each scenario dir).  Still runs Boomer + regenerates the
-#                  combined report.  Useful when LLM runs are expensive and
-#                  you just want fresh metrics / a fresh Boomer column.
+#                  in each scenario dir).  Still runs Boomer / AROM / CoMerger
+#                  and regenerates the combined report + charts.
+#   --skip-all     also skip Boomer / AROM / CoMerger — reuse ALL caches.
+#                  Regenerates only the combined report (HTML/CSV) + chart JPGs.
+#                  Fast path when you only changed the report/chart code.
 #
 # Runs (per dataset <name>):
 #   <name>_10k_aml       max-env-chars=10000  alignment-tool=aml      (LLM)
@@ -45,11 +47,19 @@ fi
 
 # ── Arg parsing ──────────────────────────────────────────────────────────────
 SKIP_MINE=0
+SKIP_ALL=0
 DATASET=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --skip-mine)
       SKIP_MINE=1
+      shift
+      ;;
+    --skip-all)
+      # Implies --skip-mine: don't run LLM, Boomer, AROM, or CoMerger.
+      # Just regenerate the combined report + charts from cached outputs.
+      SKIP_MINE=1
+      SKIP_ALL=1
       shift
       ;;
     --help|-h)
@@ -117,7 +127,13 @@ BOOMER_LOGMAP_DIR=""
 run_boomer_once() {
   local tool="$1"
   local cache_dir="$OUT_BASE/.boomer_$tool"
-  if [ ! -f "$cache_dir/merged_ontology.owl" ]; then
+  if [ "$SKIP_ALL" = "1" ]; then
+    if [ -f "$cache_dir/merged_ontology.owl" ]; then
+      echo "  → --skip-all: reusing cached Boomer ($tool) from $cache_dir"
+    else
+      echo "  WARNING: --skip-all but $cache_dir/merged_ontology.owl missing — Boomer column will be absent"
+    fi
+  elif [ ! -f "$cache_dir/merged_ontology.owl" ]; then
     echo "  → running Boomer ($tool) → $cache_dir"
     mkdir -p "$cache_dir"
     ./thirdparty/boomer/boomer.sh "$BASE" "$CANDIDATE" "$cache_dir" "$tool" \
@@ -134,7 +150,13 @@ run_boomer_once() {
 # ── AROM cache (single run per dataset — alignment always from AML) ──
 AROM_DIR_CACHE="$OUT_BASE/.arom"
 run_arom_once() {
-  if [ ! -f "$AROM_DIR_CACHE/arom_ontology.owl" ]; then
+  if [ "$SKIP_ALL" = "1" ]; then
+    if [ -f "$AROM_DIR_CACHE/arom_ontology.owl" ]; then
+      echo "  → --skip-all: reusing cached AROM from $AROM_DIR_CACHE"
+    else
+      echo "  WARNING: --skip-all but $AROM_DIR_CACHE/arom_ontology.owl missing — AROM column will be absent"
+    fi
+  elif [ ! -f "$AROM_DIR_CACHE/arom_ontology.owl" ]; then
     echo "  → running AROM → $AROM_DIR_CACHE"
     mkdir -p "$AROM_DIR_CACHE"
     ./thirdparty/arom/arom.sh "$BASE" "$CANDIDATE" "$AROM_DIR_CACHE" \
@@ -148,7 +170,13 @@ run_arom_once
 # ── CoMerger cache (single run per dataset — alignment from AML) ──
 COMERGER_DIR_CACHE="$OUT_BASE/.comerger"
 run_comerger_once() {
-  if [ ! -f "$COMERGER_DIR_CACHE/merged_ontology.owl" ]; then
+  if [ "$SKIP_ALL" = "1" ]; then
+    if [ -f "$COMERGER_DIR_CACHE/merged_ontology.owl" ]; then
+      echo "  → --skip-all: reusing cached CoMerger from $COMERGER_DIR_CACHE"
+    else
+      echo "  WARNING: --skip-all but $COMERGER_DIR_CACHE/merged_ontology.owl missing — CoMerger column will be absent"
+    fi
+  elif [ ! -f "$COMERGER_DIR_CACHE/merged_ontology.owl" ]; then
     echo "  → running CoMerger → $COMERGER_DIR_CACHE"
     mkdir -p "$COMERGER_DIR_CACHE"
     ./thirdparty/CoMerger-1.2/comerger.sh "$BASE" "$CANDIDATE" "$COMERGER_DIR_CACHE" \
@@ -177,6 +205,7 @@ for spec in "${SCENARIOS[@]}"; do
   echo "    output dir:     $out"
   echo "    log:            $log_file"
   echo "    skip-mine:      $([ "$SKIP_MINE" = "1" ] && echo yes || echo no)"
+  echo "    skip-all:       $([ "$SKIP_ALL" = "1" ] && echo yes || echo no)"
   echo "========================================"
 
   # ── LLM merger ──────────────────────────────────────────────────────────
