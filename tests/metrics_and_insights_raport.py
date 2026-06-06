@@ -600,7 +600,7 @@ def _build_csv_rows(scenarios: list[dict]) -> list[list[str]]:
 # _REGISTRY[m]["categories"] which sometimes lists two).  Charts are grouped
 # by these keys: 7 files per scenario run, one per category.
 _CATEGORY_TO_METRICS: dict[str, list[str]] = {
-    "Structural Coherence":          ["unsatisfiable_classes", "cycle_count"],
+    "Structural Coherence":          ["cycle_count"],
     "Hierarchy Integration Quality": [
         "ARC", "connectivity_ratio", "average_depth",
         "max_depth", "average_breadth", "max_breadth",
@@ -610,9 +610,9 @@ _CATEGORY_TO_METRICS: dict[str, list[str]] = {
         "new_intra_onto_relations_count",
         "cross_onto_subclassof_count",
     ],
-    "Conciseness":         ["syntactic_uniqueness_ratio", "ALC"],
+    "Conciseness":         ["ALC"],
     "Accuracy":            ["triple_preservation_ratio"],
-    "Domain Coherence":    ["applied_alignments"],
+    "Domain Coherence":    ["applied_alignments", "multi_domain_range_count"],
     "Understandability":   ["annotation_coverage_ratio"],
 }
 _CATEGORY_SLUG: dict[str, str] = {
@@ -626,14 +626,32 @@ _CATEGORY_SLUG: dict[str, str] = {
 }
 # Color per method.  "Our Solution" multi-config variants get green shades.
 _METHOD_COLORS: dict[str, str] = {
-    "Naive Union":              "#7f8c8d",
-    "Naive Applied Alignments": "#bdc3c7",
-    "AROM":                     "#3498db",
-    "CoMerger":                 "#9b59b6",
-    "Boomer":                   "#e67e22",
-    "Our Solution":             "#27ae60",
+    "Naive Union":        "#7f8c8d",
+    "Applied Alignments": "#bdc3c7",
+    "AROM":               "#3498db",
+    "CoMerger":           "#9b59b6",
+    "Boomer":             "#e67e22",
+    "Our Solution":       "#27ae60",
 }
 _OUR_SOLUTION_PALETTE = ["#27ae60", "#1e8449", "#52be80", "#16a085", "#0e6655", "#82e0aa"]
+
+# Abbreviated / cleaned display names for chart subplot titles.
+# Internal metric keys are unchanged everywhere else (registry, CSV, HTML tables).
+_METRIC_DISPLAY: dict[str, str] = {
+    "annotation_coverage_ratio":     "ACR",
+    "applied_alignments":            "Applied Alignments",
+    "multi_domain_range_count":      "Multi D/R",
+    "connectivity_ratio":             "CR",
+    "triple_preservation_ratio":      "TPR",
+    "cross_onto_relations_count":     "CORC",
+    "new_intra_onto_relations_count": "NIRC",
+    "cross_onto_subclassof_count":    "COSC",
+    "cycle_count":                    "Cycle Count",
+    "average_depth":                  "Average Depth",
+    "max_depth":                      "Max Depth",
+    "average_breadth":                "Average Breadth",
+    "max_breadth":                    "Max Breadth",
+}
 
 
 def _is_ratio_metric(metric_name: str) -> bool:
@@ -642,22 +660,31 @@ def _is_ratio_metric(metric_name: str) -> bool:
     return ("= 1.0" in target) or ("ratio" in metric_name.lower())
 
 
+def _should_use_log_scale(values: list[float]) -> bool:
+    """Use log/symlog when max/min(positive) ratio > 20 (large spread across methods)."""
+    pos = [v for v in values if v > 0]
+    if len(pos) < 2:
+        return False
+    return max(pos) / min(pos) > 20
+
+
 def _render_category_charts(scenarios: list[dict], out_dir: Path, file_prefix: str) -> list[Path]:
     """Generate cross-scenario bar-chart JPGs grouped by quality category.
 
-    For each of the 7 categories, emit one JPG file containing subplots = metrics
-    in that category.  Each subplot shows bars per method:
-      - 5 baselines from scenarios[0] (Naive Union, Naive Applied Alignments,
-        AROM, CoMerger, Boomer) — these are dataset-wide, identical across
-        scenarios.
-      - N variants of "Our Solution (<scenario_label>)" — one per scenario.
+    For each of the 7 categories, emit one JPG file.  Subplots = metrics in
+    that category; bars per subplot = baseline methods + Our Solution variants.
+
+    Special handling:
+      - Domain Coherence: Naive Union excluded; bar labels show % vs Applied
+        Alignments (the reference bar shows its absolute count).
+      - ALC: dashed red reference line = avg(AROM, CoMerger, Boomer).
+      - Log / symlog scale: auto-applied when max/min(positive) > 20× spread.
 
     Returns list of written paths.
     """
-    # Import matplotlib lazily so consumers without it can still read the module.
     import math
     import matplotlib
-    matplotlib.use("Agg")  # no display needed
+    matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
     if not scenarios:
@@ -666,40 +693,34 @@ def _render_category_charts(scenarios: list[dict], out_dir: Path, file_prefix: s
     baseline = scenarios[0]
     bmetrics = baseline["metrics"]
 
-    # Build the (label, color, getter) list once — shared for every metric/chart.
+    # Build baseline methods list; colors keyed by display name for consistency.
     methods: list[tuple[str, str, str]] = []  # (display_label, color, graph_key)
-    if "union_input" in bmetrics:
-        methods.append((_COLUMN_DISPLAY["union_input"], _METHOD_COLORS["Naive Union"], "union_input"))
-    if baseline.get("has_applied") and "applied_alignments" in bmetrics:
-        methods.append(
-            (_COLUMN_DISPLAY["applied_alignments"], _METHOD_COLORS["Naive Applied Alignments"], "applied_alignments")
-        )
-    if baseline.get("has_arom") and "arom_ontology" in bmetrics:
-        methods.append((_COLUMN_DISPLAY["arom_ontology"], _METHOD_COLORS["AROM"], "arom_ontology"))
-    if baseline.get("has_comerger") and "comerger_ontology" in bmetrics:
-        methods.append((_COLUMN_DISPLAY["comerger_ontology"], _METHOD_COLORS["CoMerger"], "comerger_ontology"))
-    if baseline.get("has_boomer") and "boomer_ontology" in bmetrics:
-        methods.append((_COLUMN_DISPLAY["boomer_ontology"], _METHOD_COLORS["Boomer"], "boomer_ontology"))
+    for graph_key, ok in [
+        ("union_input",        "union_input" in bmetrics),
+        ("applied_alignments", bool(baseline.get("has_applied")) and "applied_alignments" in bmetrics),
+        ("arom_ontology",      bool(baseline.get("has_arom")) and "arom_ontology" in bmetrics),
+        ("comerger_ontology",  bool(baseline.get("has_comerger")) and "comerger_ontology" in bmetrics),
+        ("boomer_ontology",    bool(baseline.get("has_boomer")) and "boomer_ontology" in bmetrics),
+    ]:
+        if ok:
+            disp = _COLUMN_DISPLAY[graph_key]
+            methods.append((disp, _METHOD_COLORS[disp], graph_key))
 
-    # Append one "Our Solution (scenario_label)" per scenario.  If only one
-    # scenario, label is the bare "Our Solution".
-    our_label_format = (
+    our_label = (
         lambda s: _COLUMN_DISPLAY["merged_ontology"]
         if len(scenarios) == 1
         else f"{_COLUMN_DISPLAY['merged_ontology']} ({s['label']})"
     )
-    our_solutions: list[tuple[dict, str, str]] = []  # (scenario, display_label, color)
-    for i, s in enumerate(scenarios):
-        color = _OUR_SOLUTION_PALETTE[i % len(_OUR_SOLUTION_PALETTE)]
-        our_solutions.append((s, our_label_format(s), color))
+    our_solutions: list[tuple[dict, str, str]] = [
+        (s, our_label(s), _OUR_SOLUTION_PALETTE[i % len(_OUR_SOLUTION_PALETTE)])
+        for i, s in enumerate(scenarios)
+    ]
 
     charts_dir = out_dir / "charts"
     charts_dir.mkdir(parents=True, exist_ok=True)
-
     written: list[Path] = []
 
     for category, category_metrics in _CATEGORY_TO_METRICS.items():
-        # Only keep metrics that exist in at least one scenario.
         present_metrics = [
             m for m in category_metrics
             if any(s["metrics"].get("merged_ontology", {}).get(m) is not None for s in scenarios)
@@ -707,35 +728,83 @@ def _render_category_charts(scenarios: list[dict], out_dir: Path, file_prefix: s
         if not present_metrics:
             continue
 
+        is_dc = category == "Domain Coherence"
+
+        # Domain Coherence: Naive Union carries no alignment info — exclude it.
+        cat_methods = [t for t in methods if not (is_dc and t[2] == "union_input")]
+        all_labels = [m[0] for m in cat_methods] + [o[1] for o in our_solutions]
+        all_colors = [m[1] for m in cat_methods] + [o[2] for o in our_solutions]
+
         n = len(present_metrics)
         cols = 1 if n == 1 else 2
         rows = math.ceil(n / cols)
         fig, axes = plt.subplots(rows, cols, figsize=(7.5 * cols, 4.5 * rows), squeeze=False)
         fig.suptitle(category, fontsize=15, fontweight="bold")
 
-        # Build labels + colors lists (same order for every subplot)
-        all_labels = [m[0] for m in methods] + [o[1] for o in our_solutions]
-        all_colors = [m[1] for m in methods] + [o[2] for o in our_solutions]
-
         for idx, metric_name in enumerate(present_metrics):
             ax = axes[idx // cols][idx % cols]
+
             values: list[float] = []
-            for _label, _color, key in methods:
+            for _lbl, _clr, key in cat_methods:
                 v = bmetrics.get(key, {}).get(metric_name)
                 values.append(float(v) if v is not None else 0.0)
-            for s, _label, _color in our_solutions:
+            for s, _lbl, _clr in our_solutions:
                 v = s["metrics"].get("merged_ontology", {}).get(metric_name)
                 values.append(float(v) if v is not None else 0.0)
+
+            # Auto log/symlog for large-spread data (e.g. Knowledge Completeness).
+            if _should_use_log_scale(values):
+                if any(v == 0 for v in values):
+                    ax.set_yscale("symlog", linthresh=1)
+                else:
+                    ax.set_yscale("log")
 
             bars = ax.bar(range(len(all_labels)), values, color=all_colors)
             ax.set_xticks(range(len(all_labels)))
             ax.set_xticklabels(all_labels, rotation=45, ha="right", fontsize=9)
-            ax.set_title(metric_name, fontsize=11)
+            ax.set_title(_METRIC_DISPLAY.get(metric_name, metric_name), fontsize=11)
             ax.set_ylabel("ratio" if _is_ratio_metric(metric_name) else "value")
             ax.grid(axis="y", alpha=0.3)
-            fmt = "%.3f" if _is_ratio_metric(metric_name) else "%g"
-            ax.bar_label(bars, fmt=fmt, fontsize=8, padding=2)
-            # Show metric target as subtle annotation
+
+            # Bar labels — applied_alignments uses % vs its own reference bar.
+            # Other DC metrics (e.g. multi_domain_range_count) use regular labels.
+            if is_dc and metric_name == "applied_alignments":
+                applied_ref = bmetrics.get("applied_alignments", {}).get(metric_name)
+                dc_labels: list[str] = []
+                for _lbl, _clr, key in cat_methods:
+                    v = float(bmetrics.get(key, {}).get(metric_name) or 0)
+                    if key == "applied_alignments":
+                        dc_labels.append(str(int(v)))
+                    elif applied_ref and applied_ref > 0:
+                        dc_labels.append(f"{(v - applied_ref) / applied_ref * 100:+.0f}%")
+                    else:
+                        dc_labels.append(str(int(v)))
+                for s, _lbl, _clr in our_solutions:
+                    v = float(s["metrics"].get("merged_ontology", {}).get(metric_name) or 0)
+                    if applied_ref and applied_ref > 0:
+                        dc_labels.append(f"{(v - applied_ref) / applied_ref * 100:+.0f}%")
+                    else:
+                        dc_labels.append(str(int(v)))
+                ax.bar_label(bars, labels=dc_labels, fontsize=8, padding=2)
+            else:
+                fmt = "%.3f" if _is_ratio_metric(metric_name) else "%g"
+                ax.bar_label(bars, fmt=fmt, fontsize=8, padding=2)
+
+            # ALC: dashed red reference line = avg(AROM, CoMerger, Boomer).
+            if metric_name == "ALC":
+                alc_refs = [
+                    float(bmetrics[k]["ALC"])
+                    for k in ("arom_ontology", "comerger_ontology", "boomer_ontology")
+                    if bmetrics.get(k, {}).get("ALC") is not None
+                ]
+                if alc_refs:
+                    avg_alc = sum(alc_refs) / len(alc_refs)
+                    ax.axhline(
+                        y=avg_alc, color="#e74c3c", linestyle="--", linewidth=1.5,
+                        alpha=0.85, label=f"Avg(AROM, CoMerger, Boomer) = {avg_alc:.0f}",
+                    )
+                    ax.legend(fontsize=8, loc="upper right")
+
             target = _REGISTRY.get(metric_name, {}).get("target", "")
             if target:
                 ax.text(
@@ -744,24 +813,28 @@ def _render_category_charts(scenarios: list[dict], out_dir: Path, file_prefix: s
                     ha="right", va="top",
                 )
 
-        # Hide any unused axes when n is odd and cols=2.
         for idx in range(n, rows * cols):
             axes[idx // cols][idx % cols].axis("off")
 
-        # Shared legend (color → method) at the bottom — outside subplots.
         legend_handles = [
             plt.Rectangle((0, 0), 1, 1, color=c, label=lbl)
             for lbl, c in zip(all_labels, all_colors)
         ]
+        legend_title = (
+            "% values relative to Applied Alignments  (reference bar = absolute count)"
+            if is_dc and "applied_alignments" in present_metrics else None
+        )
         fig.legend(
             handles=legend_handles, loc="lower center",
             ncol=min(len(all_labels), 4),
             bbox_to_anchor=(0.5, -0.02), fontsize=9, frameon=False,
+            title=legend_title, title_fontsize=8,
         )
 
         slug = _CATEGORY_SLUG[category]
         out_path = charts_dir / f"{file_prefix}_{slug}.jpg"
-        fig.tight_layout(rect=(0, 0.04, 1, 0.96))
+        bottom = 0.07 if is_dc else 0.04
+        fig.tight_layout(rect=(0, bottom, 1, 0.96))
         fig.savefig(out_path, dpi=150, format="jpg", bbox_inches="tight")
         plt.close(fig)
         written.append(out_path)

@@ -13,7 +13,9 @@ _RDFS_NS = str(RDFS)
 _OWL_NS = str(OWL)
 
 
-def _ensure_code(ns: str, ns_to_code: dict[str, str], code_to_ns: dict[str, str]) -> str:
+def _ensure_code(
+    ns: str, ns_to_code: dict[str, str], code_to_ns: dict[str, str]
+) -> str:
     """Return code for ns, allocating a fresh one (and updating both maps) if absent.
 
     The fresh code follows the same scheme as build_namespace_codec: shortest
@@ -83,6 +85,13 @@ def _build_instructions(ns_to_code: dict[str, str], code_to_ns: dict[str, str]) 
         merged ontology should not allow for an entity to be both a "Person" and a "Car" at the same time, because it would lead to domain inconsistency.
         Anoter example would be removing is-a relation between "Surgery" intance and "Plant" class.
         - Do not add more than twice the number of `{owl}::disjointWith` assertions already present in the input ontologies. Adding many disjoint pairs without strong domain justification is an anti-pattern that creates false constraints and makes the ontology over-restrictive.
+        - Domain and Range Oneness (CRITICAL): OWL interprets multiple `{rdfs}::domain` declarations on the same property as their INTERSECTION (conjunction), not a union — meaning every instance using that property is inferred to belong to ALL declared domain classes simultaneously.
+          An unintended second domain causes unexpected inferences, and if the two domain classes are disjoint it causes unsatisfiability. The same applies to `{rdfs}::range`.
+          When properties from Ontology_1 and Ontology_2 share the same name or are being merged, you MUST resolve conflicting domain/range declarations into exactly ONE before placing the property in Merged_Ontology. Resolve using this priority order:
+          (1) If one domain class is a subclass (or superclass) of the other in the domain, keep the MORE GENERAL class as the single domain — it covers all valid instances without over-restricting.
+          (2) If the two classes are related but neither subsumes the other, and domain knowledge supports a natural common superclass, introduce that superclass (e.g. `MedicalRole` for `Physician` and `Nurse`) and use it as the single domain. Alternatively, if appropriate, declare `owl:unionOf` as an anonymous domain class.
+          (3) If the two domain classes are entirely unrelated in the domain (e.g. `Person` and `Vehicle` for the same property name), this almost certainly means the two properties have different semantics. Keep them as TWO SEPARATE PROPERTIES with distinct, disambiguating names in Merged_Ontology — forcing a merge would produce semantically incorrect inferences.
+          Goal: every property in Merged_Ontology MUST have at most one `{rdfs}::domain` triple and at most one `{rdfs}::range` triple. Properties with no domain/range are acceptable.
 
         Cross-ontology and intra-ontology relations / Knowledge completeness
         - Merged_Ontology can and should introduce new relations between entities from the same ontology when those relations are implied by domain knowledge but were not explicitly stated.

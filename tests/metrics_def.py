@@ -64,7 +64,7 @@ _CATEGORIES: dict[str, tuple[str, str]] = {
 # map is rendering-only.
 _COLUMN_DISPLAY: dict[str, str] = {
     "union_input":         "Naive Union",
-    "applied_alignments":  "Naive Applied Alignments",
+    "applied_alignments":  "Applied Alignments",
     "arom_ontology":       "AROM",
     "comerger_ontology":   "CoMerger",
     "boomer_ontology":     "Boomer",
@@ -245,6 +245,19 @@ _REGISTRY: dict[str, dict] = {
             "Różnica wskazuje ile par alignmentu LLM uznał za niepoprawne i pozostawił rozdzielone."
         ),
     },
+    "multi_domain_range_count": {
+        "source": "self-implemented",
+        "categories": ["Domain Coherence"],
+        "target": "= 0",
+        "interpretation": (
+            "Number of properties with more than one rdfs:domain or rdfs:range declaration "
+            "in the merged ontology. OWL interprets multiple domain/range axioms as their "
+            "intersection (conjunction): if a property has domain A and domain B, every "
+            "instance using it is inferred to belong to both A and B simultaneously — "
+            "causing unintended inferences or unsatisfiability when A and B are disjoint. "
+            "Target = 0: each property should declare at most one domain and at most one range."
+        ),
+    },
     # ── Understandability ─────────────────────────────────────────────────────
     "annotation_coverage_ratio": {
         "source": "self-implemented",
@@ -338,6 +351,27 @@ def _count_cycles(g: Graph) -> int:
                 stack.pop()
 
     return cycles
+
+
+def _multi_domain_range_count(g: Graph) -> float:
+    """Count properties with more than one rdfs:domain or rdfs:range declaration.
+
+    OWL interprets multiple domain/range axioms as conjunction, so an unintended
+    second declaration causes unexpected inferences (or unsatisfiability if the
+    two classes are disjoint).  Target = 0.
+    """
+    dom: dict[URIRef, int] = {}
+    rng: dict[URIRef, int] = {}
+    for s, _, _ in g.triples((None, RDFS.domain, None)):
+        if isinstance(s, URIRef):
+            dom[s] = dom.get(s, 0) + 1
+    for s, _, _ in g.triples((None, RDFS.range, None)):
+        if isinstance(s, URIRef):
+            rng[s] = rng.get(s, 0) + 1
+    return float(sum(
+        1 for p in set(dom) | set(rng)
+        if dom.get(p, 0) > 1 or rng.get(p, 0) > 1
+    ))
 
 
 def _connectivity_ratio(g: Graph) -> float:
@@ -632,6 +666,7 @@ def _compute_self_metrics(
         "connectivity_ratio": round(connectivity, 4),
         "triple_preservation_ratio": round(tpr, 4),
         "annotation_coverage_ratio": round(annotation_coverage, 4),
+        "multi_domain_range_count": _multi_domain_range_count(g),
         **hierarchy,
     }
 
@@ -1255,7 +1290,7 @@ def main() -> None:
     # Column widths chosen to fit the longest display name in each slot.
     hdr_parts = [f"{'metric':<{col}}", f"{_COLUMN_DISPLAY['union_input']:>15}"]
     if has_app:
-        hdr_parts.append(f"{_COLUMN_DISPLAY['applied_alignments']:>24}")
+        hdr_parts.append(f"{_COLUMN_DISPLAY['applied_alignments']:>18}")
     if has_arom:
         hdr_parts.append(f"{_COLUMN_DISPLAY['arom_ontology']:>10}")
     if has_comerger:
@@ -1286,7 +1321,7 @@ def main() -> None:
         tgt = meta["target"]
         parts = [f"{metric_name:<{col}}", u_s]
         if has_app:
-            parts.append(_fs(vals.get("applied_alignments"), 24))
+            parts.append(_fs(vals.get("applied_alignments"), 18))
         if has_arom:
             parts.append(_fs(vals.get("arom_ontology"), 10))
         if has_comerger:
