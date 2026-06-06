@@ -83,19 +83,33 @@ def _collect_namespaces(graphs: list[Graph]) -> set[str]:
 
 
 def _filter_substring_namespaces(namespaces: set[str]) -> set[str]:
-    """Drop namespaces that are strict prefixes of other namespaces.
+    """Remove namespaces until no one is a lexical substring of another.
 
-    Boomer requires that no namespace be a lexical substring of another (it
-    interferes with within-namespace equivalence constraints).  E.g. if we
-    collected both 'http://' (from some malformed URI) and 'http://cmt#',
-    drop 'http://' — it's a prefix of every other http namespace.
+    Boomer requires this strictly (not just prefix-free).  Two resolution rules:
+    - Prefix case  (B starts with A, A shorter): drop A — B is more specific.
+    - Embedded case (A appears inside B but B doesn't start with A): drop B —
+      it's a malformed/intermediate URI that happens to embed a real namespace.
+    Iterates until stable (handles chains).
     """
-    sorted_ns = sorted(namespaces, key=len)
     result = set(namespaces)
-    for i, short in enumerate(sorted_ns):
-        for longer in sorted_ns[i + 1:]:
-            if longer.startswith(short) and longer != short:
-                result.discard(short)
+    changed = True
+    while changed:
+        changed = False
+        current = sorted(result, key=len)
+        for a in current:
+            if a not in result:
+                continue
+            for b in current:
+                if a is b or b not in result or a == b:
+                    continue
+                if a in b:
+                    if b.startswith(a):
+                        result.discard(a)  # prefix case: a is too short, drop it
+                    else:
+                        result.discard(b)  # embedded case: b is malformed, drop it
+                    changed = True
+                    break
+            if changed:
                 break
     return result
 

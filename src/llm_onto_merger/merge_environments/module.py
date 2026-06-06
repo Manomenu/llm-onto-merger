@@ -6,7 +6,7 @@ from llm_onto_merger.logger import get_logger
 from llm_onto_merger.ontology import (
     DropReport,
     Entity,
-    apply_alignments,
+    collapse_alignments,
     entities_to_graph,
     local_name,
 )
@@ -161,7 +161,7 @@ class MergeEnvironmentsModule:
             seed_label,
             len(env.alignments),
         )
-        fallback_graph = apply_alignments(env.onto_1, env.onto_2, env.alignments)
+        fallback_graph = collapse_alignments(env.onto_1, env.onto_2, env.alignments)
         log.warning(
             "env %d: fallback produced %d triples (input was %d)",
             idx,

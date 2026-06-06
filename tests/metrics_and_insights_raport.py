@@ -97,15 +97,13 @@ def _compute_scenario(
 
     metrics: dict[str, dict[str, float | None]] = {}
     for name, g in graphs.items():
+        print(f"  computing metrics: {name} ({len(g)} triples) …", flush=True)
         union_arg = None if name == "union_input" else union
         prov = arom_provenance if name == "arom_ontology" else None
         metrics[name] = _compute_self_metrics(
             g, onto1_entities, onto2_entities, union_arg, arom_provenance=prov
         )
-
-    print(f"  running HermiT for {out_dir.name} …")
-    for name, g in graphs.items():
-        metrics[name].update(_reasoner_check(g, f"{out_dir.name}/{name}"))
+        metrics[name]["unsatisfiable_classes"] = None  # HermiT disabled
 
     suspected_counts: dict[str, int] = {}
     alignment_stats: dict | None = None

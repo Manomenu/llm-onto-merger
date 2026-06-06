@@ -133,13 +133,13 @@ run_boomer_once() {
     else
       echo "  WARNING: --skip-all but $cache_dir/merged_ontology.owl missing — Boomer column will be absent"
     fi
-  elif [ ! -f "$cache_dir/merged_ontology.owl" ]; then
+  else
     echo "  → running Boomer ($tool) → $cache_dir"
     mkdir -p "$cache_dir"
-    ./thirdparty/boomer/boomer.sh "$BASE" "$CANDIDATE" "$cache_dir" "$tool" \
-      >"$cache_dir/run.log" 2>&1
-  else
-    echo "  → reusing cached Boomer ($tool) from $cache_dir"
+    if ! ./thirdparty/boomer/boomer.sh "$BASE" "$CANDIDATE" "$cache_dir" "$tool" \
+        >"$cache_dir/run.log" 2>&1; then
+      echo "  WARNING: Boomer ($tool) failed (exit $?) — boomer column will be absent. See $cache_dir/run.log"
+    fi
   fi
   case "$tool" in
     aml)    BOOMER_AML_DIR="$cache_dir" ;;
@@ -156,13 +156,13 @@ run_arom_once() {
     else
       echo "  WARNING: --skip-all but $AROM_DIR_CACHE/arom_ontology.owl missing — AROM column will be absent"
     fi
-  elif [ ! -f "$AROM_DIR_CACHE/arom_ontology.owl" ]; then
+  else
     echo "  → running AROM → $AROM_DIR_CACHE"
     mkdir -p "$AROM_DIR_CACHE"
-    ./thirdparty/arom/arom.sh "$BASE" "$CANDIDATE" "$AROM_DIR_CACHE" \
-      >"$AROM_DIR_CACHE/run.log" 2>&1
-  else
-    echo "  → reusing cached AROM from $AROM_DIR_CACHE"
+    if ! ./thirdparty/arom/arom.sh "$BASE" "$CANDIDATE" "$AROM_DIR_CACHE" \
+        >"$AROM_DIR_CACHE/run.log" 2>&1; then
+      echo "  WARNING: AROM failed (exit $?) — arom column will be absent. See $AROM_DIR_CACHE/run.log"
+    fi
   fi
 }
 run_arom_once
@@ -176,13 +176,13 @@ run_comerger_once() {
     else
       echo "  WARNING: --skip-all but $COMERGER_DIR_CACHE/merged_ontology.owl missing — CoMerger column will be absent"
     fi
-  elif [ ! -f "$COMERGER_DIR_CACHE/merged_ontology.owl" ]; then
+  else
     echo "  → running CoMerger → $COMERGER_DIR_CACHE"
     mkdir -p "$COMERGER_DIR_CACHE"
-    ./thirdparty/CoMerger-1.2/comerger.sh "$BASE" "$CANDIDATE" "$COMERGER_DIR_CACHE" \
-      >"$COMERGER_DIR_CACHE/run.log" 2>&1
-  else
-    echo "  → reusing cached CoMerger from $COMERGER_DIR_CACHE"
+    if ! ./thirdparty/CoMerger-1.2/comerger.sh "$BASE" "$CANDIDATE" "$COMERGER_DIR_CACHE" \
+        >"$COMERGER_DIR_CACHE/run.log" 2>&1; then
+      echo "  WARNING: CoMerger failed (exit $?) — comerger column will be absent. See $COMERGER_DIR_CACHE/run.log"
+    fi
   fi
 }
 run_comerger_once

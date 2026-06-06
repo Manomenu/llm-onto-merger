@@ -28,6 +28,7 @@ Writes:
 import argparse
 import csv
 import json
+import multiprocessing
 import sys
 from collections import defaultdict, deque
 from pathlib import Path
@@ -86,18 +87,7 @@ _REGISTRY: dict[str, dict] = {
             "przez cross-ontology is-a lub zgrupowane pod wspólnym przodkiem."
         ),
     },
-    "unsatisfiable_classes": {
-        "source": "hermit_reasoner",
-        "categories": ["Structural Coherence"],
-        "target": "= 0",
-        "interpretation": (
-            "Liczba klas inferowanych przez HermiT jako równoważne owl:Nothing — klas "
-            "niemożliwych do instancjonowania bez logicznej sprzeczności. Docelowo = 0. "
-            "Główna miara Structural Coherence: 'An ontology is consistent if its axioms "
-            "do not lead to logical contradictions' (Jiménez-Ruiz & Cuenca Grau, 2011). "
-            "Wymaga: owlready2 + Java."
-        ),
-    },
+    # "unsatisfiable_classes": disabled — HermiT too slow on large ontologies
     "cycle_count": {
         "source": "self-implemented",
         "categories": ["Structural Coherence"],
@@ -446,6 +436,24 @@ def _hierarchy_stats(g: Graph, cls: set[URIRef]) -> dict[str, float]:
 _ALIAS_PRED = "http://merged#alias"
 
 
+_WELL_KNOWN_NS = frozenset(
+    str(ns)
+    for ns in (RDF, RDFS, OWL, XSD)
+)
+
+
+def _primary_ns(entities: set[URIRef]) -> str:
+    """Namespace (prefix up to and including '#') with the most URIs, ignoring well-known namespaces."""
+    from collections import Counter
+    counts: Counter[str] = Counter()
+    for u in entities:
+        s = str(u)
+        ns = s[: s.index("#") + 1] if "#" in s else (s[: s.rindex("/") + 1] if "/" in s else "")
+        if ns and ns not in _WELL_KNOWN_NS:
+            counts[ns] += 1
+    return counts.most_common(1)[0][0] if counts else ""
+
+
 def _build_alias_maps(
     g: Graph,
     onto1_locals: set[str],
@@ -499,7 +507,7 @@ def _build_alias_maps(
                 new_to_source[new_local] = "both" if existing and existing != src else src
             # Make old→new mappings so triple_preservation_ratio normalises correctly:
             # source URIs (e.g. http://cmt#Person) collapse to the AROM code (Code_6).
-            for onto_n, source_local in by_onto.items():
+            for source_local in by_onto.values():
                 old_to_new[source_local] = new_local
 
     return old_to_new, new_to_source
@@ -519,15 +527,28 @@ def _compute_self_metrics(
     onto1_locals = {_local(e) for e in onto1_entities}
     onto2_locals = {_local(e) for e in onto2_entities}
 
-    # Alias-aware source attribution.
-    #   - Original URI from onto1/onto2 → precise attribution by URI membership.
-    #   - New URI (introduced by the LLM, e.g. zz::MedicalSurgery): attribute by alias
-    #     triple, mapping back to the source ontology of the original local name.
-    #   - AROM Code_N URI: attribute via rdfs:label provenance map (arom_provenance).
-    # Without this, every rename zeroes the cross-onto and intra-onto counters.
+    # Namespace-primary + alias-aware source attribution.
+    #
+    # Priority order for determining whether a URI is "from onto1" or "from onto2":
+    #   1. Original URI membership in onto1_entities / onto2_entities (exact match).
+    #   2. Namespace check: if the URI's namespace equals onto1's dominant namespace
+    #      (and not onto2's), attribute to onto1, and vice-versa.  This handles LLM
+    #      outputs that create human-readable names inside the original ontology
+    #      namespaces (e.g. human.owl#Membrane when original used NCI codes).
+    #   3. Alias / provenance fallback for entities in a third namespace (e.g. zz::,
+    #      merged::, AROM's merging::).  These use _build_alias_maps / arom_provenance
+    #      and may be tagged "both" (merged from one entity in each ontology).
+    #
+    # Cross-onto counting rule: a triple counts only when both endpoints are
+    # unambiguously attributed to *different* ontologies.  Any endpoint whose
+    # namespace is neither onto1 nor onto2 and whose alias says "both" (i.e. it is a
+    # merged entity bridging both) is treated as neutral — its relations are NOT
+    # cross-onto by themselves (the bridge is the merge, not a new relation).
     _, new_to_source = _build_alias_maps(
         g, onto1_locals, onto2_locals, arom_provenance=arom_provenance
     )
+    onto1_ns = _primary_ns(onto1_entities)
+    onto2_ns = _primary_ns(onto2_entities)
 
     def _from_onto1(u) -> bool:
         if not isinstance(u, URIRef):
@@ -535,6 +556,11 @@ def _compute_self_metrics(
         if u in onto1_entities:
             return True
         if u in onto2_entities:
+            return False
+        s = str(u)
+        if onto1_ns and s.startswith(onto1_ns) and not (onto2_ns and s.startswith(onto2_ns)):
+            return True
+        if onto2_ns and s.startswith(onto2_ns):
             return False
         return new_to_source.get(_local(u)) in ("onto1", "both")
 
@@ -544,6 +570,11 @@ def _compute_self_metrics(
         if u in onto2_entities:
             return True
         if u in onto1_entities:
+            return False
+        s = str(u)
+        if onto2_ns and s.startswith(onto2_ns) and not (onto1_ns and s.startswith(onto1_ns)):
+            return True
+        if onto1_ns and s.startswith(onto1_ns):
             return False
         return new_to_source.get(_local(u)) in ("onto2", "both")
 
@@ -563,16 +594,30 @@ def _compute_self_metrics(
     unique_local = len({_local(c) for c in cls})
     syntactic_uniqueness_ratio = unique_local / n_c if n_c else 1.0
 
-    # Cross-ontology metrics (alias-aware)
+    # Cross-ontology metrics (namespace-primary, alias-aware).
+    # An entity in a "third" namespace (e.g. AROM merging::, LLM zz::) whose alias
+    # says "both" satisfies _from_onto1 AND _from_onto2 simultaneously — it is a
+    # merged entity.  Any triple involving such an endpoint is NOT a new cross-onto
+    # relation; the bridge is the merge itself.  We exclude triples where ANY
+    # endpoint is "both"-attributed so tools like AROM (all Code_N = "both") score 0
+    # while direct cross-namespace triples (e.g. human.owl#X subClassOf mouse.owl#Y)
+    # added by the LLM are correctly counted.
+    def _is_cross(s, o) -> bool:
+        s1, s2 = _from_onto1(s), _from_onto2(s)
+        o1, o2 = _from_onto1(o), _from_onto2(o)
+        if (s1 and s2) or (o1 and o2):  # any "both" endpoint → excluded
+            return False
+        return (s1 and o2) or (s2 and o1)
+
     cross_sub = sum(
         1
         for s, _, o in g.triples((None, _SUB, None))
-        if (_from_onto1(s) and _from_onto2(o)) or (_from_onto2(s) and _from_onto1(o))
+        if _is_cross(s, o)
     )
     cross_rel = sum(
         1
         for s, _, o in g
-        if (_from_onto1(s) and _from_onto2(o)) or (_from_onto2(s) and _from_onto1(o))
+        if _is_cross(s, o)
     )
 
     connectivity = _connectivity_ratio(g)
@@ -691,6 +736,8 @@ def _compute_suspected_counts(
     onto1_locals = {_local(e) for e in onto1_entities}
     onto2_locals = {_local(e) for e in onto2_entities}
     _, new_to_source = _build_alias_maps(g, onto1_locals, onto2_locals)
+    onto1_ns = _primary_ns(onto1_entities)
+    onto2_ns = _primary_ns(onto2_entities)
 
     def _from_onto1(u) -> bool:
         if not isinstance(u, URIRef):
@@ -698,6 +745,11 @@ def _compute_suspected_counts(
         if u in onto1_entities:
             return True
         if u in onto2_entities:
+            return False
+        s = str(u)
+        if onto1_ns and s.startswith(onto1_ns) and not (onto2_ns and s.startswith(onto2_ns)):
+            return True
+        if onto2_ns and s.startswith(onto2_ns):
             return False
         return new_to_source.get(_local(u)) in ("onto1", "both")
 
@@ -708,22 +760,32 @@ def _compute_suspected_counts(
             return True
         if u in onto1_entities:
             return False
+        s = str(u)
+        if onto2_ns and s.startswith(onto2_ns) and not (onto1_ns and s.startswith(onto1_ns)):
+            return True
+        if onto1_ns and s.startswith(onto1_ns):
+            return False
         return new_to_source.get(_local(u)) in ("onto2", "both")
 
     def _is_tainted(u) -> bool:
         return isinstance(u, URIRef) and u in tainted_uris
 
+    def _is_cross(s, o) -> bool:
+        s1, s2 = _from_onto1(s), _from_onto2(s)
+        o1, o2 = _from_onto1(o), _from_onto2(o)
+        if (s1 and s2) or (o1 and o2):
+            return False
+        return (s1 and o2) or (s2 and o1)
+
     cross_sub_susp = sum(
         1
         for s, _, o in g.triples((None, _SUB, None))
-        if (_is_tainted(s) or _is_tainted(o))
-        and ((_from_onto1(s) and _from_onto2(o)) or (_from_onto2(s) and _from_onto1(o)))
+        if (_is_tainted(s) or _is_tainted(o)) and _is_cross(s, o)
     )
     cross_rel_susp = sum(
         1
         for s, _, o in g
-        if (_is_tainted(s) or _is_tainted(o))
-        and ((_from_onto1(s) and _from_onto2(o)) or (_from_onto2(s) and _from_onto1(o)))
+        if (_is_tainted(s) or _is_tainted(o)) and _is_cross(s, o)
     )
 
     return {
@@ -779,10 +841,30 @@ def _strip_hermit_unsupported(g: Graph) -> Graph:
     return result
 
 
-def _reasoner_check(g: Graph, label: str) -> dict[str, float | None]:
-    """Run HermiT via owlready2 and return number of unsatisfiable classes."""
+_HERMIT_TIMEOUT_S = 120
+
+
+def _hermit_worker(tmp_path: str, q: "multiprocessing.Queue[dict]") -> None:
+    import owlready2
+
     try:
-        import owlready2
+        world = owlready2.World()
+        onto = world.get_ontology(f"file://{tmp_path}").load()
+        with onto:
+            owlready2.sync_reasoner_hermit(world, infer_property_values=False)
+        unsat = list(world.inconsistent_classes())
+        q.put({"unsatisfiable_classes": float(len(unsat))})
+    except Exception as exc:
+        q.put({"unsatisfiable_classes": None, "error": str(exc)})
+
+
+def _reasoner_check(g: Graph, label: str) -> dict[str, float | None]:
+    """Run HermiT via owlready2 and return number of unsatisfiable classes.
+
+    Killed after _HERMIT_TIMEOUT_S seconds to handle large/complex ontologies.
+    """
+    try:
+        import owlready2  # noqa: F401 — availability check
     except ImportError:
         print(
             f"  [HermiT/{label}] owlready2 not installed — skipping (pip install owlready2)"
@@ -805,23 +887,27 @@ def _reasoner_check(g: Graph, label: str) -> dict[str, float | None]:
 
     try:
         print(f"  → HermiT [{label}] …", end=" ", flush=True)
-        world = owlready2.World()
-        onto = world.get_ontology(f"file://{tmp_path}").load()
-        with onto:
-            owlready2.sync_reasoner_hermit(world, infer_property_values=False)
-        unsat = list(world.inconsistent_classes())
-        print(f"{len(unsat)} unsatisfiable classes")
-        return {"unsatisfiable_classes": float(len(unsat))}
-    except Exception as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
-        return {"unsatisfiable_classes": None}
+        q: multiprocessing.Queue = multiprocessing.Queue()
+        p = multiprocessing.Process(target=_hermit_worker, args=(tmp_path, q))
+        p.start()
+        p.join(_HERMIT_TIMEOUT_S)
+        if p.is_alive():
+            p.kill()
+            p.join()
+            print(f"TIMEOUT (>{_HERMIT_TIMEOUT_S}s) — skipping")
+            return {"unsatisfiable_classes": None}
+        result = q.get_nowait()
+        if "error" in result:
+            print(f"ERROR: {result['error']}", file=sys.stderr)
+            return {"unsatisfiable_classes": None}
+        print(f"{int(result['unsatisfiable_classes'])} unsatisfiable classes")
+        return result
     finally:
         os.unlink(tmp_path)
 
 
 # ── HTML report ───────────────────────────────────────────────────────────────
 
-_CAT_ABBR: dict[str, str] = {cat: abbr for cat, (abbr, _) in _CATEGORIES.items()}
 _CAT_COLOR: dict[str, str] = {cat: color for cat, (_, color) in _CATEGORIES.items()}
 
 _SOURCE_BORDER: dict[str, str] = {
@@ -1128,10 +1214,9 @@ def main() -> None:
         )
         print(f"  {name}: done")
 
-    # ── HermiT reasoner ───────────────────────────────────────────────────────
-    print("\nRunning HermiT reasoner …")
-    for name, g in graph_objects.items():
-        self_metrics[name].update(_reasoner_check(g, name))
+    # ── HermiT reasoner (disabled — too slow on large ontologies) ────────────
+    for name in graph_objects:
+        self_metrics[name]["unsatisfiable_classes"] = None
 
     # ── Alignment application stats (from sidecar JSON written by merger) ─────
     suspected_counts: dict[str, int] = {}

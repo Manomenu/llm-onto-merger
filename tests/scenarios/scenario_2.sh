@@ -169,13 +169,13 @@ if [ "$SKIP_ALL" = "1" ]; then
   else
     echo "  WARNING: --skip-all but $BOOMER_CACHE/merged_ontology.owl missing — Boomer column will be absent"
   fi
-elif [ ! -f "$BOOMER_CACHE/merged_ontology.owl" ]; then
+else
   echo "  → running Boomer ($TOOL) → $BOOMER_CACHE"
   mkdir -p "$BOOMER_CACHE"
-  ./thirdparty/boomer/boomer.sh "$BASE" "$CANDIDATE" "$BOOMER_CACHE" "$TOOL" \
-    >"$BOOMER_CACHE/run.log" 2>&1
-else
-  echo "  → reusing cached Boomer ($TOOL) from $BOOMER_CACHE"
+  if ! ./thirdparty/boomer/boomer.sh "$BASE" "$CANDIDATE" "$BOOMER_CACHE" "$TOOL" \
+      >"$BOOMER_CACHE/run.log" 2>&1; then
+    echo "  WARNING: Boomer ($TOOL) failed (exit $?) — boomer column will be absent. See $BOOMER_CACHE/run.log"
+  fi
 fi
 if [ -f "$BOOMER_CACHE/merged_ontology.owl" ]; then
   cp "$BOOMER_CACHE/merged_ontology.owl" "$OUT_DIR/boomer_ontology.owl"
@@ -192,13 +192,13 @@ if [ "$SKIP_ALL" = "1" ]; then
   else
     echo "  WARNING: --skip-all but $AROM_CACHE/arom_ontology.owl missing — AROM column will be absent"
   fi
-elif [ ! -f "$AROM_CACHE/arom_ontology.owl" ]; then
+else
   echo "  → running AROM → $AROM_CACHE"
   mkdir -p "$AROM_CACHE"
-  ./thirdparty/arom/arom.sh "$BASE" "$CANDIDATE" "$AROM_CACHE" \
-    >"$AROM_CACHE/run.log" 2>&1
-else
-  echo "  → reusing cached AROM from $AROM_CACHE"
+  if ! ./thirdparty/arom/arom.sh "$BASE" "$CANDIDATE" "$AROM_CACHE" \
+      >"$AROM_CACHE/run.log" 2>&1; then
+    echo "  WARNING: AROM failed (exit $?) — arom column will be absent. See $AROM_CACHE/run.log"
+  fi
 fi
 if [ -f "$AROM_CACHE/arom_ontology.owl" ]; then
   cp "$AROM_CACHE/arom_ontology.owl" "$OUT_DIR/arom_ontology.owl"
@@ -215,13 +215,13 @@ if [ "$SKIP_ALL" = "1" ]; then
   else
     echo "  WARNING: --skip-all but $COMERGER_CACHE/merged_ontology.owl missing — CoMerger column will be absent"
   fi
-elif [ ! -f "$COMERGER_CACHE/merged_ontology.owl" ]; then
+else
   echo "  → running CoMerger → $COMERGER_CACHE"
   mkdir -p "$COMERGER_CACHE"
-  ./thirdparty/CoMerger-1.2/comerger.sh "$BASE" "$CANDIDATE" "$COMERGER_CACHE" \
-    >"$COMERGER_CACHE/run.log" 2>&1
-else
-  echo "  → reusing cached CoMerger from $COMERGER_CACHE"
+  if ! ./thirdparty/CoMerger-1.2/comerger.sh "$BASE" "$CANDIDATE" "$COMERGER_CACHE" \
+      >"$COMERGER_CACHE/run.log" 2>&1; then
+    echo "  WARNING: CoMerger failed (exit $?) — comerger column will be absent. See $COMERGER_CACHE/run.log"
+  fi
 fi
 if [ -f "$COMERGER_CACHE/merged_ontology.owl" ]; then
   cp "$COMERGER_CACHE/merged_ontology.owl" "$OUT_DIR/comerger_ontology.owl"

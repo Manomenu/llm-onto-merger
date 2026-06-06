@@ -620,8 +620,12 @@ public class AssignBlockProperties {
 		OWLOntology ClusterOntology;
 		OWLOntologyManager ClusterManager;
 
-		
+
 		OWLClassExpression c = ((OWLClassAssertionAxiom) myAxiom).getClassExpression();
+		if (c.isAnonymous()) {
+			System.out.println("unprocess axioms (anonymous class): " + myAxiom);
+			return ontM;
+		}
 		OWLClass cc = c.asOWLClass();
 		if (cc instanceof OWLClass) {
 			OWLClass refClass = ontM.getKeyValueEqClass().get(cc);

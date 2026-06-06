@@ -13,7 +13,7 @@ from .kg2code import (
     entities_to_graph,
     graph_to_string,
 )
-from .merge import apply_alignments
+from .merge import apply_alignments, collapse_alignments
 from .uri import local_name, namespace_of
 
 __all__ = [
@@ -35,4 +35,5 @@ __all__ = [
     "get_border",
     # merge
     "apply_alignments",
+    "collapse_alignments",
 ]
