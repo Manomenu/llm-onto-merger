@@ -115,6 +115,7 @@ REPORT_LOG="$SCENARIO_DIR/m_i_raport_${DATASET_S2}.log"
 BOOMER_CACHE="$SCENARIO_DIR/.boomer_$TOOL"
 AROM_CACHE="$SCENARIO_DIR/.arom"
 COMERGER_CACHE="$SCENARIO_DIR/.comerger"
+APPLIED_CACHE="$SCENARIO_DIR/.applied_$TOOL"
 
 mkdir -p "$OUT_DIR"
 
@@ -160,6 +161,28 @@ else
     echo "  WARNING: llm-onto-merger exited with code $merger_rc — see $OUT_DIR/run.log" >&2
     exit "$merger_rc"
   fi
+fi
+
+# ── Applied alignments baseline (cached per tool, independent of LLM run) ──
+if [ "$SKIP_ALL" = "1" ]; then
+  if [ -f "$APPLIED_CACHE/applied_alignments.owl" ]; then
+    echo "  → --skip-all: reusing cached applied alignments ($TOOL) from $APPLIED_CACHE"
+  else
+    echo "  WARNING: --skip-all but $APPLIED_CACHE/applied_alignments.owl missing — applied_alignments column will be absent"
+  fi
+else
+  echo "  → running applied alignments ($TOOL) → $APPLIED_CACHE"
+  mkdir -p "$APPLIED_CACHE"
+  if ! uv run python tests/generate_applied_alignments.py \
+      --onto1 "$BASE" --onto2 "$CANDIDATE" \
+      --output "$APPLIED_CACHE" --tool "$TOOL" \
+      >"$APPLIED_CACHE/run.log" 2>&1; then
+    echo "  WARNING: generate_applied_alignments failed (exit $?) — applied column will be absent. See $APPLIED_CACHE/run.log"
+  fi
+fi
+if [ -f "$APPLIED_CACHE/applied_alignments.owl" ]; then
+  cp "$APPLIED_CACHE/applied_alignments.owl" "$OUT_DIR/applied_alignments.owl"
+  echo "  → applied_alignments.owl ← $APPLIED_CACHE/applied_alignments.owl"
 fi
 
 # ── Boomer (cached per tool) ────────────────────────────────────────────────

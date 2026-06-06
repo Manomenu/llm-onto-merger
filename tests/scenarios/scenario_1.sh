@@ -120,6 +120,35 @@ SCENARIOS=(
   "20k_logmap  20000  logmap"
 )
 
+# ── Applied alignments per-tool cache ────────────────────────────────────────
+APPLIED_AML_DIR=""
+APPLIED_LOGMAP_DIR=""
+
+run_applied_once() {
+  local tool="$1"
+  local cache_dir="$OUT_BASE/.applied_$tool"
+  if [ "$SKIP_ALL" = "1" ]; then
+    if [ -f "$cache_dir/applied_alignments.owl" ]; then
+      echo "  → --skip-all: reusing cached applied alignments ($tool) from $cache_dir"
+    else
+      echo "  WARNING: --skip-all but $cache_dir/applied_alignments.owl missing — applied column will be absent"
+    fi
+  else
+    echo "  → running applied alignments ($tool) → $cache_dir"
+    mkdir -p "$cache_dir"
+    if ! uv run python tests/generate_applied_alignments.py \
+        --onto1 "$BASE" --onto2 "$CANDIDATE" \
+        --output "$cache_dir" --tool "$tool" \
+        >"$cache_dir/run.log" 2>&1; then
+      echo "  WARNING: generate_applied_alignments ($tool) failed (exit $?) — applied column will be absent. See $cache_dir/run.log"
+    fi
+  fi
+  case "$tool" in
+    aml)    APPLIED_AML_DIR="$cache_dir" ;;
+    logmap) APPLIED_LOGMAP_DIR="$cache_dir" ;;
+  esac
+}
+
 # ── Boomer per-tool cache (avoids running Boomer 4x when only 2 tools are used) ──
 BOOMER_AML_DIR=""
 BOOMER_LOGMAP_DIR=""
@@ -224,6 +253,17 @@ for spec in "${SCENARIOS[@]}"; do
       --output "$out" \
       --max-env-chars "$chars" \
       >"$log_file" 2>&1
+  fi
+
+  # ── Applied alignments (per-tool cache, copied into each scenario dir) ──
+  run_applied_once "$tool"
+  case "$tool" in
+    aml)    applied_cache_dir="$APPLIED_AML_DIR" ;;
+    logmap) applied_cache_dir="$APPLIED_LOGMAP_DIR" ;;
+  esac
+  if [ -f "$applied_cache_dir/applied_alignments.owl" ]; then
+    cp "$applied_cache_dir/applied_alignments.owl" "$out/applied_alignments.owl"
+    echo "  → applied_alignments.owl ← $applied_cache_dir/applied_alignments.owl"
   fi
 
   # ── Boomer (per-tool cache, copied into each scenario dir) ──────────────

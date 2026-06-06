@@ -95,13 +95,21 @@ def _compute_scenario(
     if boomer is not None:
         graphs["boomer_ontology"] = boomer
 
+    relabeling_map: dict[str, str] | None = None
+    relabeling_path = out_dir / "relabeling_map.json"
+    if relabeling_path.exists():
+        relabeling_map = json.loads(relabeling_path.read_text(encoding="utf-8"))
+        print(f"  relabeling_map: {len(relabeling_map)} entries")
+
     metrics: dict[str, dict[str, float | None]] = {}
     for name, g in graphs.items():
         print(f"  computing metrics: {name} ({len(g)} triples) …", flush=True)
         union_arg = None if name == "union_input" else union
         prov = arom_provenance if name == "arom_ontology" else None
+        rmap = relabeling_map if name == "merged_ontology" else None
         metrics[name] = _compute_self_metrics(
-            g, onto1_entities, onto2_entities, union_arg, arom_provenance=prov
+            g, onto1_entities, onto2_entities, union_arg,
+            arom_provenance=prov, relabeling_map=rmap,
         )
         metrics[name]["unsatisfiable_classes"] = None  # HermiT disabled
 

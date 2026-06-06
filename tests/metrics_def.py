@@ -459,6 +459,7 @@ def _build_alias_maps(
     onto1_locals: set[str],
     onto2_locals: set[str],
     arom_provenance: dict[str, dict[str, str]] | None = None,
+    relabeling_map: dict[str, str] | None = None,
 ) -> tuple[dict[str, str], dict[str, str]]:
     """Build local-name alias maps from the merged graph.
 
@@ -510,6 +511,12 @@ def _build_alias_maps(
             for source_local in by_onto.values():
                 old_to_new[source_local] = new_local
 
+    # Format 3: create_ontology relabeling map (old_local → new_local for rdfs:label renames)
+    if relabeling_map:
+        for old_local, new_local in relabeling_map.items():
+            if old_local not in old_to_new:
+                old_to_new[old_local] = new_local
+
     return old_to_new, new_to_source
 
 
@@ -519,6 +526,7 @@ def _compute_self_metrics(
     onto2_entities: set[URIRef],
     union: Graph | None = None,
     arom_provenance: dict[str, dict[str, str]] | None = None,
+    relabeling_map: dict[str, str] | None = None,
 ) -> dict[str, float]:
     cls = _classes(g)
     prop = _properties(g)
@@ -545,7 +553,8 @@ def _compute_self_metrics(
     # merged entity bridging both) is treated as neutral — its relations are NOT
     # cross-onto by themselves (the bridge is the merge, not a new relation).
     _, new_to_source = _build_alias_maps(
-        g, onto1_locals, onto2_locals, arom_provenance=arom_provenance
+        g, onto1_locals, onto2_locals, arom_provenance=arom_provenance,
+        relabeling_map=relabeling_map,
     )
     onto1_ns = _primary_ns(onto1_entities)
     onto2_ns = _primary_ns(onto2_entities)
@@ -627,7 +636,8 @@ def _compute_self_metrics(
     # so str(bnode) comparisons produce false negatives for restrictions/unions.
     if union is not None:
         old_to_new, _ = _build_alias_maps(
-            g, onto1_locals, onto2_locals, arom_provenance=arom_provenance
+            g, onto1_locals, onto2_locals, arom_provenance=arom_provenance,
+            relabeling_map=relabeling_map,
         )
 
         def _norm(local: str) -> str:

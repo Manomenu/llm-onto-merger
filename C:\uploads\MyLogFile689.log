@@ -1,0 +1,291 @@
+Jun 06, 2026 9:51:15 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: The preferred ontology has been set to (the priority of the input ontologies): equal
+
+Jun 06, 2026 9:51:15 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: 2 input ontologies has been read and parsed into merged model. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: 
+ Ontology: swo.owl has been read. 
+	 Number of classes: 1971	 Number of objectProperties: 161	 Number of dataProperties: 5	 Number of instances: 446	 Number of annotations: 11272	 TBOX size: 4728	 ABOX siz: 473
+ Ontology: union.owl has been read. 
+	 Number of classes: 123	 Number of objectProperties: 140	 Number of dataProperties: 31	 Number of instances: 17	 Number of annotations: 634	 TBOX size: 630	 ABOX siz: 18
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Total time for reading all input ontologies and save their entities into the merged model is: 1972 ms. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: 4 classes have been collapsed; 	 0 object properties have been collapsed; 	0 datatype properties have been collapsed. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Total time for reading and parsing the corresponding entities between the input ontologies is: 20 ms. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Number of corresponding classes: 4, 	 Number of corresponding object properties: 0, 	 Number of corresponding dataproperties: 0. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: 1179 axioms have been rewritten based on the corresponding entities during collapsed process.
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Replacing the corresponding entities with their reference entities (collapsed process) has been done successfully. Total time: 35 ms. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: A list of adjacent classes has been successfully created. Total time: 4 ms. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Cluster assignment has been done successfully in with 1 iteration. Total time: 1 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: SubClassOf(ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/RO_0002566> <http://purl.obolibrary.org/obo/BFO_0000040>) ObjectUnionOf(ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/RO_0000056> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/RO_0002418> <http://purl.obolibrary.org/obo/BFO_0000015>)) ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/RO_0002215> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/RO_0000056> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/RO_0002418> <http://purl.obolibrary.org/obo/BFO_0000015>))))) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/IAO_0000225> ObjectOneOf(<http://purl.obolibrary.org/obo/IAO_0000103> <http://purl.obolibrary.org/obo/IAO_0000226> <http://purl.obolibrary.org/obo/IAO_0000227> <http://purl.obolibrary.org/obo/IAO_0000228> <http://purl.obolibrary.org/obo/IAO_0000229> <http://purl.obolibrary.org/obo/OMO_0001000>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/OBI_0100051> ObjectIntersectionOf(<http://purl.obolibrary.org/obo/BFO_0000040> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/RO_0000087> <http://purl.obolibrary.org/obo/OBI_0000112>)) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/OBI_0000047> ObjectIntersectionOf(<http://purl.obolibrary.org/obo/BFO_0000040> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/OBI_0000312> <http://purl.obolibrary.org/obo/OBI_0000094>)) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/license/SWO_1000043> ObjectIntersectionOf(<http://www.ebi.ac.uk/swo/SWO_0000002> ObjectSomeValuesFrom(<http://www.ebi.ac.uk/swo/SWO_9001002> <http://www.ebi.ac.uk/swo/SWO_9000020>) ObjectSomeValuesFrom(<http://www.ebi.ac.uk/swo/SWO_9001002> <http://www.ebi.ac.uk/swo/SWO_9000030>) ObjectSomeValuesFrom(<http://www.ebi.ac.uk/swo/SWO_9001002> <http://www.ebi.ac.uk/swo/license/SWO_10000038>) ObjectSomeValuesFrom(<http://www.ebi.ac.uk/swo/SWO_9001002> ObjectUnionOf(<http://www.ebi.ac.uk/swo/license/SWO_10000037> <http://www.ebi.ac.uk/swo/license/SWO_9000059>))) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/SWO_1100115> ObjectSomeValuesFrom(<http://www.ebi.ac.uk/swo/SWO_0000741> <http://www.ebi.ac.uk/swo/SWO_0000274>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/OBI_0000648> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/OBI_0000312> <http://purl.obolibrary.org/obo/OBI_0200175>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/SWO_0000028> ObjectSomeValuesFrom(<http://www.ebi.ac.uk/swo/SWO_0040005> <http://www.ebi.ac.uk/swo/objective/SWO_4000005>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/OBI_0000023> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/OBI_0000312> <http://purl.obolibrary.org/obo/OBI_0000663>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/OBI_0000792> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/OBI_0000417> <http://purl.obolibrary.org/obo/OBI_0200188>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/OBI_0000457> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/OBI_0000417> <http://purl.obolibrary.org/obo/OBI_0000458>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/SWO_0000029> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/RO_0002353> ObjectIntersectionOf(<http://www.ebi.ac.uk/swo/organization/SWO_9000056> ObjectHasValue(<http://purl.obolibrary.org/obo/RO_0000057> <http://www.ebi.ac.uk/swo/organization/SWO_9000001>))) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/SWO_1100047> ObjectIntersectionOf(<http://www.ebi.ac.uk/swo/SWO_0000001> ObjectHasValue(<http://www.ebi.ac.uk/swo/SWO_0004004> <http://www.ebi.ac.uk/swo/SWO_1200004>)) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/OBI_0002076> ObjectIntersectionOf(<http://purl.obolibrary.org/obo/BFO_0000040> ObjectAllValuesFrom(<http://purl.obolibrary.org/obo/RO_0002351> <http://purl.obolibrary.org/obo/OBI_0100051>)) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/SWO_0000021> ObjectSomeValuesFrom(<http://www.ebi.ac.uk/swo/SWO_0040005> <http://www.ebi.ac.uk/swo/objective/SWO_4000010>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/license/SWO_1000140> ObjectIntersectionOf(ObjectSomeValuesFrom(<http://www.ebi.ac.uk/swo/SWO_9001002> <http://www.ebi.ac.uk/swo/SWO_9000032>) ObjectSomeValuesFrom(<http://www.ebi.ac.uk/swo/SWO_9001002> <http://www.ebi.ac.uk/swo/license/SWO_1000059>)) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/SWO_1100075> ObjectSomeValuesFrom(<http://www.ebi.ac.uk/swo/SWO_0000741> <http://www.ebi.ac.uk/swo/SWO_0000415>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/OBI_0000707> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/OBI_0000417> <http://purl.obolibrary.org/obo/OBI_0000704>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/license/SWO_1000137> ObjectIntersectionOf(ObjectSomeValuesFrom(<http://www.ebi.ac.uk/swo/SWO_9001002> <http://www.ebi.ac.uk/swo/license/SWO_1000060>) ObjectSomeValuesFrom(<http://www.ebi.ac.uk/swo/SWO_9001002> <http://www.ebi.ac.uk/swo/license/SWO_1000136>)) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/APOLLO_SV_00000008> ObjectIntersectionOf(<http://purl.obolibrary.org/obo/OBI_0000011> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/OBI_0000299> ObjectUnionOf(<http://purl.obolibrary.org/obo/IAO_0000010> <http://purl.obolibrary.org/obo/IAO_0000096>))) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/OBI_0000659> ObjectIntersectionOf(<http://purl.obolibrary.org/obo/OBI_0000011> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/OBI_0000417> <http://purl.obolibrary.org/obo/OBI_0000684>)) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/OBI_0000094> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/OBI_0000417> <http://purl.obolibrary.org/obo/OBI_0000456>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/SWO_0000002> ObjectIntersectionOf(<http://purl.obolibrary.org/obo/IAO_0000030> ObjectSomeValuesFrom(InverseOf(<http://www.ebi.ac.uk/swo/has_license>) <http://www.ebi.ac.uk/swo/SWO_0000001>)) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/license/SWO_1000044> ObjectIntersectionOf(<http://www.ebi.ac.uk/swo/license/SWO_1000043> ObjectSomeValuesFrom(<http://www.ebi.ac.uk/swo/license/SWO_1000048> ObjectUnionOf(<http://www.ebi.ac.uk/swo/license/SWO_1000046> <http://www.ebi.ac.uk/swo/license/SWO_1000047>))) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/SWO_1100022> ObjectIntersectionOf(<http://www.ebi.ac.uk/swo/SWO_0000001> ObjectHasValue(<http://www.ebi.ac.uk/swo/SWO_0004004> <http://www.ebi.ac.uk/swo/SWO_1200000>)) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/OBI_0000953> ObjectIntersectionOf(<http://purl.obolibrary.org/obo/OBI_0000047> <http://purl.obolibrary.org/obo/OBI_0100051>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/OBI_0200000> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/OBI_0000417> <http://purl.obolibrary.org/obo/OBI_0200166>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/OBI_0000835> ObjectIntersectionOf(ObjectUnionOf(<http://purl.obolibrary.org/obo/NCBITaxon_9606> <http://purl.obolibrary.org/obo/OBI_0000245>) ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/RO_0000087> <http://purl.obolibrary.org/obo/OBI_0000571>)) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/SWO_0000140> ObjectIntersectionOf(<http://www.ebi.ac.uk/swo/SWO_0000001> ObjectSomeValuesFrom(<http://www.ebi.ac.uk/swo/SWO_0040005> <http://www.ebi.ac.uk/swo/SWO_0000139>)) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/data/SWO_3000060> ObjectSomeValuesFrom(<http://www.ebi.ac.uk/swo/SWO_0004002> ObjectIntersectionOf(<http://purl.obolibrary.org/obo/IAO_0000098> ObjectHasValue(<http://www.ebi.ac.uk/swo/SWO_0004004> <http://www.ebi.ac.uk/swo/SWO_1200000>))) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/license/SWO_1000008> ObjectSomeValuesFrom(<http://www.ebi.ac.uk/swo/SWO_9001002> <http://www.ebi.ac.uk/swo/SWO_9000020>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/SWO_0000396> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/RO_0000087> <http://www.ebi.ac.uk/swo/SWO_0000392>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/SWO_9000076> ObjectIntersectionOf(<http://www.ebi.ac.uk/swo/SWO_0000001> ObjectSomeValuesFrom(<http://www.obofoundry.org/ro/ro.owl#has_part> <http://www.ebi.ac.uk/swo/SWO_0000001>)) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/SWO_0000030> ObjectSomeValuesFrom(<http://www.ebi.ac.uk/swo/SWO_0004001> <http://www.ebi.ac.uk/swo/interface/SWO_9000053>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/OBI_0200171> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/OBI_0000417> <http://purl.obolibrary.org/obo/OBI_0200172>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/SWO_0000397> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/RO_0000087> <http://www.ebi.ac.uk/swo/SWO_0000260>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/SWO_0000026> ObjectSomeValuesFrom(<http://www.ebi.ac.uk/swo/SWO_0000086> <http://www.ebi.ac.uk/swo/data/SWO_3000008>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/OBI_0002989> ObjectIntersectionOf(ObjectUnionOf(<http://purl.obolibrary.org/obo/NCBITaxon_9606> <http://purl.obolibrary.org/obo/OBI_0000245>) ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/RO_0000087> <http://purl.obolibrary.org/obo/OBI_0000018>)) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/SWO_1100079> ObjectSomeValuesFrom(<http://www.ebi.ac.uk/swo/SWO_0000086> <http://edamontology.org/format_3162>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/OBI_0000011> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/BFO_0000055> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/RO_0000059> <http://purl.obolibrary.org/obo/IAO_0000104>)) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/IAO_0000409> ObjectOneOf(<http://purl.obolibrary.org/obo/IAO_0000410> <http://purl.obolibrary.org/obo/IAO_0000420> <http://purl.obolibrary.org/obo/IAO_0000421>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/OBI_0000450> ObjectIntersectionOf(<http://purl.obolibrary.org/obo/OBI_0000245> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/RO_0000087> <http://purl.obolibrary.org/obo/OBI_0000014>)) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/license/SWO_1000009> ObjectSomeValuesFrom(<http://www.ebi.ac.uk/swo/SWO_9001002> <http://www.ebi.ac.uk/swo/SWO_9000016>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/SWO_0000034> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/RO_0002353> ObjectIntersectionOf(<http://www.ebi.ac.uk/swo/organization/SWO_9000055> ObjectHasValue(<http://purl.obolibrary.org/obo/RO_0000057> <http://www.ebi.ac.uk/swo/SWO_0000033>))) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/IAO_0000178> ObjectIntersectionOf(<http://purl.obolibrary.org/obo/BFO_0000040> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/RO_0000053> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/RO_0000059> <http://purl.obolibrary.org/obo/IAO_0000030>))) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/IAO_0000225> ObjectOneOf(<http://purl.obolibrary.org/obo/IAO_0000103> <http://purl.obolibrary.org/obo/IAO_0000226> <http://purl.obolibrary.org/obo/IAO_0000227> <http://purl.obolibrary.org/obo/IAO_0000228> <http://purl.obolibrary.org/obo/IAO_0000229>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/APOLLO_SV_00000796> ObjectIntersectionOf(<http://purl.obolibrary.org/obo/OBI_0000011> ObjectSomeValuesFrom(<http://purl.obolibrary.org/obo/OBI_0000299> <http://purl.obolibrary.org/obo/IAO_0000100>)) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://purl.obolibrary.org/obo/IAO_0000078> ObjectOneOf(<http://purl.obolibrary.org/obo/IAO_0000002> <http://purl.obolibrary.org/obo/IAO_0000120> <http://purl.obolibrary.org/obo/IAO_0000121> <http://purl.obolibrary.org/obo/IAO_0000122> <http://purl.obolibrary.org/obo/IAO_0000123> <http://purl.obolibrary.org/obo/IAO_0000124> <http://purl.obolibrary.org/obo/IAO_0000125> <http://purl.obolibrary.org/obo/IAO_0000423> <http://purl.obolibrary.org/obo/IAO_0000428>) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://www.ebi.ac.uk/swo/SWO_1100127> ObjectIntersectionOf(<http://www.ebi.ac.uk/swo/SWO_0000001> ObjectSomeValuesFrom(<http://www.ebi.ac.uk/swo/SWO_0004000> ObjectIntersectionOf(<http://purl.obolibrary.org/obo/IAO_0000129> ObjectHasValue(<http://www.ebi.ac.uk/swo/SWO_0000300> <http://www.ebi.ac.uk/swo/version/SWO_2000007>)))) ) could not be added to any clusters!
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Adding the properties of the classes to each cluster has been done successfully. Total time:  151 ms. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Clustering has been done successfully. Total time for the whole process of clustering:  154 ms. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: No refinement has been done after clustering, since local refinement did not select.
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Keeping a history of changes in the refinement step in following. 
+ 
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: 
+ Add the missing class: [http://purl.obolibrary.org/obo/GO_0008150] to the root, since there is no respective sub-super class for it. 
+
+ Add the missing class: [http://www.opengis.net/ont/geosparql#Coverage] to the root, since there is no respective sub-super class for it. 
+
+ Add the missing class: [http://www.w3.org/ns/sosa/Platform] to the root, since there is no respective sub-super class for it. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Class preservation refinement step has been done successfully. Total time  4 ms. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The ObjectProperty: [http://purl.obolibrary.org/obo/RO_0017001]is missing! But none of its domain and range are already exist in the merged ontology. So, the missing property can't be added.
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The DatatypeProperty: [http://www.w3.org/ns/sosa/hasSimpleResult]is missing! But none of its domain and range are already exist in the merged ontology. So, the missing property can't be added.
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The DatatypeProperty: [http://www.w3.org/ns/sosa/resultTime]is missing! But none of its domain and range are already exist in the merged ontology. So, the missing property can't be added.
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The DatatypeProperty: owl:topDataPropertyis missing! But none of its domain and range are already exist in the merged ontology. So, the missing property can't be added.
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: No changes has been done in the property preservation refinement step!
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Property preservation refinement step has been done successfully. Total time  1 ms. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: No changes has been done in the instance preservation refinement step!
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Instance refinement step has been done successfully. Total time  1 ms. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Correspondence preservation refinement step has been done successfully. No changes has been done in this step. Total time  0 ms. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Correspondence property preservation refinement step has been done successfully. No changes has been done in this step. Total time  0 ms. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: All Value of properties from the input ontologies have been preserved without any conflict. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Property's value preservation refinement step has been done successfully. Total time  1 ms. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: In the merged ontology, the isA axioms: SubClassOf(ObjectSomeValuesFrom([http://purl.obolibrary.org/obo/RO_0002566] [http://purl.obolibrary.org/obo/BFO_0000040]) ObjectUnionOf(ObjectSomeValuesFrom([http://purl.obolibrary.org/obo/RO_0000056] ObjectSomeValuesFrom([http://purl.obolibrary.org/obo/RO_0002418] [http://purl.obolibrary.org/obo/BFO_0000015])) ObjectSomeValuesFrom([http://purl.obolibrary.org/obo/RO_0002215] ObjectSomeValuesFrom([http://purl.obolibrary.org/obo/RO_0000056] ObjectSomeValuesFrom([http://purl.obolibrary.org/obo/RO_0002418] [http://purl.obolibrary.org/obo/BFO_0000015]))))) does not exist. So it added to the merged ontology to keep the same structure as the input ontology. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: structure preservation refinement step has been done successfully. Total time  2 ms. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Class redundancy refinement step has been done successfully. There was no redundant classes in the merged ontology. Total time  0 ms. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Property redundancy refinement step has been done successfully. There was no redundant properties in the merged ontology. Total time  0 ms. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Instance redundancy refinement step has been done successfully. There was no redundant instances in the merged ontology. Total time  0 ms. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Extraneous entity prohibition refinement step has been done successfully. Total time  46 ms. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Property's domain and range oneness refinement step has been done successfully. Total time  0 ms. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: There was no cycle in the class hierarchy in the merged ontology. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Acyclicity in the class hierarchy refinement step has been done successfully. Total time  12 ms. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: There was no cycle in the property hierarchy in the merged ontology.
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Acyclicity in the property hierarchy refinement step has been done successfully. Total time  0 ms. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: There was no property with inverse relation of themselves in the merged ontology. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Prohibition of properties being inverse of themselves refinement step has been done successfully. Total time  0 ms. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: The class: [http://purl.org/net/VideoGameOntology#PlayingArea] has been connected to root of ontology. 
+The class: [http://www.w3.org/ns/sosa/Sensor] has been connected to root of ontology. 
+The class: [http://purl.oclc.org/NET/ssnx/qu/qu#QuantityKind] has been connected to root of ontology. 
+The class: [http://purl.org/iot/ontology/iot-stream#Analytics] has been connected to root of ontology. 
+The class: [http://purl.oclc.org/NET/ssnx/qu/qu#Unit] has been connected to root of ontology. 
+The class: [http://purl.org/net/VideoGameOntology#Character] has been connected to root of ontology. 
+The class: [http://purl.org/net/VideoGameOntology#Genre] has been connected to root of ontology. 
+The class: [http://purl.org/iot/ontology/iot-stream#Event] has been connected to root of ontology. 
+The class: [http://dbpedia.org/ontology/PopulatedPlace] has been connected to root of ontology. 
+The class: [http://purl.oclc.org/NET/UNIS/fiware/iot-lite#Service] has been connected to root of ontology. 
+The class: [http://purl.org/net/VideoGameOntology#Feature] has been connected to root of ontology. 
+The class: [http://purl.org/net/VideoGameOntology#Game] has been connected to root of ontology. 
+The class: [http://purl.org/iot/ontology/iot-stream#IotStream] has been connected to root of ontology. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Unconnected class prohibition refinement step has been done successfully. Total time  34 ms. 
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: There was no unconnected property in the merged ontology.
+
+Jun 06, 2026 9:51:17 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Unconnected property prohibition refinement step has been done successfully. Total time  0 ms. 
+
+Jun 06, 2026 9:51:18 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: No changes has been done in the entailment preservation step!
+
+Jun 06, 2026 9:51:18 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Entailment deduction refinement step has been done successfully. Total time  702 ms. 
+
+Jun 06, 2026 9:51:18 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: One type restriction refinement step has been done successfully. Total time  0 ms. 
+
+Jun 06, 2026 9:51:20 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: There was not any conflict on all cardinality restriction or OWLObjectSome-AllValuesFrom.
+Jun 06, 2026 9:51:20 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Property value's constraint refinement step has been done successfully. Total time  1610 ms. 
+
+Jun 06, 2026 9:51:20 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: 	 --------->  Refinement step in interMerge step has been done successfully. Total time  2465 ms. 
+
+Jun 06, 2026 9:51:20 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Save the created merged ontology in RDFtype format. Total time  153 ms. 
+
+Jun 06, 2026 9:51:20 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Create a zip file of the created merged ontology with name: MergedOnt875.zip. Total time  37 ms. 
+
+Jun 06, 2026 9:51:20 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Save the created merged ontology in RDFtype format. Total time  23 ms. 
+
+Jun 06, 2026 9:51:20 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Create a zip file of the created merged ontology with name: subMergedOntologies.zip. Total time  6 ms. 
+
+Jun 06, 2026 9:51:20 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Merger phase (intra and inter merge) has been done successfully. Total time  2697 ms. 
+
+Jun 06, 2026 9:51:20 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: The merged ontology name: MergedOnt875.owl	 Number of classes: 2088	 Number of objectProperties: 299	 Number of dataProperties: 33	 Number of annotations: 11906	 Number of instances: 463	 TBOX size: 5338	 ABOX siz: 461
+Jun 06, 2026 9:51:20 PM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: *** done! Congratulation. Merging ontologies has been done successfully. Total time  5016 ms. 
+

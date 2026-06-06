@@ -2,6 +2,8 @@ import asyncio
 import json
 from pathlib import Path
 
+from rdflib import Graph
+
 from llm_onto_merger.alignment.alignment import AlignmentModule
 from llm_onto_merger.debug import (
     save_diff_debug,
@@ -42,6 +44,15 @@ class LLMOntologyMerger:
             args.base_path, args.candidate_path
         )
 
+        # Naive baseline: raw graphs + original alignment URIs (no LLM relabeling),
+        # so triple_preservation_ratio is comparable to the raw union input.
+        raw_1 = Graph()
+        raw_1.parse(str(args.base_path))
+        raw_2 = Graph()
+        raw_2.parse(str(args.candidate_path))
+        applied_onto = apply_alignments(raw_1, raw_2, alignments)
+        save_ontology(applied_onto, out_dir, name="applied_alignments")
+
         all_renames = {**renames_1, **renames_2}
         if all_renames:
             alignments = [
@@ -58,8 +69,24 @@ class LLMOntologyMerger:
                 len(all_renames),
             )
 
-        applied_onto = apply_alignments(onto_1, onto_2, alignments)
-        save_ontology(applied_onto, out_dir, name="applied_alignments")
+        # Save relabeling map so metrics can normalise TPR against raw union triples.
+        # Format: {old_local_name: new_local_name} for every entity relabelled by create_ontology.
+        if all_renames:
+            def _local_name(uri: str) -> str:
+                idx = max(uri.rfind("#"), uri.rfind("/"))
+                return uri[idx + 1:] if idx >= 0 else uri
+
+            relabeling_local = {
+                _local_name(old): _local_name(new)
+                for old, new in all_renames.items()
+            }
+            relabeling_path = out_dir / "relabeling_map.json"
+            relabeling_path.write_text(
+                json.dumps(relabeling_local, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            log.info("Saved relabeling map: %d entries → %s", len(relabeling_local), relabeling_path)
+
         log.info("Alignments applied: %d", len(alignments))
 
         _, code_to_ns, ns_to_code, well_known_codes = build_namespace_codec(onto_1, onto_2)
