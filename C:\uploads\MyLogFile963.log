@@ -1,0 +1,177 @@
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: The preferred ontology has been set to (the priority of the input ontologies): equal
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: 2 input ontologies has been read and parsed into merged model. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: 
+ Ontology: cmt.owl has been read. 
+	 Number of classes: 30	 Number of objectProperties: 49	 Number of dataProperties: 10	 Number of instances: 0	 Number of annotations: 4	 TBOX size: 226	 ABOX siz: 0
+ Ontology: edas.owl has been read. 
+	 Number of classes: 104	 Number of objectProperties: 30	 Number of dataProperties: 20	 Number of instances: 114	 Number of annotations: 11	 TBOX size: 624	 ABOX siz: 115
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Total time for reading all input ontologies and save their entities into the merged model is: 240 ms. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: 9 classes have been collapsed; 	 0 object properties have been collapsed; 	0 datatype properties have been collapsed. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Total time for reading and parsing the corresponding entities between the input ontologies is: 19 ms. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Number of corresponding classes: 9, 	 Number of corresponding object properties: 0, 	 Number of corresponding dataproperties: 0. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: 298 axioms have been rewritten based on the corresponding entities during collapsed process.
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Replacing the corresponding entities with their reference entities (collapsed process) has been done successfully. Total time: 8 ms. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: A list of adjacent classes has been successfully created. Total time: 0 ms. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Cluster assignment has been done successfully in with 1 iteration. Total time: 1 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://merged#Reviewer> ObjectIntersectionOf(ObjectSomeValuesFrom(<http://edas#isReviewing> <http://merged#Paper>)) ) could not be added to any clusters!
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://edas#RatedPapers> ObjectSomeValuesFrom(<http://edas#hasRating> <http://edas#ReviewRating>) ) could not be added to any clusters!
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+WARNING: The subClassOf axiom: EquivalentClasses(<http://merged#Author> ObjectIntersectionOf(ObjectSomeValuesFrom(<http://edas#hasRelatedDocument> <http://merged#Paper>)) ) could not be added to any clusters!
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Adding the properties of the classes to each cluster has been done successfully. Total time:  6 ms. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Clustering has been done successfully. Total time for the whole process of clustering:  8 ms. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: No refinement has been done after clustering, since local refinement did not select.
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Keeping a history of changes in the refinement step in following. 
+ 
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: 
+ Add the missing class: [http://edas#TwoLevelConference] to the root, since there is no respective sub-super class for it. 
+
+ Add the missing class: [http://edas#SingleLevelConference] to the root, since there is no respective sub-super class for it. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Class preservation refinement step has been done successfully. Total time  1 ms. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: No changes has been done in the property preservation refinement step!
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Property preservation refinement step has been done successfully. Total time  0 ms. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: No changes has been done in the instance preservation refinement step!
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Instance refinement step has been done successfully. Total time  1 ms. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Correspondence preservation refinement step has been done successfully. No changes has been done in this step. Total time  0 ms. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Correspondence property preservation refinement step has been done successfully. No changes has been done in this step. Total time  0 ms. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: All Value of properties from the input ontologies have been preserved without any conflict. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Property's value preservation refinement step has been done successfully. Total time  1 ms. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: structure preservation refinement step has been done successfully. Total time  0 ms. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Class redundancy refinement step has been done successfully. There was no redundant classes in the merged ontology. Total time  0 ms. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Property redundancy refinement step has been done successfully. There was no redundant properties in the merged ontology. Total time  0 ms. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Instance redundancy refinement step has been done successfully. There was no redundant instances in the merged ontology. Total time  0 ms. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Extraneous entity prohibition refinement step has been done successfully. Total time  2 ms. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Property's domain and range oneness refinement step has been done successfully. Total time  0 ms. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: There was no cycle in the class hierarchy in the merged ontology. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Acyclicity in the class hierarchy refinement step has been done successfully. Total time  0 ms. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: There was no cycle in the property hierarchy in the merged ontology.
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Acyclicity in the property hierarchy refinement step has been done successfully. Total time  0 ms. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: There was no property with inverse relation of themselves in the merged ontology. 
+
+Jun 06, 2026 11:27:04 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Prohibition of properties being inverse of themselves refinement step has been done successfully. Total time  0 ms. 
+
+Jun 06, 2026 11:27:05 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: The class: [http://cmt#Preference] has been connected to root of ontology. 
+The class: [http://edas#ContactInformation] has been connected to root of ontology. 
+The class: [http://edas#ReviewForm] has been connected to root of ontology. 
+The class: [http://edas#ConferenceSession] has been connected to root of ontology. 
+The class: [http://cmt#Bid] has been connected to root of ontology. 
+The class: [http://cmt#ProgramCommittee] has been connected to root of ontology. 
+The class: [http://edas#Country] has been connected to root of ontology. 
+
+Jun 06, 2026 11:27:05 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Unconnected class prohibition refinement step has been done successfully. Total time  40 ms. 
+
+Jun 06, 2026 11:27:05 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: There was no unconnected property in the merged ontology.
+
+Jun 06, 2026 11:27:05 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Unconnected property prohibition refinement step has been done successfully. Total time  1 ms. 
+
+Jun 06, 2026 11:27:05 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: 
+ Add the missing entilment: EquivalentClasses([http://edas#TwoLevelConference] ObjectIntersectionOf([http://edas#Conference] ObjectSomeValuesFrom([http://edas#hasMember] [http://edas#TPCMember]) ObjectAllValuesFrom([http://edas#hasMember] [http://edas#Person])) )in the merged ontology
+ Add the missing entilment: EquivalentClasses([http://edas#SingleLevelConference] ObjectIntersectionOf([http://edas#Conference] ObjectComplementOf([http://edas#TwoLevelConference]) ObjectAllValuesFrom([http://edas#hasMember] [http://edas#Person])) )in the merged ontology
+Jun 06, 2026 11:27:05 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Entailment deduction refinement step has been done successfully. Total time  109 ms. 
+
+Jun 06, 2026 11:27:05 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: One type restriction refinement step has been done successfully. Total time  0 ms. 
+
+Jun 06, 2026 11:27:05 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: There was not any conflict on all cardinality restriction or OWLObjectSome-AllValuesFrom.
+Jun 06, 2026 11:27:05 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Property value's constraint refinement step has been done successfully. Total time  0 ms. 
+
+Jun 06, 2026 11:27:05 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: 	 --------->  Refinement step in interMerge step has been done successfully. Total time  179 ms. 
+
+Jun 06, 2026 11:27:05 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Save the created merged ontology in RDFtype format. Total time  33 ms. 
+
+Jun 06, 2026 11:27:05 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Create a zip file of the created merged ontology with name: MergedOnt797.zip. Total time  5 ms. 
+
+Jun 06, 2026 11:27:05 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Save the created merged ontology in RDFtype format. Total time  9 ms. 
+
+Jun 06, 2026 11:27:05 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Create a zip file of the created merged ontology with name: subMergedOntologies.zip. Total time  2 ms. 
+
+Jun 06, 2026 11:27:05 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: Merger phase (intra and inter merge) has been done successfully. Total time  233 ms. 
+
+Jun 06, 2026 11:27:05 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: The merged ontology name: MergedOnt797.owl	 Number of classes: 126	 Number of objectProperties: 79	 Number of dataProperties: 30	 Number of annotations: 15	 Number of instances: 114	 TBOX size: 842	 ABOX siz: 114
+Jun 06, 2026 11:27:05 AM fusion.comerger.algorithm.merger.holisticMerge.MyLogging log
+INFO: *** done! Congratulation. Merging ontologies has been done successfully. Total time  657 ms. 
+

@@ -790,20 +790,22 @@ def _render_category_charts(scenarios: list[dict], out_dir: Path, file_prefix: s
                 fmt = "%.3f" if _is_ratio_metric(metric_name) else "%g"
                 ax.bar_label(bars, fmt=fmt, fontsize=8, padding=2)
 
-            # ALC: dashed red reference line = avg(AROM, CoMerger, Boomer).
-            if metric_name == "ALC":
-                alc_refs = [
-                    float(bmetrics[k]["ALC"])
+            # ALC and TPR: dashed red reference line = avg(AROM, CoMerger, Boomer).
+            if metric_name in ("ALC", "triple_preservation_ratio"):
+                ref_vals = [
+                    float(bmetrics[k][metric_name])
                     for k in ("arom_ontology", "comerger_ontology", "boomer_ontology")
-                    if bmetrics.get(k, {}).get("ALC") is not None
+                    if bmetrics.get(k, {}).get(metric_name) is not None
                 ]
-                if alc_refs:
-                    avg_alc = sum(alc_refs) / len(alc_refs)
+                if ref_vals:
+                    avg_ref = sum(ref_vals) / len(ref_vals)
+                    val_fmt = ".3f" if _is_ratio_metric(metric_name) else ".0f"
                     ax.axhline(
-                        y=avg_alc, color="#e74c3c", linestyle="--", linewidth=1.5,
-                        alpha=0.85, label=f"Avg(AROM, CoMerger, Boomer) = {avg_alc:.0f}",
+                        y=avg_ref, color="#e74c3c", linestyle="--", linewidth=1.5,
+                        alpha=0.85,
+                        label=f"Avg(AROM, CoMerger, Boomer) = {avg_ref:{val_fmt}}",
                     )
-                    ax.legend(fontsize=8, loc="upper right")
+                    ax.legend(fontsize=8, loc="lower right")
 
             target = _REGISTRY.get(metric_name, {}).get("target", "")
             if target:
