@@ -735,9 +735,10 @@ def _render_category_charts(scenarios: list[dict], out_dir: Path, file_prefix: s
             continue
 
         is_dc = category == "Domain Coherence"
+        is_kc = category == "Knowledge Completeness"
 
-        # Domain Coherence: Naive Union carries no alignment info — exclude it.
-        cat_methods = [t for t in methods if not (is_dc and t[2] == "union_input")]
+        # Domain Coherence & Knowledge Completeness: Naive Union excluded (no cross-onto info).
+        cat_methods = [t for t in methods if not ((is_dc or is_kc) and t[2] == "union_input")]
         all_labels = [m[0] for m in cat_methods] + [o[1] for o in our_solutions]
         all_colors = [m[1] for m in cat_methods] + [o[2] for o in our_solutions]
 

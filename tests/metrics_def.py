@@ -405,9 +405,16 @@ def _hierarchy_stats(g: Graph, cls: set[URIRef]) -> dict[str, float]:
 
     alc = float(sum(1 for c in cls if not children.get(c)))
 
+    # Root classes: have no named parent within cls (plus owl:Thing as universal root).
+    has_named_parent: set[URIRef] = {
+        s for s, _, o in g.triples((None, _SUB, None))
+        if isinstance(s, URIRef) and isinstance(o, URIRef) and s in cls and o in cls
+    }
+    roots = (cls - has_named_parent) | {_OWL_THING}
+
     depths: dict[URIRef, int] = {}
-    queue: deque[tuple[URIRef, int]] = deque([(_OWL_THING, 0)])
-    visited: set[URIRef] = {_OWL_THING}
+    queue: deque[tuple[URIRef, int]] = deque((r, 0) for r in roots)
+    visited: set[URIRef] = set(roots)
     while queue:
         node, d = queue.popleft()
         for child in children.get(node, []):
@@ -661,11 +668,13 @@ def _compute_self_metrics(
             _key_norm(s, p, o)
             for s, p, o in union
             if isinstance(s, URIRef) and not isinstance(o, BNode)
+            and p != _LABEL  # rdfs:label is encoded in the URI by create_ontology — not truly lost
         }
         g_triples = {
             _key(s, p, o)
             for s, p, o in g
             if isinstance(s, URIRef) and not isinstance(o, BNode)
+            and p != _LABEL
         }
         tpr = (
             len(g_triples & union_triples) / len(union_triples)
