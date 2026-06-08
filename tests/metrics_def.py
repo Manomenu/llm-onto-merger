@@ -760,6 +760,9 @@ def _compute_self_metrics(
             if isinstance(s, URIRef) and isinstance(o, URIRef)
         }
 
+        def _is_both(u) -> bool:
+            return isinstance(u, URIRef) and new_to_source.get(_local(u)) == "both"
+
         def _intra_source(u) -> str | None:
             """Resolve entity to single source for NIRC: 'both' resolved by local-name membership."""
             if not isinstance(u, URIRef):
@@ -785,6 +788,7 @@ def _compute_self_metrics(
                 for s, p, o in g
                 if isinstance(s, URIRef)
                 and isinstance(o, URIRef)
+                and not (_is_both(s) and _is_both(o))  # both↔both excluded (same as CORC rule)
                 and _intra_source(s) is not None
                 and _intra_source(s) == _intra_source(o)
                 and (_local(s), _local(p), _local(o)) not in union_keys
