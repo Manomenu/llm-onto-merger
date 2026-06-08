@@ -13,7 +13,7 @@ from .kg2code import (
     entities_to_graph,
     graph_to_string,
 )
-from .merge import apply_alignments, collapse_alignments
+from .merge import apply_alignments, collapse_alignments, collapse_alignments_to_merged_ns
 from .uri import local_name, namespace_of
 
 __all__ = [
@@ -36,4 +36,5 @@ __all__ = [
     # merge
     "apply_alignments",
     "collapse_alignments",
+    "collapse_alignments_to_merged_ns",
 ]

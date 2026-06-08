@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Generate applied_alignments.owl — naive union + owl:equivalentClass baseline.
+"""Generate applied_alignments.owl — alignment-collapsed merge into merged# namespace.
 
-Uses raw (non-relabelled) ontology graphs so triple_preservation_ratio is
-directly comparable to the raw union input.
+Aligned entity pairs are collapsed into new merged# entities carrying triples from both
+source entities.  Non-aligned entities keep their original namespaces.  A sidecar
+applied_stats.json records provenance for cross-onto metrics.
 
 Usage:
     uv run python tests/generate_applied_alignments.py \\
@@ -14,13 +15,14 @@ Usage:
 
 import argparse
 import asyncio
+import json
 import sys
 from pathlib import Path
 
 from rdflib import Graph
 
 from llm_onto_merger.alignment import alignment_modules_dict
-from llm_onto_merger.ontology import apply_alignments, save_ontology
+from llm_onto_merger.ontology import collapse_alignments_to_merged_ns, save_ontology
 
 
 def main() -> None:
@@ -46,9 +48,16 @@ def main() -> None:
     raw_1.parse(str(args.onto1))
     raw_2 = Graph()
     raw_2.parse(str(args.onto2))
-    applied = apply_alignments(raw_1, raw_2, alignments)
+    applied, provenance = collapse_alignments_to_merged_ns(raw_1, raw_2, alignments)
     save_ontology(applied, args.output, name="applied_alignments")
     print(f"  saved {len(applied)} triples → {args.output}/applied_alignments.owl")
+
+    stats_path = args.output / "applied_stats.json"
+    stats_path.write_text(
+        json.dumps({"code_provenance": provenance}, indent=2),
+        encoding="utf-8",
+    )
+    print(f"  provenance ({len(provenance)} pairs) → {stats_path}")
 
 
 if __name__ == "__main__":

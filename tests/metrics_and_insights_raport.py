@@ -85,6 +85,19 @@ def _compute_scenario(
             arom_stats_path.read_text(encoding="utf-8")
         ).get("code_provenance")
 
+    applied_stats_path = out_dir / "applied_stats.json"
+    applied_provenance: dict[str, dict[str, str]] | None = None
+    if applied is not None and applied_stats_path.exists():
+        applied_provenance = json.loads(
+            applied_stats_path.read_text(encoding="utf-8")
+        ).get("code_provenance")
+
+    boomer_provenance: dict[str, dict[str, str]] | None = None
+    if boomer is not None and boomer_stats_path.exists():
+        boomer_provenance = json.loads(
+            boomer_stats_path.read_text(encoding="utf-8")
+        ).get("code_provenance")
+
     graphs: dict[str, Graph] = {"union_input": union, "merged_ontology": merged}
     if applied is not None:
         graphs["applied_alignments"] = applied
@@ -113,7 +126,12 @@ def _compute_scenario(
     for name, g in graphs.items():
         print(f"  computing metrics: {name} ({len(g)} triples) …", flush=True)
         union_arg = None if name == "union_input" else union
-        prov = arom_provenance if name == "arom_ontology" else None
+        prov = (
+            arom_provenance if name == "arom_ontology"
+            else applied_provenance if name == "applied_alignments"
+            else boomer_provenance if name == "boomer_ontology"
+            else None
+        )
         rmap = relabeling_map if name == "merged_ontology" else None
         aac = llm_applied_count if name == "merged_ontology" else None
         metrics[name] = _compute_self_metrics(

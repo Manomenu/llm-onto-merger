@@ -572,8 +572,14 @@ def _build_alias_maps(
         idx = local_name.index("_")
         p1 = local_name[:idx].lower()
         p2 = local_name[idx + 1:].lower()
-        if (p1 in onto1_norm and p2 in onto2_norm) or (p1 in onto2_norm and p2 in onto1_norm):
+        if p1 in onto1_norm and p2 in onto2_norm:
             new_to_source[local_name] = "both"
+            old_to_new[onto1_norm[p1]] = local_name
+            old_to_new[onto2_norm[p2]] = local_name
+        elif p1 in onto2_norm and p2 in onto1_norm:
+            new_to_source[local_name] = "both"
+            old_to_new[onto2_norm[p1]] = local_name
+            old_to_new[onto1_norm[p2]] = local_name
 
     return old_to_new, new_to_source
 

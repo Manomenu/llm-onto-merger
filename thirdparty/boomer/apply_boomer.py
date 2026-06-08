@@ -12,12 +12,11 @@ as a standalone artifact — unfair vs LLM merge.
 
 This script makes Boomer's output comparable: treats each owl:equivalentClass
 in the Boomer output as an alignment (measure=1.0, relation="="), then calls
-the project's existing `apply_alignments(onto1, onto2, alignments)` — the same
-function that produces applied_alignments.owl from AML/LogMap output.
-Result: full union of both source ontologies with each accepted equiv pair
-collapsed into a single URI (e2 → e1).
+collapse_alignments_to_merged_ns — each accepted pair is collapsed into a new
+merged# entity carrying triples from both source entities.  Non-aligned entities
+keep their original namespaces.
 
-Accepted subClassOf axioms from Boomer are added as-is on top.
+Accepted subClassOf axioms from Boomer are added on top (with URIs remapped to merged#).
 
 Usage:
     uv run python apply_boomer.py \\
@@ -36,7 +35,9 @@ from rdflib import RDFS, Graph, URIRef
 from rdflib.namespace import OWL
 
 from llm_onto_merger.alignment.alignment import Alignment
-from llm_onto_merger.ontology import apply_alignments
+from llm_onto_merger.ontology import collapse_alignments_to_merged_ns
+from llm_onto_merger.ontology.uri import local_name
+from llm_onto_merger.ontology.merge import _MERGED_NS
 
 
 def _extract_equiv_pairs(g: Graph) -> list[tuple[str, str]]:
@@ -91,16 +92,20 @@ def main() -> None:
         Alignment(entity1=e1, entity2=e2, measure=1.0, relation="=")
         for e1, e2 in equiv_pairs
     ]
-    result = apply_alignments(onto1, onto2, alignments)
-    print(f"  after apply_alignments: {len(result)} triples")
+    result, provenance = collapse_alignments_to_merged_ns(onto1, onto2, alignments)
+    print(f"  after collapse_alignments_to_merged_ns: {len(result)} triples")
+
+    # canon maps both e1 and e2 to their merged# URI for subClassOf rewriting
+    canon: dict[URIRef, URIRef] = {}
+    for e1_str, e2_str in equiv_pairs:
+        e1 = URIRef(e1_str)
+        new_uri = URIRef(f"{_MERGED_NS}{local_name(e1)}")
+        canon[e1] = new_uri
+        canon[URIRef(e2_str)] = new_uri
 
     subclass_triples = _extract_subclass_triples(boomer_raw)
     added_sub = 0
     for s, o in subclass_triples:
-        # Resolve through alias map: if s or o was collapsed by apply_alignments,
-        # we want the surviving URI.  apply_alignments collapses e2 → e1.
-        # Re-resolve here by walking the equiv pairs.
-        canon = {URIRef(e2): URIRef(e1) for e1, e2 in equiv_pairs}
         s_canon = canon.get(s, s)
         o_canon = canon.get(o, o)
         triple = (s_canon, RDFS.subClassOf, o_canon)
@@ -114,14 +119,13 @@ def main() -> None:
     result.serialize(destination=str(args.output), format="xml")
     print(f"[apply_boomer] saved → {args.output} ({len(result)} triples)")
 
-    # Sidecar stats so metrics_def / raport can show "applied_alignments" for
-    # the boomer column instead of N/A.
     stats_path = args.output.parent / "boomer_stats.json"
     stats_path.write_text(
         json.dumps(
             {
                 "accepted_equiv_count": len(equiv_pairs),
                 "accepted_subclass_count": len(subclass_triples),
+                "code_provenance": provenance,
             },
             indent=2,
         ),
