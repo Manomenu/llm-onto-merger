@@ -16,3 +16,4 @@ logs/
 uv.lock
 
 tests/inputs/
+**/*MyLogFile*
