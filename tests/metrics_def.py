@@ -134,6 +134,19 @@ _REGISTRY: dict[str, dict] = {
             "osobno, powstałe przez połączenie obu ontologii."
         ),
     },
+    "corc_per_applied_alignment": {
+        "source": "self-implemented",
+        "categories": ["Knowledge Completeness"],
+        "target": "high",
+        "interpretation": (
+            "CORC / liczba_scaleń. Normalizuje liczbę relacji cross-onto przez liczbę "
+            "wykonanych scaleń (encji z proweniencją z obu ontologii). "
+            "Dla narzędzi scalających w nowy namespace (AROM, CoMerger, Our Solution): "
+            "mianownik = liczba encji 'both'. Dla narzędzi tylko asertujących equivalentClass "
+            "(Applied Alignments, Boomer): mianownik = CORC (każde alignment = 1 relacja → ratio = 1.0). "
+            "Wyższy wynik oznacza, że każde scalenie generuje więcej faktów cross-onto."
+        ),
+    },
     "new_intra_onto_relations_count": {
         "source": "self-implemented",
         "categories": ["Knowledge Completeness"],
@@ -572,7 +585,7 @@ def _compute_self_metrics(
     union: Graph | None = None,
     arom_provenance: dict[str, dict[str, str]] | None = None,
     relabeling_map: dict[str, str] | None = None,
-    use_provenance_cross: bool = False,
+    applied_alignments_count: int | None = None,
 ) -> dict[str, float]:
     cls = _classes(g)
     prop = _properties(g)
@@ -674,6 +687,13 @@ def _compute_self_metrics(
         if _is_cross(s, o)
     )
 
+    both_count = sum(1 for v in new_to_source.values() if v == "both")
+    if applied_alignments_count is not None:
+        _denom = applied_alignments_count
+    else:
+        _denom = both_count if both_count > 0 else cross_rel
+    corc_per_applied = round(cross_rel / _denom, 4) if _denom > 0 else 0.0
+
     connectivity = _connectivity_ratio(g)
 
     # Triple preservation ratio vs union
@@ -764,6 +784,7 @@ def _compute_self_metrics(
         "syntactic_uniqueness_ratio": round(syntactic_uniqueness_ratio, 4),
         "cross_onto_subclassof_count": float(cross_sub),
         "cross_onto_relations_count": float(cross_rel),
+        "corc_per_applied_alignment": corc_per_applied,
         "new_intra_onto_relations_count": new_intra_rel,
         "connectivity_ratio": round(connectivity, 4),
         "triple_preservation_ratio": round(tpr, 4),

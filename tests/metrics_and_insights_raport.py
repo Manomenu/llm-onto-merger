@@ -101,27 +101,30 @@ def _compute_scenario(
         relabeling_map = json.loads(relabeling_path.read_text(encoding="utf-8"))
         print(f"  relabeling_map: {len(relabeling_map)} entries")
 
+    # Read alignment_stats before the metrics loop so we can pass the authoritative
+    # applied_count to _compute_self_metrics for the LLM merged_ontology.
+    alignment_stats: dict | None = None
+    llm_applied_count: int | None = None
+    if alignment_stats_path.exists():
+        alignment_stats = json.loads(alignment_stats_path.read_text(encoding="utf-8"))
+        llm_applied_count = int(alignment_stats.get("applied_count", 0)) or None
+
     metrics: dict[str, dict[str, float | None]] = {}
     for name, g in graphs.items():
         print(f"  computing metrics: {name} ({len(g)} triples) …", flush=True)
         union_arg = None if name == "union_input" else union
         prov = arom_provenance if name == "arom_ontology" else None
         rmap = relabeling_map if name == "merged_ontology" else None
-        # For AROM and CoMerger, use provenance-aware cross-onto counting:
-        # all entities are merged pairs ("both"), so the relaxed rule counts
-        # relations between them as cross-onto by tracing back to source namespaces.
-        use_prov_cross = name in ("arom_ontology", "comerger_ontology")
+        aac = llm_applied_count if name == "merged_ontology" else None
         metrics[name] = _compute_self_metrics(
             g, onto1_entities, onto2_entities, union_arg,
             arom_provenance=prov, relabeling_map=rmap,
-            use_provenance_cross=use_prov_cross,
+            applied_alignments_count=aac,
         )
         metrics[name]["unsatisfiable_classes"] = None  # HermiT disabled
 
     suspected_counts: dict[str, int] = {}
-    alignment_stats: dict | None = None
-    if alignment_stats_path.exists():
-        alignment_stats = json.loads(alignment_stats_path.read_text(encoding="utf-8"))
+    if alignment_stats is not None:
         total = float(alignment_stats.get("total_alignments", 0))
         applied_count = float(alignment_stats.get("applied_count", 0))
         rejected = alignment_stats.get("rejected_alignments", [])
@@ -308,7 +311,7 @@ def _render_metrics_table(scenario: dict) -> str:
         boomer_cell = _fmt(b_val) if has_boomer else ""
         rows_html.append(
             f'    <tr style="border-left: 3px solid {border}">'
-            f"<td><strong>{metric_name}</strong></td>"
+            f"<td><strong>{_METRIC_DISPLAY.get(metric_name, metric_name)}</strong></td>"
             f"{_fmt(u_val)}"
             f"{applied_cell}"
             f"{arom_cell}"
@@ -384,7 +387,7 @@ def _render_comparison_table(scenarios: list[dict], graph_name: str) -> str:
             )
         body_rows.append(
             f'    <tr style="border-left: 3px solid {border}">'
-            f"<td><strong>{metric_name}</strong></td>"
+            f"<td><strong>{_METRIC_DISPLAY.get(metric_name, metric_name)}</strong></td>"
             f"{''.join(cells)}"
             f'<td class="tgt">{meta["target"]}</td>'
             f"</tr>"
@@ -618,6 +621,7 @@ _CATEGORY_TO_METRICS: dict[str, list[str]] = {
     ],
     "Knowledge Completeness": [
         "cross_onto_relations_count",
+        "corc_per_applied_alignment",
         "new_intra_onto_relations_count",
         "cross_onto_subclassof_count",
     ],
@@ -655,6 +659,7 @@ _METRIC_DISPLAY: dict[str, str] = {
     "connectivity_ratio":             "CR",
     "triple_preservation_ratio":      "TPR",
     "cross_onto_relations_count":     "CORC",
+    "corc_per_applied_alignment":     "CORC per Applied Alignment",
     "new_intra_onto_relations_count": "NIRC",
     "cross_onto_subclassof_count":    "COSC",
     "cycle_count":                    "Cycle Count",
