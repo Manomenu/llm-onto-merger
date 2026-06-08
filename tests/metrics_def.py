@@ -160,6 +160,18 @@ _REGISTRY: dict[str, dict] = {
             "wiedzy wewnątrz każdej z nich."
         ),
     },
+    "triple_count_delta": {
+        "source": "self-implemented",
+        "categories": ["Knowledge Completeness"],
+        "target": "high",
+        "interpretation": (
+            "Różnica liczby trójek RDF między scaloną ontologią a unią ontologii wejściowych "
+            "(merged_triples − union_triples). "
+            "Wartość dodatnia = metoda dodała nową wiedzę; "
+            "wartość zero = czyste remapowanie bez przyrostu; "
+            "wartość ujemna = metoda usunęła aksjomaty (np. coherence repair)."
+        ),
+    },
     # ── Hierarchy Integration Quality ─────────────────────────────────────────
     "cross_onto_subclassof_count": {
         "source": "self-implemented",
@@ -795,9 +807,12 @@ def _compute_self_metrics(
             )
         )
 
+        triple_count_delta = float(len(g) - len(union))
+
     else:
         tpr = 1.0
         new_intra_rel = 0.0
+        triple_count_delta = 0.0
 
     entities = cls | prop
     n_e = len(entities)
@@ -819,6 +834,7 @@ def _compute_self_metrics(
         "cross_onto_relations_count": float(cross_rel),
         "corc_per_applied_alignment": corc_per_applied,
         "new_intra_onto_relations_count": new_intra_rel,
+        "triple_count_delta": triple_count_delta,
         "connectivity_ratio": round(connectivity, 4),
         "triple_preservation_ratio": round(tpr, 4),
         "annotation_coverage_ratio": round(annotation_coverage, 4),
