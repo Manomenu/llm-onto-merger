@@ -107,9 +107,14 @@ def _compute_scenario(
         union_arg = None if name == "union_input" else union
         prov = arom_provenance if name == "arom_ontology" else None
         rmap = relabeling_map if name == "merged_ontology" else None
+        # For AROM and CoMerger, use provenance-aware cross-onto counting:
+        # all entities are merged pairs ("both"), so the relaxed rule counts
+        # relations between them as cross-onto by tracing back to source namespaces.
+        use_prov_cross = name in ("arom_ontology", "comerger_ontology")
         metrics[name] = _compute_self_metrics(
             g, onto1_entities, onto2_entities, union_arg,
             arom_provenance=prov, relabeling_map=rmap,
+            use_provenance_cross=use_prov_cross,
         )
         metrics[name]["unsatisfiable_classes"] = None  # HermiT disabled
 

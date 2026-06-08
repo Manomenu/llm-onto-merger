@@ -470,10 +470,14 @@ def _build_alias_maps(
 ) -> tuple[dict[str, str], dict[str, str]]:
     """Build local-name alias maps from the merged graph.
 
-    Two formats supported:
+    Formats supported:
       1. LLM merger format — `merged#alias` triples with literal "code;;LocalName"
       2. AROM format — `code_provenance` dict from arom_stats.json (keyed by URI,
          values are {"<ontology_n>": "<local_name>"}).  Passed via arom_provenance.
+      3. create_ontology relabeling map (old_local → new_local for rdfs:label renames)
+      4. CoMerger merged# entities — URI local name encodes two source IDs with
+         underscores stripped, joined by a single '_':
+         e.g. merged#MA0000009_NCIC12472 from MA_0000009 + NCI_C12472.
 
     Returns (old_to_new, new_to_source) where:
       old_to_new: OldLocalName → NewLocalName  (for renaming normalisation)
@@ -481,6 +485,14 @@ def _build_alias_maps(
     """
     old_to_new: dict[str, str] = {}
     new_to_source: dict[str, str] = {}
+
+    # Inverse relabeling: new_human_readable → old_coded.
+    # Needed for Format 1: LLM aliases store post-relabeling names (human-readable)
+    # rather than original coded names, so we reverse-map to identify the source ontology.
+    inv_relabeling: dict[str, str] = {}
+    if relabeling_map:
+        for old_coded, new_human in relabeling_map.items():
+            inv_relabeling[new_human] = old_coded
 
     # Format 1: LLM merger (zz::alias / merged#alias triples)
     for s, p, o in g:
@@ -494,10 +506,13 @@ def _build_alias_maps(
         if len(parts) != 2 or not parts[1]:
             continue
         old_local = parts[1]
+        # Alias names are post-relabeling (human-readable); resolve back to coded name
+        # via the inverse relabeling map so that onto1/onto2 membership is detectable.
+        resolved = inv_relabeling.get(old_local, old_local)
         new_local = _local(s)
-        old_to_new[old_local] = new_local
-        in1 = old_local in onto1_locals
-        in2 = old_local in onto2_locals
+        old_to_new[resolved] = new_local
+        in1 = resolved in onto1_locals
+        in2 = resolved in onto2_locals
         src = "both" if in1 and in2 else ("onto1" if in1 else ("onto2" if in2 else ""))
         if src:
             existing = new_to_source.get(new_local)
@@ -524,6 +539,29 @@ def _build_alias_maps(
             if old_local not in old_to_new:
                 old_to_new[old_local] = new_local
 
+    # Format 4: CoMerger merged# entities
+    # URI format: http://merged#{id1_stripped}_{id2_stripped} where the source IDs
+    # had their underscores removed before joining (NCI_C12472 → NCIC12472,
+    # MA_0000009 → MA0000009).  Build a normalized (no-underscore) lookup to
+    # reverse-match the split parts against known source entity local names.
+    onto1_norm = {loc.replace("_", "").lower(): loc for loc in onto1_locals}
+    onto2_norm = {loc.replace("_", "").lower(): loc for loc in onto2_locals}
+    _COMERGER_NS = "http://merged#"
+    for s in g.subjects():
+        if not isinstance(s, URIRef):
+            continue
+        s_str = str(s)
+        if not s_str.startswith(_COMERGER_NS):
+            continue
+        local_name = _local(s)
+        if "_" not in local_name or local_name in new_to_source:
+            continue  # skip already-tagged or no-split URIs
+        idx = local_name.index("_")
+        p1 = local_name[:idx].lower()
+        p2 = local_name[idx + 1:].lower()
+        if (p1 in onto1_norm and p2 in onto2_norm) or (p1 in onto2_norm and p2 in onto1_norm):
+            new_to_source[local_name] = "both"
+
     return old_to_new, new_to_source
 
 
@@ -534,6 +572,7 @@ def _compute_self_metrics(
     union: Graph | None = None,
     arom_provenance: dict[str, dict[str, str]] | None = None,
     relabeling_map: dict[str, str] | None = None,
+    use_provenance_cross: bool = False,
 ) -> dict[str, float]:
     cls = _classes(g)
     prop = _properties(g)
@@ -554,11 +593,6 @@ def _compute_self_metrics(
     #      merged::, AROM's merging::).  These use _build_alias_maps / arom_provenance
     #      and may be tagged "both" (merged from one entity in each ontology).
     #
-    # Cross-onto counting rule: a triple counts only when both endpoints are
-    # unambiguously attributed to *different* ontologies.  Any endpoint whose
-    # namespace is neither onto1 nor onto2 and whose alias says "both" (i.e. it is a
-    # merged entity bridging both) is treated as neutral — its relations are NOT
-    # cross-onto by themselves (the bridge is the merge, not a new relation).
     _, new_to_source = _build_alias_maps(
         g, onto1_locals, onto2_locals, arom_provenance=arom_provenance,
         relabeling_map=relabeling_map,
@@ -610,18 +644,22 @@ def _compute_self_metrics(
     unique_local = len({_local(c) for c in cls})
     syntactic_uniqueness_ratio = unique_local / n_c if n_c else 1.0
 
-    # Cross-ontology metrics (namespace-primary, alias-aware).
-    # An entity in a "third" namespace (e.g. AROM merging::, LLM zz::) whose alias
-    # says "both" satisfies _from_onto1 AND _from_onto2 simultaneously — it is a
-    # merged entity.  Any triple involving such an endpoint is NOT a new cross-onto
-    # relation; the bridge is the merge itself.  We exclude triples where ANY
-    # endpoint is "both"-attributed so tools like AROM (all Code_N = "both") score 0
-    # while direct cross-namespace triples (e.g. human.owl#X subClassOf mouse.owl#Y)
-    # added by the LLM are correctly counted.
+    # Cross-ontology predicate: a triple is cross-onto when the endpoints cover
+    # different ontologies.  Rules (applied uniformly to all tools):
+    #   • both purely onto1 → excluded (intra-onto1)
+    #   • both purely onto2 → excluded (intra-onto2)
+    #   • both "both"-tagged (merged↔merged) → excluded: these relations were
+    #     inherited simultaneously from both source ontologies and are not new
+    #   • "both"↔single-ontology → counted: the merged entity carries the other
+    #     ontology's representative, so the triple crosses ontology boundaries
     def _is_cross(s, o) -> bool:
         s1, s2 = _from_onto1(s), _from_onto2(s)
         o1, o2 = _from_onto1(o), _from_onto2(o)
-        if (s1 and s2) or (o1 and o2):  # any "both" endpoint → excluded
+        if (s1 and s2) and (o1 and o2):        # merged ↔ merged → excluded
+            return False
+        if (s1 and not s2) and (o1 and not o2): # both purely onto1
+            return False
+        if (s2 and not s1) and (o2 and not o1): # both purely onto2
             return False
         return (s1 and o2) or (s2 and o1)
 
