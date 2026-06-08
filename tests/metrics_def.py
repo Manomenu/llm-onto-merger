@@ -749,21 +749,44 @@ def _compute_self_metrics(
         # New intra-ontology relations (alias-aware): triples in g where both S and O
         # belong to the SAME source (including renamed entities), but the triple
         # (by local-name key) is absent from union.
+        #
+        # For "both"-tagged merged entities whose local name belongs to one of the
+        # original namespaces (e.g. merged#NCI_C12814 where NCI_C12814 ∈ onto1_locals),
+        # we resolve to that primary source so intra-onto triples via merged entities
+        # are counted correctly.
         union_keys = {
             (_local(s), _local(p), _local(o))
             for s, p, o in union
             if isinstance(s, URIRef) and isinstance(o, URIRef)
         }
+
+        def _intra_source(u) -> str | None:
+            """Resolve entity to single source for NIRC: 'both' resolved by local-name membership."""
+            if not isinstance(u, URIRef):
+                return None
+            if u in onto1_entities:
+                return "onto1"
+            if u in onto2_entities:
+                return "onto2"
+            loc = _local(u)
+            src = new_to_source.get(loc)
+            if src in ("onto1", "onto2"):
+                return src
+            if src == "both":
+                if loc in onto1_locals:
+                    return "onto1"
+                if loc in onto2_locals:
+                    return "onto2"
+            return None
+
         new_intra_rel = float(
             sum(
                 1
                 for s, p, o in g
                 if isinstance(s, URIRef)
                 and isinstance(o, URIRef)
-                and (
-                    (_from_onto1(s) and _from_onto1(o))
-                    or (_from_onto2(s) and _from_onto2(o))
-                )
+                and _intra_source(s) is not None
+                and _intra_source(s) == _intra_source(o)
                 and (_local(s), _local(p), _local(o)) not in union_keys
             )
         )
