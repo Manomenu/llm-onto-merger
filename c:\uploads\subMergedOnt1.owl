@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
-<rdf:RDF xmlns="file:/Users/maniumek/repos/llm-onto-merger/tests/scenarios/outputs/conference-s2/.comerger/cluster1.owl#"
-     xml:base="file:/Users/maniumek/repos/llm-onto-merger/tests/scenarios/outputs/conference-s2/.comerger/cluster1.owl"
+<rdf:RDF xmlns="file:/Users/maniumek/repos/llm-onto-merger/tests/scenarios/outputs/acm-union-s2/.comerger/cluster1.owl#"
+     xml:base="file:/Users/maniumek/repos/llm-onto-merger/tests/scenarios/outputs/acm-union-s2/.comerger/cluster1.owl"
      xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
      xmlns:owl="http://www.w3.org/2002/07/owl#"
      xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
      xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#">
-    <owl:Ontology rdf:about="file:/Users/maniumek/repos/llm-onto-merger/tests/scenarios/outputs/conference-s2/.comerger/cluster1.owl"/>
+    <owl:Ontology rdf:about="file:/Users/maniumek/repos/llm-onto-merger/tests/scenarios/outputs/acm-union-s2/.comerger/cluster1.owl"/>
     
 
 
@@ -20,245 +20,82 @@
     
 
 
-    <!-- http://cmt#acceptPaper -->
+    <!-- http://rdf-vocabulary.ddialliance.org/xkos#generalizes -->
 
-    <owl:ObjectProperty rdf:about="http://cmt#acceptPaper">
-        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+    <owl:ObjectProperty rdf:about="http://rdf-vocabulary.ddialliance.org/xkos#generalizes"/>
+    
+
+
+    <!-- http://rdf-vocabulary.ddialliance.org/xkos#hasPart -->
+
+    <owl:ObjectProperty rdf:about="http://rdf-vocabulary.ddialliance.org/xkos#hasPart"/>
+    
+
+
+    <!-- http://rdf-vocabulary.ddialliance.org/xkos#isPartOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf-vocabulary.ddialliance.org/xkos#isPartOf"/>
+    
+
+
+    <!-- http://rdf-vocabulary.ddialliance.org/xkos#next -->
+
+    <owl:ObjectProperty rdf:about="http://rdf-vocabulary.ddialliance.org/xkos#next"/>
+    
+
+
+    <!-- http://rdf-vocabulary.ddialliance.org/xkos#previous -->
+
+    <owl:ObjectProperty rdf:about="http://rdf-vocabulary.ddialliance.org/xkos#previous"/>
+    
+
+
+    <!-- http://rdf-vocabulary.ddialliance.org/xkos#specializes -->
+
+    <owl:ObjectProperty rdf:about="http://rdf-vocabulary.ddialliance.org/xkos#specializes"/>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/constructs -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/constructs">
+        <rdfs:label xml:lang="en">constructs</rdfs:label>
+        <rdfs:comment xml:lang="en">The constructs property relates an executable to the classes it constructs.</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Class"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Executable"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isConstructedBy"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/references"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/declares -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/declares">
         <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
-        <rdfs:domain rdf:resource="http://cmt#Administrator"/>
+        <rdfs:label xml:lang="en">declares</rdfs:label>
+        <rdfs:comment>The declares property relates a code element to the elements it declares. For instance, a class is linked to its fields, methods and constructors.</rdfs:comment>
+        <rdfs:subPropertyOf rdf:resource="http://rdf-vocabulary.ddialliance.org/xkos#hasPart"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isDeclaredBy"/>
     </owl:ObjectProperty>
     
 
 
-    <!-- http://cmt#acceptedBy -->
+    <!-- http://rdf.webofcode.org/woc/extends -->
 
-    <owl:ObjectProperty rdf:about="http://cmt#acceptedBy">
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/extends">
         <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
-        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
-        <rdfs:range rdf:resource="http://cmt#Administrator"/>
-        <owl:inverseOf rdf:resource="http://cmt#acceptPaper"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#addProgramCommitteeMember -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#addProgramCommitteeMember">
-        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
-        <rdfs:domain rdf:resource="http://cmt#Administrator"/>
-        <rdfs:range rdf:resource="http://cmt#ProgramCommitteeMember"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#addedBy -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#addedBy">
-        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
-        <rdfs:range rdf:resource="http://cmt#Administrator"/>
-        <rdfs:domain rdf:resource="http://cmt#ProgramCommitteeMember"/>
-        <owl:inverseOf rdf:resource="http://cmt#addProgramCommitteeMember"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#adjustBid -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#adjustBid">
-        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
-        <rdfs:domain rdf:resource="http://merged#Reviewer"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#adjustedBy -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#adjustedBy">
-        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
-        <owl:inverseOf rdf:resource="http://cmt#adjustBid"/>
-        <rdfs:range rdf:resource="http://merged#Reviewer"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#assignExternalReviewer -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#assignExternalReviewer">
-        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
-        <rdfs:range rdf:resource="http://cmt#ExternalReviewer"/>
-        <owl:inverseOf rdf:resource="http://cmt#assignedByReviewer"/>
-        <rdfs:domain rdf:resource="http://merged#Reviewer"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#assignReviewer -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#assignReviewer">
-        <rdfs:domain rdf:resource="http://cmt#Administrator"/>
-        <rdfs:range rdf:resource="http://merged#Reviewer"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#assignedByAdministrator -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#assignedByAdministrator">
-        <rdfs:range rdf:resource="http://cmt#Administrator"/>
-        <owl:inverseOf rdf:resource="http://cmt#assignReviewer"/>
-        <rdfs:domain rdf:resource="http://merged#Reviewer"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#assignedByReviewer -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#assignedByReviewer">
-        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
-        <rdfs:domain rdf:resource="http://cmt#ExternalReviewer"/>
-        <rdfs:range rdf:resource="http://merged#Reviewer"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#assignedTo -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#assignedTo">
-        <rdfs:range rdf:resource="http://merged#Reviewer"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#co-writePaper -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#co-writePaper">
-        <rdfs:domain rdf:resource="http://cmt#Co-author"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#detailsEnteredBy -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#detailsEnteredBy">
-        <rdfs:range rdf:resource="http://cmt#Administrator"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#enableVirtualMeeting -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#enableVirtualMeeting">
-        <rdfs:domain rdf:resource="http://cmt#Administrator"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#endReview -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#endReview">
-        <rdfs:domain rdf:resource="http://cmt#ProgramCommitteeChair"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#enterConferenceDetails -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#enterConferenceDetails">
-        <rdfs:domain rdf:resource="http://cmt#Administrator"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#enterReviewCriteria -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#enterReviewCriteria">
-        <rdfs:domain rdf:resource="http://cmt#Administrator"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#finalizePaperAssignment -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#finalizePaperAssignment">
-        <rdfs:domain rdf:resource="http://cmt#Administrator"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#hardcopyMailingManifestsPrintedBy -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#hardcopyMailingManifestsPrintedBy">
-        <rdfs:range rdf:resource="http://cmt#Administrator"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#hasAuthor -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#hasAuthor">
-        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
-        <owl:inverseOf rdf:resource="http://cmt#writePaper"/>
-        <rdfs:range rdf:resource="http://merged#Author"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#hasBeenAssigned -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#hasBeenAssigned">
-        <owl:inverseOf rdf:resource="http://cmt#assignedTo"/>
-        <rdfs:domain rdf:resource="http://merged#Reviewer"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#hasCo-author -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#hasCo-author">
-        <rdfs:range rdf:resource="http://cmt#Co-author"/>
-        <owl:inverseOf rdf:resource="http://cmt#co-writePaper"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#hasConferenceMember -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#hasConferenceMember">
-        <rdfs:range rdf:resource="http://cmt#ConferenceMember"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#hasConflictOfInterest -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#hasConflictOfInterest">
-        <rdfs:domain rdf:resource="http://merged#Person"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#hasProgramCommitteeMember -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#hasProgramCommitteeMember">
-        <rdfs:range rdf:resource="http://cmt#ProgramCommitteeMember"/>
-        <owl:inverseOf rdf:resource="http://cmt#memberOfProgramCommittee"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#markConflictOfInterest -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#markConflictOfInterest">
-        <rdfs:comment rdf:datatype="http://www.w3.org/2001/XMLSchema#string">In CMT terms, a ‘Conflict of Interest’ is an association between a specific Reviewer and a specific Paper that states there is a conflict of interest between that Reviewer and that paper. Conflicts can be marked by Authors (during paper submission) or by Reviewers (in Phase 2) or by Chairmen (in Phase 3).
-
-Based on that conflict, the reviewer will not be able to bid on the paper, be assigned to that paper (either automatically by the system or manually by a Chairman) or view review submissions for that paper.
-</rdfs:comment>
+        <rdfs:label xml:lang="en">extends</rdfs:label>
+        <rdfs:comment xml:lang="en">The extends property relates a class, an interface, a type variable or a wildacard to the types it extends.</rdfs:comment>
+        <rdfs:subPropertyOf rdf:resource="http://rdf-vocabulary.ddialliance.org/xkos#specializes"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/hasSubClass"/>
         <rdfs:domain>
             <owl:Class>
                 <owl:unionOf rdf:parseType="Collection">
-                    <rdf:Description rdf:about="http://cmt#Chairman"/>
-                    <rdf:Description rdf:about="http://merged#Author"/>
-                    <rdf:Description rdf:about="http://merged#Reviewer"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Class"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Interface"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/TypeVariable"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Wildcard"/>
                 </owl:unionOf>
             </owl:Class>
         </rdfs:domain>
@@ -266,234 +103,48 @@ Based on that conflict, the reviewer will not be able to bid on the paper, be as
     
 
 
-    <!-- http://cmt#memberOfConference -->
+    <!-- http://rdf.webofcode.org/woc/hasArgument -->
 
-    <owl:ObjectProperty rdf:about="http://cmt#memberOfConference">
-        <rdfs:domain rdf:resource="http://cmt#ConferenceMember"/>
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasArgument">
+        <rdfs:label xml:lang="en">has argument</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasArgument property relates an executable invocation to each of its actual arguments.</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/ActualArgument"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/ExecutableInvocationExpression"/>
     </owl:ObjectProperty>
     
 
 
-    <!-- http://cmt#memberOfProgramCommittee -->
+    <!-- http://rdf.webofcode.org/woc/hasAssertExpression -->
 
-    <owl:ObjectProperty rdf:about="http://cmt#memberOfProgramCommittee">
-        <rdfs:domain rdf:resource="http://cmt#ProgramCommitteeMember"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#paperAssignmentFinalizedBy -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#paperAssignmentFinalizedBy">
-        <rdfs:range rdf:resource="http://cmt#Administrator"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#paperAssignmentToolsRunBy -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#paperAssignmentToolsRunBy">
-        <rdfs:range rdf:resource="http://cmt#Administrator"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#printHardcopyMailingManifests -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#printHardcopyMailingManifests">
-        <rdfs:domain rdf:resource="http://cmt#Administrator"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#readByMeta-Reviewer -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#readByMeta-Reviewer">
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasAssertExpression">
         <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
-        <rdfs:range rdf:resource="http://cmt#Meta-Reviewer"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#readByReviewer -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#readByReviewer">
-        <owl:inverseOf rdf:resource="http://cmt#readPaper"/>
-        <rdfs:range rdf:resource="http://merged#Reviewer"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#readPaper -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#readPaper">
-        <rdfs:domain rdf:resource="http://merged#Reviewer"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#rejectPaper -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#rejectPaper">
         <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
-        <rdfs:domain rdf:resource="http://cmt#Administrator"/>
-        <owl:inverseOf rdf:resource="http://cmt#rejectedBy"/>
+        <rdfs:label xml:lang="en">has assert expression</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasAssertExpression property relates an assert statement to the boolean expression asserted to be true</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/AssertStatement"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/hasSubExpression"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isAssertExpressionOf"/>
     </owl:ObjectProperty>
     
 
 
-    <!-- http://cmt#rejectedBy -->
+    <!-- http://rdf.webofcode.org/woc/hasBody -->
 
-    <owl:ObjectProperty rdf:about="http://cmt#rejectedBy">
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasBody">
         <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
-        <rdfs:range rdf:resource="http://cmt#Administrator"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#reviewCriteriaEnteredBy -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#reviewCriteriaEnteredBy">
-        <rdfs:range rdf:resource="http://cmt#Administrator"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#reviewerBiddingStartedBy -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#reviewerBiddingStartedBy">
-        <rdfs:range rdf:resource="http://cmt#Administrator"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#runPaperAssignmentTools -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#runPaperAssignmentTools">
-        <rdfs:domain rdf:resource="http://cmt#Administrator"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#setMaxPapers -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#setMaxPapers">
-        <rdfs:domain rdf:resource="http://cmt#Administrator"/>
-        <rdfs:range rdf:resource="http://cmt#ProgramCommitteeMember"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#startReviewerBidding -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#startReviewerBidding">
-        <rdfs:domain rdf:resource="http://cmt#Administrator"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#submitPaper -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#submitPaper">
-        <rdfs:domain rdf:resource="http://merged#Author"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#virtualMeetingEnabledBy -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#virtualMeetingEnabledBy">
-        <rdfs:range rdf:resource="http://cmt#Administrator"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#writePaper -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#writePaper">
         <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
-        <rdfs:domain rdf:resource="http://merged#Author"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#writeReview -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#writeReview">
-        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
-        <rdfs:domain rdf:resource="http://merged#Reviewer"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#writtenBy -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#writtenBy">
-        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
-        <owl:inverseOf rdf:resource="http://cmt#writeReview"/>
-        <rdfs:range rdf:resource="http://merged#Reviewer"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://edas#attendeeAt -->
-
-    <owl:ObjectProperty rdf:about="http://edas#attendeeAt">
-        <owl:inverseOf rdf:resource="http://edas#hasAttendee"/>
-        <rdfs:domain rdf:resource="http://merged#Person"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://edas#hasAttendee -->
-
-    <owl:ObjectProperty rdf:about="http://edas#hasAttendee">
-        <rdfs:range rdf:resource="http://merged#Person"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://edas#hasMember -->
-
-    <owl:ObjectProperty rdf:about="http://edas#hasMember">
-        <rdfs:range rdf:resource="http://merged#Person"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://edas#hasRelatedDocument -->
-
-    <owl:ObjectProperty rdf:about="http://edas#hasRelatedDocument"/>
-    
-
-
-    <!-- http://edas#hasRelatedPaper -->
-
-    <owl:ObjectProperty rdf:about="http://edas#hasRelatedPaper">
-        <rdfs:domain rdf:resource="http://merged#Author"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://edas#hasReviewHistory -->
-
-    <owl:ObjectProperty rdf:about="http://edas#hasReviewHistory">
-        <owl:inverseOf rdf:resource="http://edas#isReviewHistoryOf"/>
-        <rdfs:domain rdf:resource="http://merged#Reviewer"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://edas#initiates -->
-
-    <owl:ObjectProperty rdf:about="http://edas#initiates">
-        <owl:inverseOf rdf:resource="http://edas#isInitiatedBy"/>
+        <rdfs:label xml:lang="en">has body</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasBody property relates an executable or a statement to its body.</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/BlockStatement"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/hasSubStatement"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isBodyOf"/>
         <rdfs:domain>
             <owl:Class>
                 <owl:unionOf rdf:parseType="Collection">
-                    <rdf:Description rdf:about="http://edas#SessionChair"/>
-                    <rdf:Description rdf:about="http://edas#TPCMember"/>
-                    <rdf:Description rdf:about="http://merged#ConferenceChair"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Executable"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/LoopStatement"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/TryStatement"/>
                 </owl:unionOf>
             </owl:Class>
         </rdfs:domain>
@@ -501,15 +152,190 @@ Based on that conflict, the reviewer will not be able to bid on the paper, be as
     
 
 
-    <!-- http://edas#isInitiatedBy -->
+    <!-- http://rdf.webofcode.org/woc/hasCatchClause -->
 
-    <owl:ObjectProperty rdf:about="http://edas#isInitiatedBy">
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasCatchClause">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">has catch clause</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasCatchClause property relates a try statement to the relative catch clauses.</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/CatchBlock"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/TryStatement"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/hasSubStatement"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isCatchClauseOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasCatchFormalParameter -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasCatchFormalParameter">
+        <rdfs:label xml:lang="en">has catch formal parameter</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasCatchFormalParameter property relates a catch clause to its formal parameters, namely the throwable objects it caughts</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/CatchBlock"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Class"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasCondition -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasCondition">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">has condition</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasCondition property specifies a condition for a statement to be executed.</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/hasSubExpression"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isConditionOf"/>
+        <rdfs:domain>
+            <owl:Class>
+                <owl:unionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/DoStatement"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/ForStatement"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/IfThenElseStatement"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/WhileStatement"/>
+                </owl:unionOf>
+            </owl:Class>
+        </rdfs:domain>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasConstructor -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasConstructor">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">has constructor</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasConstructor property relates a class to its constructors.</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Constructor"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isConstructorOf"/>
+        <rdfs:domain>
+            <owl:Class>
+                <owl:unionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Class"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Enum"/>
+                </owl:unionOf>
+            </owl:Class>
+        </rdfs:domain>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasDeclaration -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasDeclaration">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdfs:label xml:lang="en">has declaration</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasDeclaration property relates a variable to the statement it was declared by.</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Variable"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/VariableDeclarationStatement"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasElseBranch -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasElseBranch">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">has else branch</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasElseBranch property relates a if-then-else statement to the statement in the else branch.</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/IfThenElseStatement"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Statement"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/hasSubStatement"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isElseBranchOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasField -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasField">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">has field</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasField property relates a class to its fields</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/ComplexType"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Field"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isFieldOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasFinallyClause -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasFinallyClause">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">has finally clause</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasFinallyClause property relates a try statemet to its finally clause.</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/FinallyBlock"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/TryStatement"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/hasSubStatement"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isFinallyClauseOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasForInit -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasForInit">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">has for init</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasForInit property relates a basic for statement to each statement expression executed as initialization code, before the first iteration step is performed</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/ForStatement"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/hasSubExpression"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isForInitOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasForUpdate -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasForUpdate">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">has for update</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasForUpdate property relates a basic for statement to each expression evaluated as update code at the end of every iteration</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/ForStatement"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/hasSubExpression"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isForUpdateOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasFormalTypeParameter -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasFormalTypeParameter">
+        <rdfs:label xml:lang="en">has formal type parameter</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasFormalTypeParameter property relates a class, an interface, an enumeration, a constructor or a method to the formal type parameters it declares</rdfs:comment>
+        <rdfs:domain>
+            <owl:Class>
+                <owl:unionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Class"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Enum"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Executable"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Interface"/>
+                </owl:unionOf>
+            </owl:Class>
+        </rdfs:domain>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasGenericType -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasGenericType">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdfs:label xml:lang="en">has generic type</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasGenericType property relates a parameterized type to the generic type it is a parameterization of</rdfs:comment>
         <rdfs:range>
             <owl:Class>
                 <owl:unionOf rdf:parseType="Collection">
-                    <rdf:Description rdf:about="http://edas#SessionChair"/>
-                    <rdf:Description rdf:about="http://edas#TPCMember"/>
-                    <rdf:Description rdf:about="http://merged#ConferenceChair"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Class"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Interface"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/TypeVariable"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Wildcard"/>
                 </owl:unionOf>
             </owl:Class>
         </rdfs:range>
@@ -517,50 +343,178 @@ Based on that conflict, the reviewer will not be able to bid on the paper, be as
     
 
 
-    <!-- http://edas#isMemberOf -->
+    <!-- http://rdf.webofcode.org/woc/hasInitializer -->
 
-    <owl:ObjectProperty rdf:about="http://edas#isMemberOf">
-        <rdfs:domain rdf:resource="http://merged#Person"/>
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasInitializer">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">has initializer</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasInitializer property relates a variable declaration to the expression assigned to the declared variable</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/VariableDeclarationStatement"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/hasSubExpression"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isInitializerOf"/>
     </owl:ObjectProperty>
     
 
 
-    <!-- http://edas#isReviewHistoryOf -->
+    <!-- http://rdf.webofcode.org/woc/hasLeftHandSide -->
 
-    <owl:ObjectProperty rdf:about="http://edas#isReviewHistoryOf">
-        <rdfs:range rdf:resource="http://merged#Reviewer"/>
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasLeftHandSide">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">has left hand side</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasLeftHandSide property relates a assignement expression to the left hand side expression it contains</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/AssignmentExpression"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/hasSubExpression"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isLeftHandSideOf"/>
     </owl:ObjectProperty>
     
 
 
-    <!-- http://edas#isReviewedBy -->
+    <!-- http://rdf.webofcode.org/woc/hasMethod -->
 
-    <owl:ObjectProperty rdf:about="http://edas#isReviewedBy">
-        <rdfs:range>
-            <owl:Class>
-                <owl:unionOf rdf:parseType="Collection">
-                    <rdf:Description rdf:about="http://edas#SessionChair"/>
-                    <rdf:Description rdf:about="http://edas#TPCMember"/>
-                    <rdf:Description rdf:about="http://merged#ConferenceChair"/>
-                    <rdf:Description rdf:about="http://merged#Reviewer"/>
-                </owl:unionOf>
-            </owl:Class>
-        </rdfs:range>
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasMethod">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">has method</rdfs:label>
+        <rdfs:comment>The ihasMehtod property relates a class to its methods.</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/ComplexType"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Method"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isMethodOf"/>
     </owl:ObjectProperty>
     
 
 
-    <!-- http://edas#isReviewing -->
+    <!-- http://rdf.webofcode.org/woc/hasModifier -->
 
-    <owl:ObjectProperty rdf:about="http://edas#isReviewing">
-        <owl:inverseOf rdf:resource="http://edas#isReviewedBy"/>
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasModifier">
+        <rdfs:label xml:lang="en">has modifier</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasGenericType property relates a modifiable element to its modifiers</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Modifiable"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isModifierOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasNextStatement -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasNextStatement">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">next</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasNextStatement property relates a statement to the next statement to be executed.</rdfs:comment>
+        <rdfs:subPropertyOf rdf:resource="http://rdf-vocabulary.ddialliance.org/xkos#next"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Statement"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Statement"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/hasPreviousStatement"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasPackage -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasPackage">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdfs:label xml:lang="en">has package</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasPackage property relates a class, interface, enum or annotation to the package it is declared by.</rdfs:comment>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/isDeclaredBy"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasParameter -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasParameter">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">has parameter</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasParameter property relates a constructor or a method to the formal parameters it declares</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Executable"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Parameter"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isParameterOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasPreviousStatement -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasPreviousStatement">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">has previous statement</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasPreviousStatement property relates a statement to the previous one.</rdfs:comment>
+        <rdfs:subPropertyOf rdf:resource="http://rdf-vocabulary.ddialliance.org/xkos#previous"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Statement"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Statement"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasProject -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasProject">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdfs:label xml:lang="en">has project</rdfs:label>
+        <rdfs:comment>The hasProject property relates a package to the project it belongs to.</rdfs:comment>
+        <rdfs:subPropertyOf rdf:resource="http://rdf-vocabulary.ddialliance.org/xkos#isPartOf"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isProjectOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasResource -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasResource">
+        <rdfs:label xml:lang="en">has resource</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasResource property relates a try statement to each local variable declared to act as resource for the try statement</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/LocalVariable"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/TryStatement"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasReturnType -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasReturnType">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdfs:label xml:lang="en">has return type</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasReturnType property relates a method to its return type.</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Method"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/hasType"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isReturnTypeOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasReturnedExpression -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasReturnedExpression">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">has returned expression</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasReturnedExpression property relates a return statement to the returned expression</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/ReturnStatement"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/hasSubExpression"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isReturnedExpressionOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasSubClass -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasSubClass">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">has subclass</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasSubClass property relates a class to its direct sub-classes</rdfs:comment>
+        <rdfs:subPropertyOf rdf:resource="http://rdf-vocabulary.ddialliance.org/xkos#generalizes"/>
         <rdfs:domain>
             <owl:Class>
                 <owl:unionOf rdf:parseType="Collection">
-                    <rdf:Description rdf:about="http://edas#SessionChair"/>
-                    <rdf:Description rdf:about="http://edas#TPCMember"/>
-                    <rdf:Description rdf:about="http://merged#ConferenceChair"/>
-                    <rdf:Description rdf:about="http://merged#Reviewer"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Class"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Interface"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/TypeVariable"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Wildcard"/>
                 </owl:unionOf>
             </owl:Class>
         </rdfs:domain>
@@ -568,11 +522,695 @@ Based on that conflict, the reviewer will not be able to bid on the paper, be as
     
 
 
-    <!-- http://edas#isWrittenBy -->
+    <!-- http://rdf.webofcode.org/woc/hasSubExpression -->
 
-    <owl:ObjectProperty rdf:about="http://edas#isWrittenBy">
-        <owl:inverseOf rdf:resource="http://edas#hasRelatedPaper"/>
-        <rdfs:range rdf:resource="http://merged#Author"/>
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasSubExpression">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">has subexpression</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasSubExpression property relates a statement or expression to the expressions it contains.</rdfs:comment>
+        <rdfs:subPropertyOf rdf:resource="http://rdf-vocabulary.ddialliance.org/xkos#hasPart"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isSubExpressionOf"/>
+        <rdfs:domain>
+            <owl:Class>
+                <owl:unionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Expression"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Statement"/>
+                </owl:unionOf>
+            </owl:Class>
+        </rdfs:domain>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasSubStatement -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasSubStatement">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">has substatement</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasSubStatement property relates a statment to its sub-statements.</rdfs:comment>
+        <rdfs:subPropertyOf rdf:resource="http://rdf-vocabulary.ddialliance.org/xkos#hasPart"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Statement"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isSubStatementOf"/>
+        <rdfs:domain>
+            <owl:Class>
+                <owl:unionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Executable"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Statement"/>
+                </owl:unionOf>
+            </owl:Class>
+        </rdfs:domain>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasSuperBound -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasSuperBound">
+        <rdfs:label xml:lang="en">has super bound</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasSuperBound property relates a lower bounded wildcard to its bouds.</rdfs:comment>
+        <rdfs:subPropertyOf rdf:resource="http://rdf-vocabulary.ddialliance.org/xkos#generalizes"/>
+        <rdfs:range>
+            <owl:Class>
+                <owl:unionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Class"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Interface"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/ParameterizedType"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/TypeVariable"/>
+                </owl:unionOf>
+            </owl:Class>
+        </rdfs:range>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasSwitchLabel -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasSwitchLabel">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">has switch label</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasSwitchLabel property relates a switch statement to its cases.</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/LabeledBlock"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/SwitchStatement"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/hasSubStatement"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isSwitchLabelOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasTarget -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasTarget">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">has target</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasTarget property relates a method invocation expression to its target.</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/MethodInvocationExpression"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/hasSubExpression"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isTargetOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasThenBranch -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasThenBranch">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">has then branch</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasThenBranch property relates a if-then-else statement to the statement declared in the &quot;then&quot; branch</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/IfThenElseStatement"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Statement"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/hasSubStatement"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isThenBranchOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasThrownExpression -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasThrownExpression">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">has thrown expression</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasThrownExpression property relates a thrown statement to the expression it throws</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/ThrowStatement"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/hasSubExpression"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isThrownExpressionOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasType -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasType">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdfs:label xml:lang="en">has type</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasType property relates an expression, a variable or a method to its type.</rdfs:comment>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isTypeOf"/>
+        <rdfs:domain>
+            <owl:Class>
+                <owl:unionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Expression"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Method"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Variable"/>
+                </owl:unionOf>
+            </owl:Class>
+        </rdfs:domain>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasVariable -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/hasVariable">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">has variable</rdfs:label>
+        <rdfs:comment xml:lang="en">The hasVariable property relates a for-each statement to the local variable it declares.</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/ForEachStatement"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/LocalVariable"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/implements -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/implements">
+        <rdfs:label xml:lang="en">implements</rdfs:label>
+        <rdfs:comment xml:lang="en">The implements property relates a class to each implemented interface.</rdfs:comment>
+        <rdfs:subPropertyOf rdf:resource="http://rdf-vocabulary.ddialliance.org/xkos#specializes"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Class"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Interface"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/isImplementedBy"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/invokes -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/invokes">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdfs:label xml:lang="en">invokes</rdfs:label>
+        <rdfs:comment xml:lang="en">The invokes property relates a invocation expression to the invoked executable.</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Executable"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/ExecutableInvocationExpression"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isAssertExpressionOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isAssertExpressionOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">is subexpression of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isAssertExpressionOf property relates a boolean expression to the assert statement it is contained in.</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/AssertStatement"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/isSubExpressionOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isBodyOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isBodyOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">is body of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isBodyOf property relates a block to the exexcutable or statement it is the body of.</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/BlockStatement"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/isSubStatementOf"/>
+        <rdfs:range>
+            <owl:Class>
+                <owl:unionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Executable"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/LoopStatement"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/TryStatement"/>
+                </owl:unionOf>
+            </owl:Class>
+        </rdfs:range>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isCatchClauseOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isCatchClauseOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdfs:label xml:lang="en">is catch clause of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isCatchClauseOf property relates a catch clause to the corresponding try statement.</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/CatchBlock"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/TryStatement"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/isSubStatementOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isConditionOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isConditionOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">is condition of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isConditionOf property relates a if-then-else statement or a loop to its condition.</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/isSubExpressionOf"/>
+        <rdfs:range>
+            <owl:Class>
+                <owl:unionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/DoStatement"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/ForStatement"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/IfThenElseStatement"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/WhileStatement"/>
+                </owl:unionOf>
+            </owl:Class>
+        </rdfs:range>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isConstructedBy -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isConstructedBy">
+        <rdfs:label xml:lang="en">is constructed by</rdfs:label>
+        <rdfs:comment xml:lang="en">The isConstructedBy property relates a class to the executables that instantiates objects of that class.</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Class"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Executable"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/isReferencedBy"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isConstructorOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isConstructorOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdfs:label xml:lang="en">is constructor of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isConstructorOf property relates a constructor to the class it is declared by.</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Constructor"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/isDeclaredBy"/>
+        <rdfs:range>
+            <owl:Class>
+                <owl:unionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Class"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Enum"/>
+                </owl:unionOf>
+            </owl:Class>
+        </rdfs:range>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isDeclaredBy -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isDeclaredBy">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdfs:label xml:lang="en">is declared by</rdfs:label>
+        <rdfs:comment xml:lang="en">The isDeclaredBy property relates a code element to the element it is declared by.</rdfs:comment>
+        <rdfs:subPropertyOf rdf:resource="http://rdf-vocabulary.ddialliance.org/xkos#isPartOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isElseBranchOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isElseBranchOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">is else branch of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isElseBranchOf property relates the statement in an else branch to the corresponding If-then-else statement</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/IfThenElseStatement"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Statement"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/isSubStatementOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isFieldOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isFieldOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdfs:label xml:lang="en">is field of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isFieldOf property relates a field to the class, interface or enum it is declared by.</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/ComplexType"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Field"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/isDeclaredBy"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isFinallyClauseOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isFinallyClauseOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">is finally clause of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isFinallyClauseOf property relates the statement enclosed in a finally clause to the corresponding try statement.</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/FinallyBlock"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/TryStatement"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/isSubStatementOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isForInitOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isForInitOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdfs:label xml:lang="en">is for init of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isForInitOf property relates an expression executed as initialization code of a basic for statement to the relative for statement.</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/ForStatement"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/isSubExpressionOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isForUpdateOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isForUpdateOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdfs:label xml:lang="en">is for update of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isForUpdateOf property relates an expression evaluated as update code of a for statement at the end of every iteration, to the corresponding for statement.</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/ForStatement"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/isSubExpressionOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isImplementedBy -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isImplementedBy">
+        <rdfs:label xml:lang="en">is implemented by</rdfs:label>
+        <rdfs:comment xml:lang="en">The isImplementedBy property relates an interface to the classes implementig that interface</rdfs:comment>
+        <rdfs:subPropertyOf rdf:resource="http://rdf-vocabulary.ddialliance.org/xkos#generalizes"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Class"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Interface"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isInitializerOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isInitializerOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">is initializer of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isInitializerOf property relates an expression used to initialize a variable, to the statement it is contained in.</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/VariableDeclarationStatement"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/isSubExpressionOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isLeftHandSideOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isLeftHandSideOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">is left hand side of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isLeftHandSideOf property relates an expression that is used as left hand side expression of an assignemnt, to the corresponding assignment expression</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/AssignmentExpression"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/isSubExpressionOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isMethodOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isMethodOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdfs:label xml:lang="en">is method of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isMethodOf property relates a method to the class, enum or interface it is declared by.</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/ComplexType"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Method"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/isDeclaredBy"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isModifierOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isModifierOf">
+        <rdfs:label xml:lang="en">is modifier of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isModifierOf property relates a modifier to the corresponding modifiable element.</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Modifiable"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isOverriddenBy -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isOverriddenBy">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">is overridden by</rdfs:label>
+        <rdfs:comment xml:lang="en">The isOverridenBy property relates a method to the ones it is overridden by.</rdfs:comment>
+        <rdfs:subPropertyOf rdf:resource="http://rdf-vocabulary.ddialliance.org/xkos#generalizes"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Method"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Method"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/overrides"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isParameterOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isParameterOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">is parameter of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isParameterOf property relates a parameter to the corresponding executable.</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Executable"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Parameter"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isProjectOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isProjectOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">is project of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isProjectOf property relates a project to the packages it contains.</rdfs:comment>
+        <rdfs:subPropertyOf rdf:resource="http://rdf-vocabulary.ddialliance.org/xkos#hasPart"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isReferencedBy -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isReferencedBy">
+        <rdfs:label xml:lang="en">is referenced by</rdfs:label>
+        <rdfs:comment xml:lang="en">The isReferencedBy property relates a code element to the elements it is referenced by.</rdfs:comment>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/references"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isReturnTypeOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isReturnTypeOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">is return type of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isReturnTypeOf property relates a type to the methods that return objects of that type.</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Method"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/isTypeOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isReturnedBy -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isReturnedBy">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">is returned by</rdfs:label>
+        <rdfs:comment xml:lang="en">The isReturnedBy property relates a variable to the methods that return that variable.</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Method"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Variable"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/returns"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isReturnedExpressionOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isReturnedExpressionOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">is returned expression of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isReturnedExpressionOf property relates an expression returned by a method to the return statement it is contained in.</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/ReturnStatement"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/isSubExpressionOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isSubExpressionOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isSubExpressionOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdfs:label xml:lang="en">is subexpression of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isSubExpressionOf property relates an expression to its parent expression.</rdfs:comment>
+        <rdfs:subPropertyOf rdf:resource="http://rdf-vocabulary.ddialliance.org/xkos#isPartOf"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+        <rdfs:range>
+            <owl:Class>
+                <owl:unionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Expression"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Statement"/>
+                </owl:unionOf>
+            </owl:Class>
+        </rdfs:range>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isSubProjectOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isSubProjectOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdfs:label xml:lang="en">is subproject of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isSubProjectOf property relates a project to its parent project.</rdfs:comment>
+        <rdfs:subPropertyOf rdf:resource="http://rdf-vocabulary.ddialliance.org/xkos#isPartOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isSubStatementOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isSubStatementOf">
+        <rdfs:label xml:lang="en">is substatement of</rdfs:label>
+        <rdfs:comment>The isSubStatementOf property relates a statement to the method, constructor or statement it is contained in.</rdfs:comment>
+        <rdfs:subPropertyOf rdf:resource="http://rdf-vocabulary.ddialliance.org/xkos#isPartOf"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Statement"/>
+        <rdfs:range>
+            <owl:Class>
+                <owl:unionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Executable"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Statement"/>
+                </owl:unionOf>
+            </owl:Class>
+        </rdfs:range>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isSwitchLabelOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isSwitchLabelOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdfs:label xml:lang="en">is switch label of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isSwitchLabelOf property relates a case labeled block or a default block to the corresponding switch statement.</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/LabeledBlock"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/SwitchStatement"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/isSubStatementOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isTargetOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isTargetOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">is target of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isTargetOf property relates an expression used as target of a method invocation, to the corresponding method invocation.</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/MethodInvocationExpression"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/isSubExpressionOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isThenBranchOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isThenBranchOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">is then branch of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isThenBranchOf property relates a statement enclosed in a then branch to the corresponding If-then-else statement</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/IfThenElseStatement"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Statement"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/isSubStatementOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isThrownBy -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isThrownBy">
+        <rdfs:label xml:lang="en">is thrown by</rdfs:label>
+        <rdfs:comment xml:lang="en">The isThrownBy property relates an exception to the executables it is thrown by.</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Class"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Executable"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/isReferencedBy"/>
+        <owl:inverseOf rdf:resource="http://rdf.webofcode.org/woc/throws"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isThrownExpressionOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isThrownExpressionOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">is thrown expression of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isThrownExpressionOf property relates a thrown expression, to the throw statement it is contained in.</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/ThrowStatement"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/isSubExpressionOf"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/isTypeOf -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/isTypeOf">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
+        <rdfs:label xml:lang="en">is type of</rdfs:label>
+        <rdfs:comment xml:lang="en">The isTypeOf property relates a type to the elements of that type.</rdfs:comment>
+        <rdfs:range>
+            <owl:Class>
+                <owl:unionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Expression"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Method"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Variable"/>
+                </owl:unionOf>
+            </owl:Class>
+        </rdfs:range>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/overrides -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/overrides">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdfs:label xml:lang="en">overrides</rdfs:label>
+        <rdfs:comment xml:lang="en">The overrides property relates a method to the method it overrides.</rdfs:comment>
+        <rdfs:subPropertyOf rdf:resource="http://rdf-vocabulary.ddialliance.org/xkos#specializes"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Method"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Method"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/references -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/references">
+        <rdfs:label xml:lang="en">references</rdfs:label>
+        <rdfs:comment xml:lang="en">The references property relates a method or a constructor to the types, methods, constructors and fields it references.</rdfs:comment>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/returns -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/returns">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdfs:label xml:lang="en">returns</rdfs:label>
+        <rdfs:comment xml:lang="en">The returns property relates a method to the variable it returns, if any.</rdfs:comment>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Method"/>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Variable"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/throws -->
+
+    <owl:ObjectProperty rdf:about="http://rdf.webofcode.org/woc/throws">
+        <rdfs:label xml:lang="en">throws</rdfs:label>
+        <rdfs:comment xml:lang="en">The throws property relates a method or a constructor to the exceptions it declares to throw.</rdfs:comment>
+        <rdfs:range rdf:resource="http://rdf.webofcode.org/woc/Class"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Executable"/>
+        <rdfs:subPropertyOf rdf:resource="http://rdf.webofcode.org/woc/references"/>
     </owl:ObjectProperty>
     
 
@@ -588,56 +1226,93 @@ Based on that conflict, the reviewer will not be able to bid on the paper, be as
     
 
 
-    <!-- http://cmt#email -->
+    <!-- http://rdf.webofcode.org/woc/hasCanonicalName -->
 
-    <owl:DatatypeProperty rdf:about="http://cmt#email">
-        <rdfs:domain rdf:resource="http://merged#Person"/>
+    <owl:DatatypeProperty rdf:about="http://rdf.webofcode.org/woc/hasCanonicalName">
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/ComplexType"/>
         <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
     </owl:DatatypeProperty>
     
 
 
-    <!-- http://cmt#maxPapers -->
+    <!-- http://rdf.webofcode.org/woc/hasEndLine -->
 
-    <owl:DatatypeProperty rdf:about="http://cmt#maxPapers">
+    <owl:DatatypeProperty rdf:about="http://rdf.webofcode.org/woc/hasEndLine">
         <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
-        <rdfs:domain rdf:resource="http://cmt#ProgramCommitteeMember"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/BlockStatement"/>
         <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#int"/>
     </owl:DatatypeProperty>
     
 
 
-    <!-- http://edas#hasBiography -->
+    <!-- http://rdf.webofcode.org/woc/hasLabel -->
 
-    <owl:DatatypeProperty rdf:about="http://edas#hasBiography">
-        <rdfs:domain rdf:resource="http://merged#Person"/>
+    <owl:DatatypeProperty rdf:about="http://rdf.webofcode.org/woc/hasLabel">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Statement"/>
         <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
     </owl:DatatypeProperty>
     
 
 
-    <!-- http://edas#hasEmail -->
+    <!-- http://rdf.webofcode.org/woc/hasLine -->
 
-    <owl:DatatypeProperty rdf:about="http://edas#hasEmail">
+    <owl:DatatypeProperty rdf:about="http://rdf.webofcode.org/woc/hasLine">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#int"/>
+        <rdfs:domain>
+            <owl:Class>
+                <owl:unionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Expression"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Statement"/>
+                </owl:unionOf>
+            </owl:Class>
+        </rdfs:domain>
+    </owl:DatatypeProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasPosition -->
+
+    <owl:DatatypeProperty rdf:about="http://rdf.webofcode.org/woc/hasPosition">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#int"/>
+    </owl:DatatypeProperty>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/hasSimpleName -->
+
+    <owl:DatatypeProperty rdf:about="http://rdf.webofcode.org/woc/hasSimpleName">
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/ComplexType"/>
         <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
     </owl:DatatypeProperty>
     
 
 
-    <!-- http://edas#hasFirstName -->
+    <!-- http://rdf.webofcode.org/woc/hasTargetedLabel -->
 
-    <owl:DatatypeProperty rdf:about="http://edas#hasFirstName">
-        <rdfs:domain rdf:resource="http://merged#Person"/>
+    <owl:DatatypeProperty rdf:about="http://rdf.webofcode.org/woc/hasTargetedLabel">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
         <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:domain>
+            <owl:Class>
+                <owl:unionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/BreakStatement"/>
+                    <rdf:Description rdf:about="http://rdf.webofcode.org/woc/ContinueStatement"/>
+                </owl:unionOf>
+            </owl:Class>
+        </rdfs:domain>
     </owl:DatatypeProperty>
     
 
 
-    <!-- http://edas#hasLastName -->
+    <!-- http://rdf.webofcode.org/woc/isVarArgs -->
 
-    <owl:DatatypeProperty rdf:about="http://edas#hasLastName">
-        <rdfs:domain rdf:resource="http://merged#Person"/>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <owl:DatatypeProperty rdf:about="http://rdf.webofcode.org/woc/isVarArgs">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
+        <rdfs:domain rdf:resource="http://rdf.webofcode.org/woc/Executable"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#boolean"/>
     </owl:DatatypeProperty>
     
 
@@ -653,208 +1328,867 @@ Based on that conflict, the reviewer will not be able to bid on the paper, be as
     
 
 
-    <!-- http://cmt#Administrator -->
+    <!-- http://merged#ControlFlowStatement -->
 
-    <owl:Class rdf:about="http://cmt#Administrator">
-        <rdfs:subClassOf rdf:resource="http://cmt#User"/>
+    <owl:Class rdf:about="http://merged#ControlFlowStatement">
+        <rdfs:label xml:lang="en">Control Flow Statement</rdfs:label>
+        <rdfs:label>Information flow control</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/Statement"/>
+        <rdfs:comment xml:lang="en">A control flow statement, that is a statement that regulates the order in which statements are executed.
+Control Flow Statements break up the flow of execution by employing decision making, looping, or branching.</rdfs:comment>
     </owl:Class>
     
 
 
-    <!-- http://cmt#AssociatedChair -->
+    <!-- http://rdf.webofcode.org/woc/AccessModifier -->
 
-    <owl:Class rdf:about="http://cmt#AssociatedChair">
-        <rdfs:subClassOf rdf:resource="http://cmt#ConferenceMember"/>
-        <owl:disjointWith rdf:resource="http://merged#ConferenceChair"/>
-    </owl:Class>
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/AccessModifier"/>
     
 
 
-    <!-- http://cmt#AuthorNotReviewer -->
+    <!-- http://rdf.webofcode.org/woc/ActualArgument -->
 
-    <owl:Class rdf:about="http://cmt#AuthorNotReviewer">
-        <rdfs:subClassOf rdf:resource="http://merged#Author"/>
-        <owl:disjointWith rdf:resource="http://cmt#ProgramCommitteeMember"/>
-        <owl:disjointWith rdf:resource="http://merged#Reviewer"/>
-    </owl:Class>
-    
-
-
-    <!-- http://cmt#Chairman -->
-
-    <owl:Class rdf:about="http://cmt#Chairman">
-        <owl:equivalentClass>
-            <owl:Class>
-                <owl:unionOf rdf:parseType="Collection">
-                    <rdf:Description rdf:about="http://cmt#AssociatedChair"/>
-                    <rdf:Description rdf:about="http://cmt#ProgramCommitteeChair"/>
-                    <rdf:Description rdf:about="http://merged#ConferenceChair"/>
-                </owl:unionOf>
-            </owl:Class>
-        </owl:equivalentClass>
-        <rdfs:subClassOf rdf:resource="http://merged#Person"/>
-    </owl:Class>
-    
-
-
-    <!-- http://cmt#Co-author -->
-
-    <owl:Class rdf:about="http://cmt#Co-author">
-        <rdfs:subClassOf rdf:resource="http://merged#Author"/>
-    </owl:Class>
-    
-
-
-    <!-- http://cmt#ConferenceMember -->
-
-    <owl:Class rdf:about="http://cmt#ConferenceMember">
-        <rdfs:subClassOf rdf:resource="http://merged#Person"/>
-    </owl:Class>
-    
-
-
-    <!-- http://cmt#ExternalReviewer -->
-
-    <owl:Class rdf:about="http://cmt#ExternalReviewer">
-        <rdfs:subClassOf rdf:resource="http://merged#Person"/>
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/ActualArgument">
+        <rdfs:label>Actual Argument</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
         <rdfs:subClassOf>
             <owl:Restriction>
-                <owl:onProperty rdf:resource="http://cmt#assignedByReviewer"/>
-                <owl:cardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:cardinality>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasSubExpression"/>
+                <owl:onClass rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
             </owl:Restriction>
         </rdfs:subClassOf>
-        <owl:disjointWith rdf:resource="http://merged#Reviewer"/>
-        <rdfs:comment rdf:datatype="http://www.w3.org/2001/XMLSchema#string">An External Reviewer is a person that has been assigned to review a paper for another Reviewer, but is not themselves a Reviewer. </rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasPosition"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+                <owl:onDataRange rdf:resource="http://www.w3.org/2001/XMLSchema#int"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment>The actual argument of a method</rdfs:comment>
     </owl:Class>
     
 
 
-    <!-- http://cmt#Meta-Reviewer -->
+    <!-- http://rdf.webofcode.org/woc/AnonymousClass -->
 
-    <owl:Class rdf:about="http://cmt#Meta-Reviewer">
-        <rdfs:subClassOf rdf:resource="http://merged#Reviewer"/>
-        <rdfs:comment rdf:datatype="http://www.w3.org/2001/XMLSchema#string">A special type of Reviewer.  There can be any number of Reviewers for a given paper, but only one Meta-Reviewer.  The Meta-Reviewer can go over all the reviews submitted for the paper and submit their own review.  Questions for the Meta-Reviewer can be different from those for a normal Reviewer.  Their role is to ensure that the reviews are good and consistent. The decision to use Meta-Reviewers is optional, and must be set before paper assignment occurs.</rdfs:comment>
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/AnonymousClass">
+        <rdfs:label xml:lang="en">Anonymous Class</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/Class"/>
+        <rdfs:comment xml:lang="en">An anonymous class</rdfs:comment>
     </owl:Class>
     
 
 
-    <!-- http://cmt#ProgramCommitteeChair -->
+    <!-- http://rdf.webofcode.org/woc/AssertStatement -->
 
-    <owl:Class rdf:about="http://cmt#ProgramCommitteeChair">
-        <rdfs:subClassOf rdf:resource="http://cmt#ProgramCommitteeMember"/>
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/AssertStatement">
+        <rdfs:label xml:lang="en">Assert Statement</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/Statement"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasAssertExpression"/>
+                <owl:onClass rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">An assert statement</rdfs:comment>
     </owl:Class>
     
 
 
-    <!-- http://cmt#ProgramCommitteeMember -->
+    <!-- http://rdf.webofcode.org/woc/AssignmentExpression -->
 
-    <owl:Class rdf:about="http://cmt#ProgramCommitteeMember">
-        <rdfs:subClassOf rdf:resource="http://cmt#ConferenceMember"/>
-        <rdfs:subClassOf rdf:resource="http://merged#Person"/>
-        <rdfs:comment rdf:datatype="http://www.w3.org/2001/XMLSchema#string">The Program Committee consists of all members of the conference except for Authors who are not also Reviewers.</rdfs:comment>
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/AssignmentExpression">
+        <rdfs:label>Assignment Expression</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasLeftHandSide"/>
+                <owl:onClass rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasSubExpression"/>
+                <owl:onClass rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">An assignment expression. It involves one of the following operators:
+=, *=, /=, %=, +=, -=, &lt;&lt;=, &gt;&gt;=, &gt;&gt;&gt;=, &amp;=, ^=, |=</rdfs:comment>
     </owl:Class>
     
 
 
-    <!-- http://cmt#User -->
+    <!-- http://rdf.webofcode.org/woc/BlockStatement -->
 
-    <owl:Class rdf:about="http://cmt#User">
-        <rdfs:subClassOf rdf:resource="http://merged#Person"/>
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/BlockStatement">
+        <rdfs:label xml:lang="en">Block Statement</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/Statement"/>
+        <rdfs:comment xml:lang="en">A block</rdfs:comment>
     </owl:Class>
     
 
 
-    <!-- http://edas#Attendee -->
+    <!-- http://rdf.webofcode.org/woc/BranchingStatement -->
 
-    <owl:Class rdf:about="http://edas#Attendee">
-        <rdfs:subClassOf rdf:resource="http://merged#Person"/>
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/BranchingStatement">
+        <rdfs:label xml:lang="en">Branching Statement</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://merged#ControlFlowStatement"/>
+        <rdfs:comment xml:lang="en">A branching statement, namely a break statement, a continue statement or a return statement</rdfs:comment>
     </owl:Class>
     
 
 
-    <!-- http://edas#Presenter -->
+    <!-- http://rdf.webofcode.org/woc/BreakStatement -->
 
-    <owl:Class rdf:about="http://edas#Presenter">
-        <rdfs:subClassOf rdf:resource="http://merged#Author"/>
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/BreakStatement">
+        <rdfs:label xml:lang="en">Break Statement</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/BranchingStatement"/>
+        <rdfs:comment xml:lang="en">The BreakStatement class represents a break statement. The break statement has two forms: labeled and unlabeled. In case a break statement is labeled, the label is defined through the targetedLabel property</rdfs:comment>
     </owl:Class>
     
 
 
-    <!-- http://edas#SessionChair -->
+    <!-- http://rdf.webofcode.org/woc/CaseLabeledBlock -->
 
-    <owl:Class rdf:about="http://edas#SessionChair">
-        <rdfs:subClassOf rdf:resource="http://merged#Person"/>
-        <owl:disjointWith rdf:resource="http://merged#Author"/>
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/CaseLabeledBlock">
+        <rdfs:label xml:lang="en">Case Labeled Block</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/LabeledBlock"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasSubExpression"/>
+                <owl:onClass rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">A case-labeled list of statements</rdfs:comment>
     </owl:Class>
     
 
 
-    <!-- http://edas#TPCMember -->
+    <!-- http://rdf.webofcode.org/woc/CatchBlock -->
 
-    <owl:Class rdf:about="http://edas#TPCMember">
-        <rdfs:subClassOf rdf:resource="http://merged#Person"/>
-        <owl:disjointWith rdf:resource="http://merged#Author"/>
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/CatchBlock">
+        <rdfs:label xml:lang="en">Catch Block</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/BlockStatement"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasCatchFormalParameter"/>
+                <owl:someValuesFrom rdf:resource="http://rdf.webofcode.org/woc/Class"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">A catch block</rdfs:comment>
     </owl:Class>
     
 
 
-    <!-- http://merged#Author -->
+    <!-- http://rdf.webofcode.org/woc/Class -->
 
-    <owl:Class rdf:about="http://merged#Author">
-        <owl:equivalentClass>
-            <owl:Class>
-                <owl:intersectionOf rdf:parseType="Collection">
-                    <owl:Restriction>
-                        <owl:onProperty rdf:resource="http://edas#hasRelatedDocument"/>
-                        <owl:someValuesFrom rdf:resource="http://merged#Paper"/>
-                    </owl:Restriction>
-                </owl:intersectionOf>
-            </owl:Class>
-        </owl:equivalentClass>
-        <rdfs:subClassOf rdf:resource="http://cmt#ConferenceMember"/>
-        <rdfs:subClassOf rdf:resource="http://cmt#User"/>
-        <owl:disjointWith rdf:resource="http://merged#ConferenceChair"/>
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/Class">
+        <rdfs:label xml:lang="en">Class</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/ComplexType"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/extends"/>
+                <owl:allValuesFrom rdf:resource="http://rdf.webofcode.org/woc/Class"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasDeclaration"/>
+                <owl:allValuesFrom rdf:resource="http://rdf.webofcode.org/woc/ClassDeclarationStatement"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/implements"/>
+                <owl:allValuesFrom rdf:resource="http://rdf.webofcode.org/woc/Interface"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/extends"/>
+                <owl:onClass rdf:resource="http://rdf.webofcode.org/woc/Class"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">A class</rdfs:comment>
     </owl:Class>
     
 
 
-    <!-- http://merged#ConferenceChair -->
+    <!-- http://rdf.webofcode.org/woc/ClassDeclarationStatement -->
 
-    <owl:Class rdf:about="http://merged#ConferenceChair">
-        <rdfs:subClassOf rdf:resource="http://cmt#ConferenceMember"/>
-        <rdfs:subClassOf rdf:resource="http://merged#Person"/>
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/ClassDeclarationStatement">
+        <rdfs:label xml:lang="en">Class Declaration Statement</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/DeclarationStatement"/>
+        <owl:disjointWith rdf:resource="http://rdf.webofcode.org/woc/VariableDeclarationStatement"/>
+        <rdfs:comment xml:lang="en">A statement that corresponds to the declaration of a local class</rdfs:comment>
     </owl:Class>
     
 
 
-    <!-- http://merged#Paper -->
+    <!-- http://rdf.webofcode.org/woc/ClassInstanceCreationExpression -->
 
-    <owl:Class rdf:about="http://merged#Paper"/>
-    
-
-
-    <!-- http://merged#Person -->
-
-    <owl:Class rdf:about="http://merged#Person"/>
-    
-
-
-    <!-- http://merged#Reviewer -->
-
-    <owl:Class rdf:about="http://merged#Reviewer">
-        <owl:equivalentClass>
-            <owl:Class>
-                <owl:intersectionOf rdf:parseType="Collection">
-                    <owl:Restriction>
-                        <owl:onProperty rdf:resource="http://edas#isReviewing"/>
-                        <owl:someValuesFrom rdf:resource="http://merged#Paper"/>
-                    </owl:Restriction>
-                </owl:intersectionOf>
-            </owl:Class>
-        </owl:equivalentClass>
-        <rdfs:subClassOf rdf:resource="http://cmt#ConferenceMember"/>
-        <rdfs:subClassOf rdf:resource="http://cmt#User"/>
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/ClassInstanceCreationExpression">
+        <rdfs:label xml:lang="en">Class Instance Creation Expression</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/ExecutableInvocationExpression"/>
+        <owl:disjointWith rdf:resource="http://rdf.webofcode.org/woc/MethodInvocationExpression"/>
+        <rdfs:comment xml:lang="en">An expression that creates a class instance, in other words a constructor call</rdfs:comment>
     </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/ComplexType -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/ComplexType">
+        <rdfs:label xml:lang="en">Complex Type</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/Modifiable"/>
+        <rdfs:comment xml:lang="en">A class or an enumeration or an interface</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/Constructor -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/Constructor">
+        <rdfs:label xml:lang="en">Constructor</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/Executable"/>
+        <owl:disjointWith rdf:resource="http://rdf.webofcode.org/woc/Method"/>
+        <rdfs:comment xml:lang="en">A constructor of a Class</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/ContinueStatement -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/ContinueStatement">
+        <rdfs:label xml:lang="en">Continue Statement</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/BranchingStatement"/>
+        <rdfs:comment xml:lang="en">A continue statement</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/DecisionMakingStatement -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/DecisionMakingStatement">
+        <rdfs:label xml:lang="en">Decision Making Statement</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://merged#ControlFlowStatement"/>
+        <rdfs:comment xml:lang="en">A Decision Making Statement, that is a statement that break up the flow of execution by employing decision making. It can either be a if-then-else statement or a switch statement.</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/DeclarationStatement -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/DeclarationStatement">
+        <rdfs:label xml:lang="en">Declaration statement</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/Statement"/>
+        <rdfs:comment xml:lang="en">A statement that holds a declaration</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/DefaultLabeledBlock -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/DefaultLabeledBlock">
+        <rdfs:label xml:lang="en">Default Labeled Block</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/LabeledBlock"/>
+        <rdfs:comment xml:lang="en">A default-labeled block</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/DoStatement -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/DoStatement">
+        <rdfs:label xml:lang="en">Do Statement</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/LoopStatement"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasCondition"/>
+                <owl:onClass rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">A do-while statement</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/Enum -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/Enum">
+        <rdfs:label xml:lang="en">Enum</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/ComplexType"/>
+        <rdfs:comment xml:lang="en">An enumeration</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/Executable -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/Executable">
+        <rdfs:label xml:lang="en">Executable</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/Modifiable"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/isVarArgs"/>
+                <owl:someValuesFrom rdf:resource="http://www.w3.org/2001/XMLSchema#boolean"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">An executable block of code, namely a Method or a Constructor</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/ExecutableInvocationExpression -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/ExecutableInvocationExpression">
+        <rdfs:label xml:lang="en">Executable invocation expression</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/invokes"/>
+                <owl:onClass rdf:resource="http://rdf.webofcode.org/woc/Executable"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">An invocation of either a method or a constructor.</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/Expression -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/Expression">
+        <rdfs:label>Expression</rdfs:label>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasType"/>
+                <owl:onClass rdf:resource="http://rdf.webofcode.org/woc/Type"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasLine"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+                <owl:onDataRange rdf:resource="http://www.w3.org/2001/XMLSchema#int"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment>A generic expression</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/ExpressionStatement -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/ExpressionStatement">
+        <rdfs:label xml:lang="en">Expression statement</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/Statement"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasSubExpression"/>
+                <owl:onClass rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">An expression statement. that is a statement that wraps an expression</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/Field -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/Field">
+        <rdfs:label xml:lang="en">Field</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/Modifiable"/>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/Variable"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasDeclaration"/>
+                <owl:allValuesFrom rdf:resource="http://rdf.webofcode.org/woc/FieldDeclarationStatement"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/isDeclaredBy"/>
+                <owl:allValuesFrom>
+                    <owl:Class>
+                        <owl:unionOf rdf:parseType="Collection">
+                            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Class"/>
+                            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Enum"/>
+                            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Interface"/>
+                        </owl:unionOf>
+                    </owl:Class>
+                </owl:allValuesFrom>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">A class field</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/FieldDeclarationStatement -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/FieldDeclarationStatement">
+        <rdfs:label xml:lang="en">Field Declaration</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/VariableDeclarationStatement"/>
+        <owl:disjointWith rdf:resource="http://rdf.webofcode.org/woc/LocalVariableDeclarationStatement"/>
+        <rdfs:comment xml:lang="en">The declaration of a field</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/FinallyBlock -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/FinallyBlock">
+        <rdfs:label xml:lang="en">Finally Block</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/BlockStatement"/>
+        <rdfs:comment xml:lang="en">A finally block</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/ForEachStatement -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/ForEachStatement">
+        <rdfs:label xml:lang="en">ForEach Statement</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/LoopStatement"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasSubExpression"/>
+                <owl:onClass rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasVariable"/>
+                <owl:onClass rdf:resource="http://rdf.webofcode.org/woc/Variable"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">A for-each statement, also known as enhanced for statement</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/ForStatement -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/ForStatement">
+        <rdfs:label xml:lang="en">For Statement</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/LoopStatement"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasCondition"/>
+                <owl:onClass rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">A for statement</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/IfThenElseStatement -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/IfThenElseStatement">
+        <rdfs:label xml:lang="en">If-then-else statement</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/DecisionMakingStatement"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasCondition"/>
+                <owl:onClass rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasThenBranch"/>
+                <owl:onClass rdf:resource="http://rdf.webofcode.org/woc/Statement"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <owl:disjointWith rdf:resource="http://rdf.webofcode.org/woc/SwitchStatement"/>
+        <rdfs:comment xml:lang="en">A If-then-else statement</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/Interface -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/Interface">
+        <rdfs:label xml:lang="en">Interface</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/ComplexType"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/extends"/>
+                <owl:allValuesFrom rdf:resource="http://rdf.webofcode.org/woc/Interface"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">An interface</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/LabeledBlock -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/LabeledBlock">
+        <rdfs:label xml:lang="en">Labeled Block</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/BlockStatement"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasNextStatement"/>
+                <owl:allValuesFrom rdf:resource="http://rdf.webofcode.org/woc/LabeledBlock"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">A labeled block of code, namely a case-labeled block or a default-labeled block</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/LocalVariable -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/LocalVariable">
+        <rdfs:label xml:lang="en">Local Variable</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/Variable"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/isDeclaredBy"/>
+                <owl:allValuesFrom rdf:resource="http://rdf.webofcode.org/woc/Executable"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">A local variable</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/LocalVariableDeclarationStatement -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/LocalVariableDeclarationStatement">
+        <rdfs:label xml:lang="en">Local Variable Declaration Statement</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/VariableDeclarationStatement"/>
+        <rdfs:comment xml:lang="en">A local variable declaration</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/LoopStatement -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/LoopStatement">
+        <rdfs:label xml:lang="en">Loop Statement</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://merged#ControlFlowStatement"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasBody"/>
+                <owl:onClass rdf:resource="http://rdf.webofcode.org/woc/BlockStatement"/>
+                <owl:maxQualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxQualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">A loop statement.</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/Method -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/Method">
+        <rdfs:label xml:lang="en">Method</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/Executable"/>
+        <rdfs:comment xml:lang="en">A Method</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/MethodInvocationExpression -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/MethodInvocationExpression">
+        <rdfs:label xml:lang="en">Method Invocation Expression</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/ExecutableInvocationExpression"/>
+        <rdfs:comment xml:lang="en">A method call</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/Modifiable -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/Modifiable">
+        <rdfs:label xml:lang="en">Modifiable</rdfs:label>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasModifier"/>
+                <owl:someValuesFrom rdf:resource="http://rdf.webofcode.org/woc/Modifier"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasModifier"/>
+                <owl:onClass rdf:resource="http://rdf.webofcode.org/woc/AccessModifier"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">An element that can have a modifier</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/Modifier -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/Modifier"/>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/Parameter -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/Parameter">
+        <rdfs:label xml:lang="en">Parameter</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/Variable"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasPosition"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+                <owl:onDataRange rdf:resource="http://www.w3.org/2001/XMLSchema#int"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">A formal parameter</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/ParameterizedType -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/ParameterizedType"/>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/ReturnStatement -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/ReturnStatement">
+        <rdfs:label xml:lang="en">Return Statement</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/BranchingStatement"/>
+        <rdfs:comment xml:lang="en">A return statement</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/Statement -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/Statement">
+        <rdfs:label>Statement</rdfs:label>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasLine"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+                <owl:onDataRange rdf:resource="http://www.w3.org/2001/XMLSchema#int"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasPosition"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+                <owl:onDataRange rdf:resource="http://www.w3.org/2001/XMLSchema#int"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment>A generic statement</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/SwitchStatement -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/SwitchStatement">
+        <rdfs:label xml:lang="en">Switch Statement</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/DecisionMakingStatement"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasSubExpression"/>
+                <owl:onClass rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">A switch statement</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/SynchronizedStatement -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/SynchronizedStatement">
+        <rdfs:label xml:lang="en">Synchronized Statement</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/Statement"/>
+        <rdfs:comment xml:lang="en">A synchronized statement, that is a statement that acquires a mutual-exclusion lock on behalf of the executiing-thread, executes a block, then release the lock.
+In java it is of the form:
+synchronized &lt;Expression&gt; &lt;Block&gt;</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/ThrowStatement -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/ThrowStatement">
+        <rdfs:label xml:lang="en">Throw Statement</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/Statement"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasThrownExpression"/>
+                <owl:onClass rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">A throw statement, that is a statement that causes an exception to be thrown</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/TryStatement -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/TryStatement">
+        <rdfs:label xml:lang="en">Try Statement</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/Statement"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasBody"/>
+                <owl:onClass rdf:resource="http://rdf.webofcode.org/woc/BlockStatement"/>
+                <owl:maxQualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxQualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">A try statement</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/Type -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/Type"/>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/TypeVariable -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/TypeVariable"/>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/Variable -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/Variable">
+        <rdfs:label xml:lang="en">Variable</rdfs:label>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasType"/>
+                <owl:onClass rdf:resource="http://rdf.webofcode.org/woc/Type"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">A variable</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/VariableDeclarationStatement -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/VariableDeclarationStatement">
+        <rdfs:label xml:lang="en">Variable Declaration</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/DeclarationStatement"/>
+        <rdfs:comment xml:lang="en">A statement that represents the declaration of a variable</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/WhileStatement -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/WhileStatement">
+        <rdfs:label xml:lang="en">While Statement</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://rdf.webofcode.org/woc/LoopStatement"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://rdf.webofcode.org/woc/hasCondition"/>
+                <owl:onClass rdf:resource="http://rdf.webofcode.org/woc/Expression"/>
+                <owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment xml:lang="en">A while statement</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://rdf.webofcode.org/woc/Wildcard -->
+
+    <owl:Class rdf:about="http://rdf.webofcode.org/woc/Wildcard"/>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // General axioms
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    <rdf:Description>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AllDisjointClasses"/>
+        <owl:members rdf:parseType="Collection">
+            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/ActualArgument"/>
+            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/AssignmentExpression"/>
+            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/ExecutableInvocationExpression"/>
+        </owl:members>
+    </rdf:Description>
+    <rdf:Description>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AllDisjointClasses"/>
+        <owl:members rdf:parseType="Collection">
+            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/BranchingStatement"/>
+            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/DecisionMakingStatement"/>
+            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/LoopStatement"/>
+        </owl:members>
+    </rdf:Description>
+    <rdf:Description>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AllDisjointClasses"/>
+        <owl:members rdf:parseType="Collection">
+            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/BreakStatement"/>
+            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/ContinueStatement"/>
+            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/ReturnStatement"/>
+        </owl:members>
+    </rdf:Description>
+    <rdf:Description>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AllDisjointClasses"/>
+        <owl:members rdf:parseType="Collection">
+            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/CatchBlock"/>
+            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/FinallyBlock"/>
+            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/LabeledBlock"/>
+        </owl:members>
+    </rdf:Description>
+    <rdf:Description>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AllDisjointClasses"/>
+        <owl:members rdf:parseType="Collection">
+            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Class"/>
+            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Enum"/>
+            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Interface"/>
+        </owl:members>
+    </rdf:Description>
+    <rdf:Description>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AllDisjointClasses"/>
+        <owl:members rdf:parseType="Collection">
+            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/DoStatement"/>
+            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/ForEachStatement"/>
+            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/ForStatement"/>
+            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/WhileStatement"/>
+        </owl:members>
+    </rdf:Description>
+    <rdf:Description>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#AllDisjointClasses"/>
+        <owl:members rdf:parseType="Collection">
+            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Field"/>
+            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/LocalVariable"/>
+            <rdf:Description rdf:about="http://rdf.webofcode.org/woc/Parameter"/>
+        </owl:members>
+    </rdf:Description>
 </rdf:RDF>
 
 

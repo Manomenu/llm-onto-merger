@@ -1,11 +1,48 @@
 <?xml version="1.0"?>
-<rdf:RDF xmlns="file:/Users/maniumek/repos/llm-onto-merger/tests/scenarios/outputs/conference-s2/.comerger/cluster2.owl#"
-     xml:base="file:/Users/maniumek/repos/llm-onto-merger/tests/scenarios/outputs/conference-s2/.comerger/cluster2.owl"
+<rdf:RDF xmlns="file:/Users/maniumek/repos/llm-onto-merger/tests/scenarios/outputs/acm-union-s2/.comerger/cluster2.owl#"
+     xml:base="file:/Users/maniumek/repos/llm-onto-merger/tests/scenarios/outputs/acm-union-s2/.comerger/cluster2.owl"
+     xmlns:schema="http://schema.org/"
      xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
      xmlns:owl="http://www.w3.org/2002/07/owl#"
      xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:skos="http://www.w3.org/2004/02/skos/core#"
      xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#">
-    <owl:Ontology rdf:about="file:/Users/maniumek/repos/llm-onto-merger/tests/scenarios/outputs/conference-s2/.comerger/cluster2.owl"/>
+    <owl:Ontology rdf:about="file:/Users/maniumek/repos/llm-onto-merger/tests/scenarios/outputs/acm-union-s2/.comerger/cluster2.owl"/>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Annotation properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://schema.org/domainIncludes -->
+
+    <owl:AnnotationProperty rdf:about="http://schema.org/domainIncludes"/>
+    
+
+
+    <!-- http://schema.org/rangeIncludes -->
+
+    <owl:AnnotationProperty rdf:about="http://schema.org/rangeIncludes"/>
+    
+
+
+    <!-- http://www.w3.org/2004/02/skos/core#definition -->
+
+    <owl:AnnotationProperty rdf:about="http://www.w3.org/2004/02/skos/core#definition"/>
+    
+
+
+    <!-- http://www.w3.org/2004/02/skos/core#example -->
+
+    <owl:AnnotationProperty rdf:about="http://www.w3.org/2004/02/skos/core#example"/>
     
 
 
@@ -20,238 +57,57 @@
     
 
 
-    <!-- http://cmt#acceptPaper -->
+    <!-- http://purl.oclc.org/NET/UNIS/fiware/iot-lite#hasQuantityKind -->
 
-    <owl:ObjectProperty rdf:about="http://cmt#acceptPaper">
-        <rdfs:range rdf:resource="http://merged#Paper"/>
+    <owl:ObjectProperty rdf:about="http://purl.oclc.org/NET/UNIS/fiware/iot-lite#hasQuantityKind">
+        <rdfs:domain rdf:resource="http://merged#Sensor"/>
     </owl:ObjectProperty>
     
 
 
-    <!-- http://cmt#acceptedBy -->
+    <!-- http://purl.oclc.org/NET/UNIS/fiware/iot-lite#hasUnit -->
 
-    <owl:ObjectProperty rdf:about="http://cmt#acceptedBy">
-        <rdfs:domain rdf:resource="http://merged#Paper"/>
+    <owl:ObjectProperty rdf:about="http://purl.oclc.org/NET/UNIS/fiware/iot-lite#hasUnit">
+        <rdfs:domain rdf:resource="http://merged#Sensor"/>
     </owl:ObjectProperty>
     
 
 
-    <!-- http://cmt#assignedTo -->
+    <!-- http://purl.org/iot/ontology/iot-stream#madeStreamObservation -->
 
-    <owl:ObjectProperty rdf:about="http://cmt#assignedTo">
-        <rdfs:domain rdf:resource="http://merged#Paper"/>
+    <owl:ObjectProperty rdf:about="http://purl.org/iot/ontology/iot-stream#madeStreamObservation">
+        <rdfs:label xml:lang="en">made stream observation</rdfs:label>
+        <rdfs:domain rdf:resource="http://merged#Sensor"/>
     </owl:ObjectProperty>
     
 
 
-    <!-- http://cmt#co-writePaper -->
+    <!-- http://www.w3.org/ns/sosa/madeBySensor -->
 
-    <owl:ObjectProperty rdf:about="http://cmt#co-writePaper">
-        <rdfs:range rdf:resource="http://merged#Paper"/>
+    <owl:ObjectProperty rdf:about="http://www.w3.org/ns/sosa/madeBySensor">
+        <rdfs:label xml:lang="en">made by sensor</rdfs:label>
+        <skos:definition xml:lang="en">Relation between an Observation and the Sensor which made the Observation.</skos:definition>
+        <rdfs:comment xml:lang="en">Relation between an Observation and the Sensor which made the Observation.</rdfs:comment>
+        <rdfs:range rdf:resource="http://merged#Sensor"/>
+        <rdfs:isDefinedBy rdf:resource="http://www.w3.org/ns/sosa/"/>
+        <schema:domainIncludes rdf:resource="http://www.w3.org/ns/sosa/Observation"/>
+        <schema:rangeIncludes rdf:resource="http://www.w3.org/ns/sosa/Sensor"/>
+        <owl:inverseOf rdf:resource="http://www.w3.org/ns/sosa/madeObservation"/>
     </owl:ObjectProperty>
     
 
 
-    <!-- http://cmt#hasAuthor -->
+    <!-- http://www.w3.org/ns/sosa/madeObservation -->
 
-    <owl:ObjectProperty rdf:about="http://cmt#hasAuthor">
-        <rdfs:domain rdf:resource="http://merged#Paper"/>
+    <owl:ObjectProperty rdf:about="http://www.w3.org/ns/sosa/madeObservation">
+        <rdfs:label xml:lang="en">made observation</rdfs:label>
+        <rdfs:comment xml:lang="en">Relation between a Sensor and an Observation made by the Sensor.</rdfs:comment>
+        <skos:definition xml:lang="en">Relation between a Sensor and an Observation made by the Sensor.</skos:definition>
+        <rdfs:domain rdf:resource="http://merged#Sensor"/>
+        <rdfs:isDefinedBy rdf:resource="http://www.w3.org/ns/sosa/"/>
+        <schema:rangeIncludes rdf:resource="http://www.w3.org/ns/sosa/Observation"/>
+        <schema:domainIncludes rdf:resource="http://www.w3.org/ns/sosa/Sensor"/>
     </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#hasBeenAssigned -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#hasBeenAssigned">
-        <rdfs:range rdf:resource="http://merged#Paper"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#hasBid -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#hasBid">
-        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty"/>
-        <rdfs:domain rdf:resource="http://merged#Paper"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#hasCo-author -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#hasCo-author">
-        <rdfs:domain rdf:resource="http://merged#Paper"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#hasDecision -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#hasDecision">
-        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
-        <rdfs:domain rdf:resource="http://merged#Paper"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#hasSubjectArea -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#hasSubjectArea">
-        <rdfs:domain rdf:resource="http://merged#Paper"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#markConflictOfInterest -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#markConflictOfInterest">
-        <rdfs:range rdf:resource="http://merged#Paper"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#readByMeta-Reviewer -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#readByMeta-Reviewer">
-        <rdfs:domain rdf:resource="http://merged#Paper"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#readByReviewer -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#readByReviewer">
-        <rdfs:domain rdf:resource="http://merged#Paper"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#readPaper -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#readPaper">
-        <rdfs:range rdf:resource="http://merged#Paper"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#rejectPaper -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#rejectPaper">
-        <rdfs:range rdf:resource="http://merged#Paper"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#rejectedBy -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#rejectedBy">
-        <rdfs:domain rdf:resource="http://merged#Paper"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#submitPaper -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#submitPaper">
-        <rdfs:range rdf:resource="http://merged#Paper"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://cmt#writePaper -->
-
-    <owl:ObjectProperty rdf:about="http://cmt#writePaper">
-        <rdfs:range rdf:resource="http://merged#Paper"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://edas#hasRating -->
-
-    <owl:ObjectProperty rdf:about="http://edas#hasRating">
-        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
-        <rdfs:domain rdf:resource="http://edas#ActivePaper"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://edas#hasRelatedPaper -->
-
-    <owl:ObjectProperty rdf:about="http://edas#hasRelatedPaper">
-        <rdfs:range rdf:resource="http://merged#Paper"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://edas#isReviewedBy -->
-
-    <owl:ObjectProperty rdf:about="http://edas#isReviewedBy">
-        <rdfs:domain rdf:resource="http://merged#Paper"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://edas#isReviewing -->
-
-    <owl:ObjectProperty rdf:about="http://edas#isReviewing">
-        <rdfs:range rdf:resource="http://merged#Paper"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://edas#isWrittenBy -->
-
-    <owl:ObjectProperty rdf:about="http://edas#isWrittenBy">
-        <rdfs:domain rdf:resource="http://merged#Paper"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://edas#relatedToEvent -->
-
-    <owl:ObjectProperty rdf:about="http://edas#relatedToEvent">
-        <rdfs:domain rdf:resource="http://edas#AcceptedPaper"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- http://edas#relatedToPaper -->
-
-    <owl:ObjectProperty rdf:about="http://edas#relatedToPaper">
-        <rdfs:range rdf:resource="http://edas#AcceptedPaper"/>
-        <owl:inverseOf rdf:resource="http://edas#relatedToEvent"/>
-    </owl:ObjectProperty>
-    
-
-
-    <!-- 
-    ///////////////////////////////////////////////////////////////////////////////////////
-    //
-    // Data properties
-    //
-    ///////////////////////////////////////////////////////////////////////////////////////
-     -->
-
-    
-
-
-    <!-- http://cmt#paperID -->
-
-    <owl:DatatypeProperty rdf:about="http://cmt#paperID">
-        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
-        <rdfs:domain rdf:resource="http://merged#Paper"/>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#unsignedLong"/>
-    </owl:DatatypeProperty>
-    
-
-
-    <!-- http://cmt#title -->
-
-    <owl:DatatypeProperty rdf:about="http://cmt#title">
-        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty"/>
-        <rdfs:domain rdf:resource="http://merged#Paper"/>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
-    </owl:DatatypeProperty>
     
 
 
@@ -266,132 +122,1664 @@
     
 
 
-    <!-- http://cmt#PaperAbstract -->
+    <!-- http://acm2012.owl#10003035 -->
 
-    <owl:Class rdf:about="http://cmt#PaperAbstract">
-        <rdfs:subClassOf rdf:resource="http://merged#Paper"/>
+    <rdf:Description rdf:about="http://acm2012.owl#10003035">
+        <rdfs:label>Network design principles</rdfs:label>
+    </rdf:Description>
+    
+
+
+    <!-- http://acm2012.owl#10003036 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10003036">
+        <rdfs:label>Layering</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003035"/>
     </owl:Class>
     
 
 
-    <!-- http://cmt#PaperFullVersion -->
+    <!-- http://acm2012.owl#10003037 -->
 
-    <owl:Class rdf:about="http://cmt#PaperFullVersion">
-        <rdfs:subClassOf rdf:resource="http://merged#Paper"/>
+    <owl:Class rdf:about="http://acm2012.owl#10003037">
+        <rdfs:label>Naming and addressing</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003035"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003099"/>
     </owl:Class>
     
 
 
-    <!-- http://edas#AcceptedPaper -->
+    <!-- http://acm2012.owl#10003099 -->
 
-    <owl:Class rdf:about="http://edas#AcceptedPaper">
-        <rdfs:subClassOf rdf:resource="http://merged#Paper"/>
-        <owl:disjointWith rdf:resource="http://edas#ActivePaper"/>
-        <owl:disjointWith rdf:resource="http://edas#PendingPaper"/>
-        <owl:disjointWith rdf:resource="http://edas#PublishedPaper"/>
-        <owl:disjointWith rdf:resource="http://edas#RejectedPaper"/>
-        <owl:disjointWith rdf:resource="http://edas#WithdrawnPaper"/>
+    <rdf:Description rdf:about="http://acm2012.owl#10003099">
+        <rdfs:label>Network services</rdfs:label>
+    </rdf:Description>
+    
+
+
+    <!-- http://acm2012.owl#10003100 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10003100">
+        <rdfs:label>Cloud computing</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003099"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010537"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10011120"/>
     </owl:Class>
     
 
 
-    <!-- http://edas#ActivePaper -->
+    <!-- http://acm2012.owl#10003101 -->
 
-    <owl:Class rdf:about="http://edas#ActivePaper">
-        <rdfs:subClassOf rdf:resource="http://merged#Paper"/>
-        <owl:disjointWith rdf:resource="http://edas#PendingPaper"/>
-        <owl:disjointWith rdf:resource="http://edas#PublishedPaper"/>
-        <owl:disjointWith rdf:resource="http://edas#RejectedPaper"/>
-        <owl:disjointWith rdf:resource="http://edas#WithdrawnPaper"/>
+    <owl:Class rdf:about="http://acm2012.owl#10003101">
+        <rdfs:label>Location based services</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003099"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003236"/>
     </owl:Class>
     
 
 
-    <!-- http://edas#PendingPaper -->
+    <!-- http://acm2012.owl#10003102 -->
 
-    <owl:Class rdf:about="http://edas#PendingPaper">
-        <rdfs:subClassOf rdf:resource="http://merged#Paper"/>
-        <owl:disjointWith rdf:resource="http://edas#PublishedPaper"/>
-        <owl:disjointWith rdf:resource="http://edas#RejectedPaper"/>
-        <owl:disjointWith rdf:resource="http://edas#WithdrawnPaper"/>
+    <owl:Class rdf:about="http://acm2012.owl#10003102">
+        <rdfs:label>Programmable networks</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003099"/>
     </owl:Class>
     
 
 
-    <!-- http://edas#PublishedPaper -->
+    <!-- http://acm2012.owl#10003103 -->
 
-    <owl:Class rdf:about="http://edas#PublishedPaper">
-        <rdfs:subClassOf rdf:resource="http://merged#Paper"/>
-        <owl:disjointWith rdf:resource="http://edas#RejectedPaper"/>
-        <owl:disjointWith rdf:resource="http://edas#WithdrawnPaper"/>
+    <owl:Class rdf:about="http://acm2012.owl#10003103">
+        <rdfs:label>In-network processing</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003099"/>
     </owl:Class>
     
 
 
-    <!-- http://edas#RatedPapers -->
+    <!-- http://acm2012.owl#10003104 -->
 
-    <owl:Class rdf:about="http://edas#RatedPapers">
-        <owl:equivalentClass>
-            <owl:Restriction>
-                <owl:onProperty rdf:resource="http://edas#hasRating"/>
-                <owl:someValuesFrom rdf:resource="http://edas#ReviewRating"/>
-            </owl:Restriction>
-        </owl:equivalentClass>
-        <rdfs:subClassOf rdf:resource="http://edas#ActivePaper"/>
+    <owl:Class rdf:about="http://acm2012.owl#10003104">
+        <rdfs:label>Network management</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003099"/>
     </owl:Class>
     
 
 
-    <!-- http://edas#RejectedPaper -->
+    <!-- http://acm2012.owl#10003105 -->
 
-    <owl:Class rdf:about="http://edas#RejectedPaper">
-        <rdfs:subClassOf rdf:resource="http://merged#Paper"/>
-        <owl:disjointWith rdf:resource="http://edas#WithdrawnPaper"/>
+    <owl:Class rdf:about="http://acm2012.owl#10003105">
+        <rdfs:label>Network monitoring</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003099"/>
     </owl:Class>
     
 
 
-    <!-- http://edas#ReviewRating -->
+    <!-- http://acm2012.owl#10003106 -->
 
-    <owl:Class rdf:about="http://edas#ReviewRating"/>
+    <rdf:Description rdf:about="http://acm2012.owl#10003106">
+        <rdfs:label>Network types</rdfs:label>
+    </rdf:Description>
     
 
 
-    <!-- http://edas#WithdrawnPaper -->
+    <!-- http://acm2012.owl#10003107 -->
 
-    <owl:Class rdf:about="http://edas#WithdrawnPaper">
-        <rdfs:subClassOf rdf:resource="http://merged#Paper"/>
+    <owl:Class rdf:about="http://acm2012.owl#10003107">
+        <rdfs:label>Network on chip</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003106"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010645"/>
     </owl:Class>
     
 
 
-    <!-- http://merged#Paper -->
+    <!-- http://acm2012.owl#10003108 -->
 
-    <owl:Class rdf:about="http://merged#Paper">
-        <rdfs:subClassOf>
-            <owl:Restriction>
-                <owl:onProperty rdf:resource="http://cmt#hasDecision"/>
-                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">0</owl:minCardinality>
-            </owl:Restriction>
-        </rdfs:subClassOf>
-        <rdfs:subClassOf>
-            <owl:Restriction>
-                <owl:onProperty rdf:resource="http://cmt#readByReviewer"/>
-                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality>
-            </owl:Restriction>
-        </rdfs:subClassOf>
-        <rdfs:subClassOf>
-            <owl:Restriction>
-                <owl:onProperty rdf:resource="http://cmt#hasDecision"/>
-                <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
-            </owl:Restriction>
-        </rdfs:subClassOf>
-        <rdfs:subClassOf>
-            <owl:Restriction>
-                <owl:onProperty rdf:resource="http://cmt#readByMeta-Reviewer"/>
-                <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
-            </owl:Restriction>
-        </rdfs:subClassOf>
+    <owl:Class rdf:about="http://acm2012.owl#10003108">
+        <rdfs:label>Home networks</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003106"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10003109 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10003109">
+        <rdfs:label>Storage area networks</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003106"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003518"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10003110 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10003110">
+        <rdfs:label>Data center networks</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003106"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10003111 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10003111">
+        <rdfs:label>Wired access networks</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003106"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10003112 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10003112">
+        <rdfs:label>Cyber-physical networks</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003106"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10003113 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10003113">
+        <rdfs:label>Mobile networks</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003106"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10003114 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10003114">
+        <rdfs:label>Overlay and other logical network structures</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003106"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10003115 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10003115">
+        <rdfs:label>Peer-to-peer networks</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003114"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10003116 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10003116">
+        <rdfs:label>World Wide Web (network structure)</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003114"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10003118 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10003118">
+        <rdfs:label>Social media networks</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003114"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10003119 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10003119">
+        <rdfs:label>Wireless access networks</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003106"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10003124 -->
+
+    <rdf:Description rdf:about="http://acm2012.owl#10003124">
+        <rdfs:label>Interaction paradigms</rdfs:label>
+    </rdf:Description>
+    
+
+
+    <!-- http://acm2012.owl#10003125 -->
+
+    <rdf:Description rdf:about="http://acm2012.owl#10003125">
+        <rdfs:label>Interaction devices</rdfs:label>
+    </rdf:Description>
+    
+
+
+    <!-- http://acm2012.owl#10003174 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10003174">
+        <rdfs:label>Direct attached storage</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003518"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10003175 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10003175">
+        <rdfs:label>Network attached storage</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003518"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10003236 -->
+
+    <rdf:Description rdf:about="http://acm2012.owl#10003236">
+        <rdfs:label>Spatial-temporal systems</rdfs:label>
+    </rdf:Description>
+    
+
+
+    <!-- http://acm2012.owl#10003237 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10003237">
+        <rdfs:label>Geographic information systems</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003236"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10003239 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10003239">
+        <rdfs:label>Data streaming</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003236"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10003247 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10003247">
+        <rdfs:label>Signal processing systems</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010588"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10003248 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10003248">
+        <rdfs:label>Digital signal processing</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003247"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10003249 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10003249">
+        <rdfs:label>Beamforming</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003247"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10003250 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10003250">
+        <rdfs:label>Noise reduction</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003247"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10003254 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10003254">
+        <rdfs:label>Hypertext / hypermedia</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003124"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10003518 -->
+
+    <rdf:Description rdf:about="http://acm2012.owl#10003518">
+        <rdfs:label>Storage network architectures</rdfs:label>
+    </rdf:Description>
+    
+
+
+    <!-- http://acm2012.owl#10003660 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10003660">
+        <rdfs:label>Classification and regression trees</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010293"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010071 -->
+
+    <rdf:Description rdf:about="http://acm2012.owl#10010071">
+        <rdfs:label>Machine learning theory</rdfs:label>
+    </rdf:Description>
+    
+
+
+    <!-- http://acm2012.owl#10010072 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010072">
+        <rdfs:label>Sample complexity and generalization bounds</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010071"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010073 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010073">
+        <rdfs:label>Boolean function learning</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010071"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010074 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010074">
+        <rdfs:label>Unsupervised learning and clustering</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010071"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010075 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010075">
+        <rdfs:label>Kernel methods</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010071"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010293"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010076 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010076">
+        <rdfs:label>Boosting</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010071"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010333"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010077 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010077">
+        <rdfs:label>Bayesian analysis</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010071"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010078 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010078">
+        <rdfs:label>Inductive inference</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010071"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010079 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010079">
+        <rdfs:label>Online learning theory</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010071"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010082 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010082">
+        <rdfs:label>Multi-agent learning</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010071"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010083 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010083">
+        <rdfs:label>Models of learning</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010071"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010084 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010084">
+        <rdfs:label>Query learning</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010071"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010085 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010085">
+        <rdfs:label>Structured prediction</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010071"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010261 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010261">
+        <rdfs:label>Reinforcement learning</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010071"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010272 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010272">
+        <rdfs:label>Sequential decision making</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010261"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010273 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010273">
+        <rdfs:label>Inverse reinforcement learning</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010261"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010274 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010274">
+        <rdfs:label>Apprenticeship learning</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010261"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010275 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010275">
+        <rdfs:label>Multi-agent reinforcement learning</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010261"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010276 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010276">
+        <rdfs:label>Adversarial learning</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010261"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010286 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010286">
+        <rdfs:label>Active learning</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010071"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010289 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010289">
+        <rdfs:label>Semi-supervised learning</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010071"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010293 -->
+
+    <rdf:Description rdf:about="http://acm2012.owl#10010293">
+        <rdfs:label>Machine learning approaches</rdfs:label>
+    </rdf:Description>
+    
+
+
+    <!-- http://acm2012.owl#10010294 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010294">
+        <rdfs:label>Neural networks</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010293"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010542"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010295 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010295">
+        <rdfs:label>Support vector machines</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010075"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010296 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010296">
+        <rdfs:label>Gaussian processes</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010075"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010297 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010297">
+        <rdfs:label>Logical and relational learning</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010293"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010298 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010298">
+        <rdfs:label>Inductive logic learning</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010297"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010299 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010299">
+        <rdfs:label>Statistical relational learning</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010297"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010300 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010300">
+        <rdfs:label>Learning in probabilistic graphical models</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010293"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010301 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010301">
+        <rdfs:label>Maximum likelihood modeling</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010300"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010302 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010302">
+        <rdfs:label>Maximum entropy modeling</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010300"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010303 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010303">
+        <rdfs:label>Maximum a posteriori modeling</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010300"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010304 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010304">
+        <rdfs:label>Mixture models</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010300"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010305 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010305">
+        <rdfs:label>Latent variable models</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010300"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010306 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010306">
+        <rdfs:label>Bayesian network models</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010300"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010307 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010307">
+        <rdfs:label>Learning linear models</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010293"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010308 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010308">
+        <rdfs:label>Perceptron algorithm</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010307"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010309 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010309">
+        <rdfs:label>Factorization methods</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010293"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010310 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010310">
+        <rdfs:label>Non-negative matrix factorization</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010309"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010311 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010311">
+        <rdfs:label>Factor analysis</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010309"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010312 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010312">
+        <rdfs:label>Principal component analysis</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010309"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010313 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010313">
+        <rdfs:label>Canonical correlation analysis</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010309"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010314 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010314">
+        <rdfs:label>Rule learning</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010293"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010315 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010315">
+        <rdfs:label>Instance-based learning</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010293"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010316 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010316">
+        <rdfs:label>Markov decision processes</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010071"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010293"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010317 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010317">
+        <rdfs:label>Partially-observable Markov decision processes</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010293"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010318 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010318">
+        <rdfs:label>Stochastic games</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010293"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010319 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010319">
+        <rdfs:label>Learning latent representations</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010293"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010320 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010320">
+        <rdfs:label>Deep belief networks</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010319"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010333 -->
+
+    <rdf:Description rdf:about="http://acm2012.owl#10010333">
+        <rdfs:label>Ensemble methods</rdfs:label>
+    </rdf:Description>
+    
+
+
+    <!-- http://acm2012.owl#10010334 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010334">
+        <rdfs:label>Bagging</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010333"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010387 -->
+
+    <rdf:Description rdf:about="http://acm2012.owl#10010387">
+        <rdfs:label>Graphics systems and interfaces</rdfs:label>
+    </rdf:Description>
+    
+
+
+    <!-- http://acm2012.owl#10010389 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010389">
+        <rdfs:label>Graphics processors</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010387"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010391 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010391">
+        <rdfs:label>Graphics input devices</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003125"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010387"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010392 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010392">
+        <rdfs:label>Mixed / augmented reality</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003124"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010387"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010393 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010393">
+        <rdfs:label>Perception</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010387"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010394 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010394">
+        <rdfs:label>Graphics file formats</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010387"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010537 -->
+
+    <rdf:Description rdf:about="http://acm2012.owl#10010537">
+        <rdfs:label>Distributed architectures</rdfs:label>
+    </rdf:Description>
+    
+
+
+    <!-- http://acm2012.owl#10010538 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010538">
+        <rdfs:label>Client-server architectures</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010537"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10011120"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010539 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010539">
+        <rdfs:label>n-tier architectures</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010537"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010972"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010540 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010540">
+        <rdfs:label>Peer-to-peer architectures</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010537"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010972"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010541 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010541">
+        <rdfs:label>Grid computing</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010537"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10011120"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010542 -->
+
+    <rdf:Description rdf:about="http://acm2012.owl#10010542">
+        <rdfs:label>Other architectures</rdfs:label>
+    </rdf:Description>
+    
+
+
+    <!-- http://acm2012.owl#10010543 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010543">
+        <rdfs:label>Reconfigurable computing</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010542"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010544 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010544">
+        <rdfs:label>Analog computers</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010542"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010545 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010545">
+        <rdfs:label>Data flow architectures</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010542"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010972"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010546 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010546">
+        <rdfs:label>Heterogeneous (hybrid) systems</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010542"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010548 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010548">
+        <rdfs:label>Self-organizing autonomic computing</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010542"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010549 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010549">
+        <rdfs:label>Optical computing</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010542"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010550 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010550">
+        <rdfs:label>Quantum computing</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010542"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010551 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010551">
+        <rdfs:label>Molecular computing</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010542"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010553 -->
+
+    <rdf:Description rdf:about="http://acm2012.owl#10010553">
+        <rdfs:label>Embedded and cyber-physical systems</rdfs:label>
+    </rdf:Description>
+    
+
+
+    <!-- http://acm2012.owl#10010554 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010554">
+        <rdfs:label>Robotics</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010553"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010555 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010555">
+        <rdfs:label>Robotic components</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010554"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010556 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010556">
+        <rdfs:label>Robotic control</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010554"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010557 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010557">
+        <rdfs:label>Robotic autonomy</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010554"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010558 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010558">
+        <rdfs:label>External interfaces for robotics</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010554"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010559 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010559">
+        <rdfs:label>Sensors and actuators</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010553"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010588"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010560 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010560">
+        <rdfs:label>System on a chip</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010553"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010645"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010561 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010561">
+        <rdfs:label>Firmware</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010562"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010562 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010562">
+        <rdfs:label>Embedded systems</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010553"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010563 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010563">
+        <rdfs:label>Embedded hardware</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010562"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010564 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010564">
+        <rdfs:label>Embedded software</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010562"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010971"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010582 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010582">
+        <rdfs:label>Ad hoc networks</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003106"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010588 -->
+
+    <rdf:Description rdf:about="http://acm2012.owl#10010588">
+        <rdfs:label>Communication hardware, interfaces and storage</rdfs:label>
+    </rdf:Description>
+    
+
+
+    <!-- http://acm2012.owl#10010590 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010590">
+        <rdfs:label>Buses and high-speed links</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010588"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010591 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010591">
+        <rdfs:label>Displays and imagers</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003125"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010588"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010592 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010592">
+        <rdfs:label>External storage</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010588"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010593 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010593">
+        <rdfs:label>Networking hardware</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010588"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010594 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010594">
+        <rdfs:label>Printers</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010588"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010595 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010595">
+        <rdfs:label>Sensor applications and deployments</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010588"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010596 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010596">
+        <rdfs:label>Sensor devices and platforms</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010588"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010597 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010597">
+        <rdfs:label>Sound-based input / output</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003125"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010588"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010598 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010598">
+        <rdfs:label>Tactile and hand-based interfaces</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010588"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010645 -->
+
+    <rdf:Description rdf:about="http://acm2012.owl#10010645">
+        <rdfs:label>Design reuse and communication-based design</rdfs:label>
+    </rdf:Description>
+    
+
+
+    <!-- http://acm2012.owl#10010648 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010648">
+        <rdfs:label>Platform-based design</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010645"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010862 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010862">
+        <rdfs:label>Command line interfaces</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003124"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010865 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010865">
+        <rdfs:label>Graphical user interfaces</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003124"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010866 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010866">
+        <rdfs:label>Virtual reality</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003124"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010387"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010868 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010868">
+        <rdfs:label>Web-based interaction</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003124"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010870 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010870">
+        <rdfs:label>Natural language interfaces</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003124"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010872 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010872">
+        <rdfs:label>Keyboards</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003125"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010873 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010873">
+        <rdfs:label>Pointing devices</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003125"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010924 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010924">
+        <rdfs:label>Public Internet</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003106"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010971 -->
+
+    <rdf:Description rdf:about="http://acm2012.owl#10010971">
+        <rdfs:label>Software system structures</rdfs:label>
+    </rdf:Description>
+    
+
+
+    <!-- http://acm2012.owl#10010972 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010972">
+        <rdfs:label>Software architectures</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010971"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010973 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010973">
+        <rdfs:label>Cooperating communicating processes</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010972"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010974 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010974">
+        <rdfs:label>Layered systems</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010972"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010975 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010975">
+        <rdfs:label>Publish-subscribe / event-based architectures</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010972"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010976 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010976">
+        <rdfs:label>Electronic blackboards</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010972"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010978 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010978">
+        <rdfs:label>Simulator / interpreter</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010972"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010979 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010979">
+        <rdfs:label>Object oriented architectures</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010972"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010980 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010980">
+        <rdfs:label>Software system models</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010971"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010981 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010981">
+        <rdfs:label>Petri nets</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010980"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010982 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010982">
+        <rdfs:label>State systems</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010980"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010983 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010983">
+        <rdfs:label>Entity relationship modeling</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010980"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010984 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010984">
+        <rdfs:label>Model-driven software engineering</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010980"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010985 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010985">
+        <rdfs:label>Feature interaction</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010980"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010986 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010986">
+        <rdfs:label>Massively parallel systems</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010980"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10010991 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10010991">
+        <rdfs:label>Ultra-large-scale systems</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010971"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011116 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011116">
+        <rdfs:label>Tightly coupled architectures</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010972"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011117 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011117">
+        <rdfs:label>Space-based architectures</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010972"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011120 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011120">
+        <rdfs:label>Distributed systems organizing principles</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010971"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011194 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011194">
+        <rdfs:label>Regret bounds</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010071"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011559 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011559">
+        <rdfs:label>Global positioning systems</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003236"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011661 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011661">
+        <rdfs:label>Wireless local area networks</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003119"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011662 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011662">
+        <rdfs:label>Wireless personal area networks</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003119"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011666 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011666">
+        <rdfs:label>Touch screens</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003125"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010598"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011667 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011667">
+        <rdfs:label>Scanners</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010588"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011668 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011668">
+        <rdfs:label>Mobile ad hoc networks</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010582"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011669 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011669">
+        <rdfs:label>Wireless devices</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010588"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011670 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011670">
+        <rdfs:label>Wireless integrated network sensors</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010588"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011671 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011671">
+        <rdfs:label>Latent Dirichlet allocation</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010309"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011679 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011679">
+        <rdfs:label>Real-time systems software</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010971"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011680 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011680">
+        <rdfs:label>Organizing principles for web applications</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10011120"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011681 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011681">
+        <rdfs:label>3-tier architectures</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010972"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011682 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011682">
+        <rdfs:label>Abstraction, modeling and modularity</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010971"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011705 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011705">
+        <rdfs:label>Packet-switching networks</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003106"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011713 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011713">
+        <rdfs:label>High-level language architectures</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010542"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011714 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011714">
+        <rdfs:label>Special purpose systems</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010542"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011715 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011715">
+        <rdfs:label>Electro-mechanical devices</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010588"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011718 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011718">
+        <rdfs:label>Hard and soft IP</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010645"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011730 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011730">
+        <rdfs:label>Online social networks</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003114"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011751 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011751">
+        <rdfs:label>Collaborative interaction</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003124"/>
+    </owl:Class>
+    
+
+
+    <!-- http://acm2012.owl#10011752 -->
+
+    <owl:Class rdf:about="http://acm2012.owl#10011752">
+        <rdfs:label>Haptic devices</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003125"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010598"/>
+    </owl:Class>
+    
+
+
+    <!-- http://merged#Sensor -->
+
+    <owl:Class rdf:about="http://merged#Sensor">
+        <rdfs:label xml:lang="en">Sensor</rdfs:label>
+        <rdfs:label>Sensor networks</rdfs:label>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003112"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10003236"/>
+        <rdfs:subClassOf rdf:resource="http://acm2012.owl#10010553"/>
+        <skos:example xml:lang="en">Accelerometers, gyroscopes, barometers, magnetometers, and so forth are Sensors that are typically mounted on a modern smart phone (which acts as Platform). Other examples of sensors include the human eyes.</skos:example>
+        <rdfs:comment xml:lang="en">Device, agent (including humans), or software (simulation) involved in, or implementing, a Procedure. Sensors respond to a stimulus, e.g., a change in the environment, or input data composed from the results of prior Observations, and generate a Result. Sensors can be hosted by Platforms.</rdfs:comment>
+        <skos:definition xml:lang="en">Device, agent (including humans), or software (simulation) involved in, or implementing, a Procedure. Sensors respond to a stimulus, e.g., a change in the environment, or input data composed from the results of prior Observations, and generate a Result. Sensors can be hosted by Platforms.</skos:definition>
+        <rdfs:isDefinedBy rdf:resource="http://www.w3.org/ns/sosa/"/>
     </owl:Class>
 </rdf:RDF>
 

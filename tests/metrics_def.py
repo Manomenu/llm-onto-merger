@@ -190,10 +190,10 @@ _REGISTRY: dict[str, dict] = {
         "categories": ["Hierarchy Integration Quality"],
         "target": "= 1.0",
         "interpretation": (
-            "Connectivity Ratio = liczba klas osiągalnych z owl:Thing przez relacje "
-            "SubClassOf / całkowita liczba klas. "
-            "He et al. (2022) raportują ~42% dla naiwnej unii jako dolną granicę. "
-            "Docelowo = 1.0: wszystkie klasy połączone z korzeniem hierarchii."
+            "Connectivity Ratio = liczba klas mających co najmniej jednego nazwanego rodzica "
+            "przez relację SubClassOf / całkowita liczba klas. "
+            "Klasa bez żadnego rodzica (korzeń hierarchii lub izolowany węzeł) nie jest liczona. "
+            "Docelowo = 1.0: każda klasa podłączona do hierarchii."
         ),
     },
     "average_depth": {
@@ -390,26 +390,16 @@ def _multi_domain_range_count(g: Graph) -> float:
 
 
 def _connectivity_ratio(g: Graph) -> float:
-    """Fraction of named classes reachable from owl:Thing via subClassOf."""
+    """Fraction of named classes that have at least one named parent via subClassOf."""
     cls = _classes(g)
     if not cls:
         return 1.0
-    children: dict[URIRef, set[URIRef]] = defaultdict(set)
-    for s, _, o in g.triples((None, _SUB, None)):
-        if isinstance(s, URIRef) and isinstance(o, URIRef):
-            children[o].add(s)
-    reachable: set[URIRef] = set()
-    queue: deque[URIRef] = deque([_OWL_THING])
-    visited: set[URIRef] = {_OWL_THING}
-    while queue:
-        node = queue.popleft()
-        for child in children.get(node, set()):
-            if child not in visited:
-                visited.add(child)
-                if child in cls:
-                    reachable.add(child)
-                queue.append(child)
-    return len(reachable) / len(cls)
+    has_parent = {
+        s
+        for s, _, o in g.triples((None, _SUB, None))
+        if isinstance(s, URIRef) and isinstance(o, URIRef) and s in cls and o in cls
+    }
+    return len(has_parent) / len(cls)
 
 
 def _hierarchy_stats(g: Graph, cls: set[URIRef]) -> dict[str, float]:
