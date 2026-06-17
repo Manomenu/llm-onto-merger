@@ -1,0 +1,7 @@
+method,Syntactic Uniqueness Ratio,Structural Redundancy
+Naive Union,0.8165,0.0570
+Applied Alignments,0.8465,0.0822
+AROM,0.8464,0.0822
+CoMerger,0.8384,0.0821
+Boomer,0.8467,0.0821
+Our Solution,0.9798,0.1199

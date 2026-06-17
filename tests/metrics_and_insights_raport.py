@@ -114,13 +114,33 @@ def _compute_scenario(
         relabeling_map = json.loads(relabeling_path.read_text(encoding="utf-8"))
         print(f"  relabeling_map: {len(relabeling_map)} entries")
 
-    # Read alignment_stats before the metrics loop so we can pass the authoritative
-    # applied_count to _compute_self_metrics for the LLM merged_ontology.
+    # Read stats sidecars before the metrics loop so we can pass authoritative
+    # applied_alignments_count to _compute_self_metrics for every tool.  This
+    # keeps per-alignment metrics (corc_per_applied, multi_d/r_change_per_alignment)
+    # consistent with the "applied_alignments" column reported in the CSV.
     alignment_stats: dict | None = None
     llm_applied_count: int | None = None
     if alignment_stats_path.exists():
         alignment_stats = json.loads(alignment_stats_path.read_text(encoding="utf-8"))
         llm_applied_count = int(alignment_stats.get("applied_count", 0)) or None
+
+    # Build a graph_name -> applied_count map from the same sources used in
+    # the post-loop block that fills self_metrics[…]["applied_alignments"].
+    applied_count_by_graph: dict[str, int] = {}
+    if alignment_stats is not None:
+        total_align = int(alignment_stats.get("total_alignments", 0))
+        if "applied_alignments" in graphs:
+            applied_count_by_graph["applied_alignments"] = total_align
+        if "arom_ontology" in graphs:
+            applied_count_by_graph["arom_ontology"] = total_align
+        if llm_applied_count is not None and "merged_ontology" in graphs:
+            applied_count_by_graph["merged_ontology"] = llm_applied_count
+    if comerger_stats_path.exists() and "comerger_ontology" in graphs:
+        cstats = json.loads(comerger_stats_path.read_text(encoding="utf-8"))
+        applied_count_by_graph["comerger_ontology"] = int(cstats.get("applied_equiv_total", 0))
+    if boomer_stats_path.exists() and "boomer_ontology" in graphs:
+        bstats = json.loads(boomer_stats_path.read_text(encoding="utf-8"))
+        applied_count_by_graph["boomer_ontology"] = int(bstats.get("accepted_equiv_count", 0))
 
     metrics: dict[str, dict[str, float | None]] = {}
     for name, g in graphs.items():
@@ -133,7 +153,7 @@ def _compute_scenario(
             else None
         )
         rmap = relabeling_map if name == "merged_ontology" else None
-        aac = llm_applied_count if name == "merged_ontology" else None
+        aac = applied_count_by_graph.get(name)
         metrics[name] = _compute_self_metrics(
             g, onto1_entities, onto2_entities, union_arg,
             arom_provenance=prov, relabeling_map=rmap,
@@ -644,7 +664,7 @@ _CATEGORY_TO_METRICS: dict[str, list[str]] = {
         "cross_onto_subclassof_count",
         "triple_count_delta",
     ],
-    "Conciseness":         ["ALC"],
+    "Conciseness":         ["syntactic_uniqueness_ratio", "structural_redundancy"],
     "Accuracy":            ["triple_preservation_ratio"],
     "Domain Coherence":    ["applied_alignments", "multi_domain_range_count"],
     "Understandability":   ["annotation_coverage_ratio"],
@@ -675,13 +695,16 @@ _METRIC_DISPLAY: dict[str, str] = {
     "annotation_coverage_ratio":     "ACR",
     "applied_alignments":            "Applied Alignments",
     "multi_domain_range_count":      "Multi D/R",
+    "multi_domain_range_change_per_alignment": "Multi D/R Change per Alignment",
+    "structural_redundancy":         "Structural Redundancy",
     "connectivity_ratio":             "CR",
     "triple_preservation_ratio":      "TPR",
     "cross_onto_relations_count":     "CORC",
     "corc_per_applied_alignment":     "CORC per Applied Alignment",
     "new_intra_onto_relations_count": "NIRC",
     "cross_onto_subclassof_count":    "COSC",
-    "triple_count_delta":             "Triple Count Delta",
+    "new_cross_onto_relations_count": "NCRC",
+    "triple_count_delta":             "Triples Count Change",
     "cycle_count":                    "Cycle Count",
     "average_depth":                  "Average Depth",
     "max_depth":                      "Max Depth",

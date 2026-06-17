@@ -183,6 +183,9 @@ fi
 if [ -f "$APPLIED_CACHE/applied_alignments.owl" ]; then
   cp "$APPLIED_CACHE/applied_alignments.owl" "$OUT_DIR/applied_alignments.owl"
   echo "  → applied_alignments.owl ← $APPLIED_CACHE/applied_alignments.owl"
+  if [ -f "$APPLIED_CACHE/applied_stats.json" ]; then
+    cp "$APPLIED_CACHE/applied_stats.json" "$OUT_DIR/applied_stats.json"
+  fi
 fi
 
 # ── Boomer (cached per tool) ────────────────────────────────────────────────

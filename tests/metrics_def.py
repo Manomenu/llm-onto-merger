@@ -111,6 +111,20 @@ _REGISTRY: dict[str, dict] = {
             "Docelowo = 1.0: żadne dwie klasy nie mają tej samej nazwy lokalnej."
         ),
     },
+    "structural_redundancy": {
+        "source": "self-implemented",
+        "categories": ["Conciseness"],
+        "target": "= 0",
+        "interpretation": (
+            "Odsetek klas mających ≥2 nazwanych rodziców, których domknięcia "
+            "przechodnio-zwrotne (zbiory wszystkich przodków) zawierają wspólny "
+            "węzeł. Taka klasa jest osiągalna ze wspólnego nadrzędnika dwoma "
+            "różnymi ścieżkami rdfs:subClassOf — co najmniej jedna z tych "
+            "deklaracji jest wywodliwa z pozostałych przez przechodniość "
+            "subsumpcji. Znormalizowane przez |C| → wartość w [0,1] "
+            "porównywalna między datasetami. Target = 0."
+        ),
+    },
     "ALC": {
         "source": "self-implemented",
         "categories": ["Conciseness", "Hierarchy Integration Quality"],
@@ -145,6 +159,21 @@ _REGISTRY: dict[str, dict] = {
             "mianownik = liczba encji 'both'. Dla narzędzi tylko asertujących equivalentClass "
             "(Applied Alignments, Boomer): mianownik = CORC (każde alignment = 1 relacja → ratio = 1.0). "
             "Wyższy wynik oznacza, że każde scalenie generuje więcej faktów cross-onto."
+        ),
+    },
+    "new_cross_onto_relations_count": {
+        "source": "self-implemented",
+        "categories": ["Knowledge Completeness"],
+        "target": "high",
+        "interpretation": (
+            "Liczba NOWYCH cross-ontologicznych relacji (dowolny predykat) — "
+            "tripli łączących encje z różnych ontologii, których NIE da się "
+            "wyprowadzić z unii przez samo relabelowanie aliasu (po normalizacji "
+            "old_to_new). Naive collapse zamienia intra-onto triple na cross-onto "
+            "przez tagowanie 'both', ale po normalizacji local-name pair jest "
+            "identyczny z source — więc się nie liczy. Liczy tylko genuinely "
+            "dodaną wiedzę między ontologiami (np. LLM-created cross-onto axioms). "
+            "Target: wysokie = wartościowe scalanie semantyki."
         ),
     },
     "new_intra_onto_relations_count": {
@@ -258,6 +287,19 @@ _REGISTRY: dict[str, dict] = {
             "bezwarunkowo na etapie apply_alignments). Kolumna merged_ontology = ile LLM zaakceptował "
             "po weryfikacji kontekstu (relacji, properties, typów). "
             "Różnica wskazuje ile par alignmentu LLM uznał za niepoprawne i pozostawił rozdzielone."
+        ),
+    },
+    "multi_domain_range_change_per_alignment": {
+        "source": "self-implemented",
+        "categories": ["Domain Coherence"],
+        "target": "= 0",
+        "interpretation": (
+            "Liczba nowo wprowadzonych multi-domain/range properties (merged - union) "
+            "podzielona przez liczbę zaaplikowanych alignments. "
+            "Mierzy ile konfliktów domain/range metoda średnio wprowadza na jeden "
+            "zaakceptowany alignment. Target = 0: metoda nie tworzy nowych konfliktów. "
+            "Wartość dodatnia = metoda agresywnie scala koncepty o niezgodnych "
+            "zakresach (intersection inference issues)."
         ),
     },
     "multi_domain_range_count": {
@@ -400,6 +442,59 @@ def _connectivity_ratio(g: Graph) -> float:
         if isinstance(s, URIRef) and isinstance(o, URIRef) and s in cls and o in cls
     }
     return len(has_parent) / len(cls)
+
+
+def _structural_redundancy(g: Graph) -> float:
+    """Fraction of classes for which two rdfs:subClassOf paths reach a common ancestor.
+
+    A class c is structurally redundant iff it has 2+ named parents p1, p2 such that
+    Anc*(p1) ∩ Anc*(p2) ≠ ∅ (transitive-reflexive ancestor closures share at least
+    one node).  Such a class is mounted in the taxonomy via two paths that converge
+    above — at least one rdfs:subClassOf assertion is derivable from the others via
+    subsumption transitivity.  Normalised by |C| → ratio in [0,1] comparable across
+    datasets.
+    """
+    cls = _classes(g)
+    if not cls:
+        return 0.0
+
+    parents: dict[URIRef, set[URIRef]] = defaultdict(set)
+    for s, _, o in g.triples((None, _SUB, None)):
+        if isinstance(s, URIRef) and isinstance(o, URIRef) and s in cls and o in cls:
+            parents[s].add(o)
+
+    _ancestor_cache: dict[URIRef, frozenset[URIRef]] = {}
+
+    def ancestors_inclusive(start: URIRef) -> frozenset[URIRef]:
+        if start in _ancestor_cache:
+            return _ancestor_cache[start]
+        visited: set[URIRef] = set()
+        queue: deque[URIRef] = deque([start])
+        while queue:
+            n = queue.popleft()
+            if n in visited:
+                continue
+            visited.add(n)
+            for p in parents.get(n, set()):
+                if p not in visited:
+                    queue.append(p)
+        result = frozenset(visited)
+        _ancestor_cache[start] = result
+        return result
+
+    redundant = 0
+    for c, ps in parents.items():
+        if len(ps) < 2:
+            continue
+        seen: set[URIRef] = set()
+        for p in ps:
+            anc = ancestors_inclusive(p)
+            if anc & seen:
+                redundant += 1
+                break
+            seen |= anc
+
+    return round(redundant / len(cls), 6)
 
 
 def _hierarchy_stats(g: Graph, cls: set[URIRef]) -> dict[str, float]:
@@ -702,6 +797,18 @@ def _compute_self_metrics(
         _denom = both_count if both_count > 0 else cross_rel
     corc_per_applied = round(cross_rel / _denom, 4) if _denom > 0 else 0.0
 
+    # Multi D/R newly added by the merge, normalised by applied alignments.
+    # Multi D/R is inherent to source properties (collapse_alignments preserves it),
+    # so comparing absolute counts unfairly favours methods that apply fewer alignments.
+    # This delta-per-alignment isolates the conflict actually introduced.
+    if union is not None:
+        mdr_g = _multi_domain_range_count(g)
+        mdr_u = _multi_domain_range_count(union)
+        mdr_delta = mdr_g - mdr_u
+        _mdr_change_per_alignment = round(mdr_delta / _denom, 6) if _denom > 0 else 0.0
+    else:
+        _mdr_change_per_alignment = 0.0
+
     connectivity = _connectivity_ratio(g)
 
     # Triple preservation ratio vs union
@@ -799,10 +906,32 @@ def _compute_self_metrics(
 
         triple_count_delta = float(len(g) - len(union))
 
+        # NEW cross-ontology relations — triples (any predicate) that bridge
+        # ontologies AND are NOT derivable from an existing union triple via
+        # entity-merge relabeling.  We normalise union keys with old_to_new
+        # (Y aligned to X → Y's local name maps to X's) so that naive collapse
+        # of `Y subClassOf Z` into `merged#X subClassOf Z` matches the original
+        # union triple and is NOT counted as new.  Only genuinely new edges
+        # introduced by the merge logic (e.g. LLM-created cross-onto axioms)
+        # remain.
+        union_keys_norm = {
+            (_norm(_local(s)), _norm(_local(p)), _norm(_local(o)))
+            for s, p, o in union
+            if isinstance(s, URIRef) and isinstance(o, URIRef)
+        }
+        new_cross_rel = float(sum(
+            1
+            for s, p, o in g
+            if isinstance(s, URIRef) and isinstance(o, URIRef)
+            and _is_cross(s, o)
+            and (_local(s), _local(p), _local(o)) not in union_keys_norm
+        ))
+
     else:
         tpr = 1.0
         new_intra_rel = 0.0
         triple_count_delta = 0.0
+        new_cross_rel = 0.0
 
     entities = cls | prop
     n_e = len(entities)
@@ -821,6 +950,7 @@ def _compute_self_metrics(
         "cycle_count": cycle_count,
         "syntactic_uniqueness_ratio": round(syntactic_uniqueness_ratio, 4),
         "cross_onto_subclassof_count": float(cross_sub),
+        "new_cross_onto_relations_count": new_cross_rel,
         "cross_onto_relations_count": float(cross_rel),
         "corc_per_applied_alignment": corc_per_applied,
         "new_intra_onto_relations_count": new_intra_rel,
@@ -829,6 +959,8 @@ def _compute_self_metrics(
         "triple_preservation_ratio": round(tpr, 4),
         "annotation_coverage_ratio": round(annotation_coverage, 4),
         "multi_domain_range_count": _multi_domain_range_count(g),
+        "multi_domain_range_change_per_alignment": _mdr_change_per_alignment,
+        "structural_redundancy": _structural_redundancy(g),
         **hierarchy,
     }
 
