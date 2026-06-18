@@ -589,12 +589,15 @@ def _build_alias_maps(
          underscores stripped, joined by a single '_':
          e.g. merged#MA0000009_NCIC12472 from MA_0000009 + NCI_C12472.
 
-    Returns (old_to_new, new_to_source) where:
+    Returns (old_to_new, new_to_source, uri_to_new_local) where:
       old_to_new: OldLocalName → NewLocalName  (for renaming normalisation)
       new_to_source: NewLocalName → 'onto1' | 'onto2' | 'both'  (attribution)
+      uri_to_new_local: full source URI → merged local name (precise aliasing,
+                       avoids over-mapping built-ins that share local names)
     """
     old_to_new: dict[str, str] = {}
     new_to_source: dict[str, str] = {}
+    uri_to_new_local: dict[str, str] = {}
 
     # Inverse relabeling: new_human_readable → old_coded.
     # Needed for Format 1: LLM aliases store post-relabeling names (human-readable)
@@ -629,6 +632,11 @@ def _build_alias_maps(
             new_to_source[new_local] = "both" if existing and existing != src else src
 
     # Format 2: AROM provenance map (Code_X URIs with per-source rdfs:label)
+    # NEW: when provenance carries full source URIs ("1_uri"/"2_uri") we map by
+    # URI (precise — only the actually aligned entity is normalised, no
+    # collateral damage to built-ins like owl:Class that share local names).
+    # Legacy fallback: when only local names are present, map by local name
+    # (over-aliases when two distinct source entities share the same local).
     if arom_provenance:
         for code_uri, by_onto in arom_provenance.items():
             new_local = _local(URIRef(code_uri))
@@ -638,10 +646,14 @@ def _build_alias_maps(
             if src:
                 existing = new_to_source.get(new_local)
                 new_to_source[new_local] = "both" if existing and existing != src else src
-            # Make old→new mappings so triple_preservation_ratio normalises correctly:
-            # source URIs (e.g. http://cmt#Person) collapse to the AROM code (Code_6).
-            for source_local in by_onto.values():
-                old_to_new[source_local] = new_local
+            has_uris = any(k.endswith("_uri") for k in by_onto)
+            if has_uris:
+                for key, val in by_onto.items():
+                    if key.endswith("_uri") and val:
+                        uri_to_new_local[val] = new_local
+            else:
+                for source_local in by_onto.values():
+                    old_to_new[source_local] = new_local
 
     # Format 3: create_ontology relabeling map (old_local → new_local for rdfs:label renames)
     if relabeling_map:
@@ -678,7 +690,7 @@ def _build_alias_maps(
             old_to_new[onto2_norm[p1]] = local_name
             old_to_new[onto1_norm[p2]] = local_name
 
-    return old_to_new, new_to_source
+    return old_to_new, new_to_source, uri_to_new_local
 
 
 def _compute_self_metrics(
@@ -709,7 +721,7 @@ def _compute_self_metrics(
     #      merged::, AROM's merging::).  These use _build_alias_maps / arom_provenance
     #      and may be tagged "both" (merged from one entity in each ontology).
     #
-    _, new_to_source = _build_alias_maps(
+    _, new_to_source, _ = _build_alias_maps(
         g, onto1_locals, onto2_locals, arom_provenance=arom_provenance,
         relabeling_map=relabeling_map,
     )
@@ -815,13 +827,23 @@ def _compute_self_metrics(
     # BNode objects are excluded: their internal IDs differ across parse sessions,
     # so str(bnode) comparisons produce false negatives for restrictions/unions.
     if union is not None:
-        old_to_new, _ = _build_alias_maps(
+        old_to_new, _, uri_to_new_local = _build_alias_maps(
             g, onto1_locals, onto2_locals, arom_provenance=arom_provenance,
             relabeling_map=relabeling_map,
         )
 
         def _norm(local: str) -> str:
             return old_to_new.get(local, local)
+
+        def _norm_uri(u) -> str:
+            """Prefer URI-based aliasing if available — avoids over-mapping
+            built-ins (e.g. owl:Class) when they share local names with
+            actually aligned entities (e.g. oboInOwl:Class).
+            Falls back to local-name aliasing for legacy provenance without URIs.
+            """
+            if isinstance(u, URIRef):
+                return uri_to_new_local.get(str(u), _norm(_local(u)))
+            return str(u)
 
         def _key(s, p, o) -> tuple[str, str, str]:
             return (
@@ -831,11 +853,7 @@ def _compute_self_metrics(
             )
 
         def _key_norm(s, p, o) -> tuple[str, str, str]:
-            return (
-                _norm(_local(s)),
-                _norm(_local(p)),
-                _norm(_local(o)) if isinstance(o, URIRef) else str(o),
-            )
+            return (_norm_uri(s), _norm_uri(p), _norm_uri(o))
 
         union_triples = {
             _key_norm(s, p, o)
@@ -915,7 +933,7 @@ def _compute_self_metrics(
         # introduced by the merge logic (e.g. LLM-created cross-onto axioms)
         # remain.
         union_keys_norm = {
-            (_norm(_local(s)), _norm(_local(p)), _norm(_local(o)))
+            (_norm_uri(s), _norm_uri(p), _norm_uri(o))
             for s, p, o in union
             if isinstance(s, URIRef) and isinstance(o, URIRef)
         }
@@ -984,7 +1002,7 @@ def _compute_suspected_counts(
 
     onto1_locals = {_local(e) for e in onto1_entities}
     onto2_locals = {_local(e) for e in onto2_entities}
-    _, new_to_source = _build_alias_maps(g, onto1_locals, onto2_locals)
+    _, new_to_source, _ = _build_alias_maps(g, onto1_locals, onto2_locals)
     onto1_ns = _primary_ns(onto1_entities)
     onto2_ns = _primary_ns(onto2_entities)
 

@@ -58,7 +58,10 @@ def collapse_alignments_to_merged_ns(
             for s, p, _ in list(result.triples((None, None, src))):
                 result.remove((s, p, src))
                 result.add((s, p, new_uri))
-        provenance[str(new_uri)] = {"1": local_name(e1), "2": local_name(e2)}
+        provenance[str(new_uri)] = {
+            "1": local_name(e1), "2": local_name(e2),
+            "1_uri": str(e1), "2_uri": str(e2),
+        }
     return result, provenance
 
 
