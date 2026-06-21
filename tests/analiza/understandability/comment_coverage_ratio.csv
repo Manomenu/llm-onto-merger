@@ -1,0 +1,5 @@
+dataset,Naive Union,Applied Alignments,AROM,CoMerger,Boomer,Our Solution
+conference-s2,0.0581,0.0603,0.0603,0.0598,0.0603,0.9228
+human-mouse-s2,0.0,0.0,0.0,0.0,0.0,0.7526
+acm-union-s2,0.1008,0.1011,0.1009,0.1,0.1011,0.2539
+swo-union-s2,0.4148,0.4155,0.4161,0.4216,0.415,0.4526

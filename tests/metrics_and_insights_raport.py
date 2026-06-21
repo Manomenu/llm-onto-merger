@@ -693,6 +693,7 @@ _OUR_SOLUTION_PALETTE = ["#27ae60", "#1e8449", "#52be80", "#16a085", "#0e6655", 
 # Internal metric keys are unchanged everywhere else (registry, CSV, HTML tables).
 _METRIC_DISPLAY: dict[str, str] = {
     "annotation_coverage_ratio":     "ACR",
+    "comment_coverage_ratio":        "CCR",
     "applied_alignments":            "Applied Alignments",
     "multi_domain_range_count":      "Multi D/R",
     "multi_domain_range_change_per_alignment": "Multi D/R Change per Alignment",

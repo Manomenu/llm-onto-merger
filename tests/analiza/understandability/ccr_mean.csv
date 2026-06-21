@@ -1,0 +1,7 @@
+method,Comment Coverage Ratio
+Naive Union,0.1434
+Applied Alignments,0.1442
+AROM,0.1443
+CoMerger,0.1454
+Boomer,0.1441
+Our Solution,0.5955

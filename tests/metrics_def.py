@@ -48,6 +48,7 @@ _LABEL = RDFS.label
 _COMMENT = RDFS.comment
 _PROP_TYPES = (_OWL_OBJ, _OWL_DATA, _OWL_ANN, _OWL_FP, _OWL_IFP)
 
+# Understandability — synonym & definition predicates
 # Category name → (css-abbreviation, badge-colour)
 _CATEGORIES: dict[str, tuple[str, str]] = {
     "Structural Coherence": ("sc", "#c0392b"),
@@ -325,6 +326,18 @@ _REGISTRY: dict[str, dict] = {
             "rdfs:label lub rdfs:comment / całkowita liczba encji. Docelowo = 1.0. "
             "Opatrzone etykietami encje umożliwiają ekspertom domenowym weryfikację "
             "semantycznej poprawności i spójności ontologii po scaleniu."
+        ),
+    },
+    "comment_coverage_ratio": {
+        "source": "self-implemented",
+        "categories": ["Understandability"],
+        "target": "= 1.0",
+        "interpretation": (
+            "Comment Coverage Ratio = liczba encji (klas + właściwości) posiadających "
+            "rdfs:comment / całkowita liczba encji. Docelowo = 1.0. "
+            "Bardziej rygorystyczna miara niż ACR — wymaga pełnej dokumentacji "
+            "(comment), nie tylko etykiety. Per Osman et al. (2021): "
+            "comments są kluczowe dla użyteczności dziedzinowej scalonej ontologii."
         ),
     },
 }
@@ -960,6 +973,8 @@ def _compute_self_metrics(
         or any(True for _ in g.objects(e, _COMMENT))
     )
     annotation_coverage = annotated / n_e if n_e else 0.0
+    commented = sum(1 for e in entities if any(True for _ in g.objects(e, _COMMENT)))
+    comment_coverage = commented / n_e if n_e else 0.0
 
     hierarchy = _hierarchy_stats(g, cls)
 
@@ -976,6 +991,7 @@ def _compute_self_metrics(
         "connectivity_ratio": round(connectivity, 4),
         "triple_preservation_ratio": round(tpr, 4),
         "annotation_coverage_ratio": round(annotation_coverage, 4),
+        "comment_coverage_ratio": round(comment_coverage, 4),
         "multi_domain_range_count": _multi_domain_range_count(g),
         "multi_domain_range_change_per_alignment": _mdr_change_per_alignment,
         "structural_redundancy": _structural_redundancy(g),

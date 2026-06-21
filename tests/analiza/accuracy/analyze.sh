@@ -23,7 +23,7 @@ uv run python3 ../plot_pct.py \
     --input tpr_mean.csv \
     --output tpr_mean.jpg \
     --ylabel-for "Triple Preservation Ratio" "Triple preservation ratio (avg over 4 datasets)" \
-    --bar-fmt "%.4f"
+    --bar-fmt "%.2f"
 
 echo
 echo "=== triple_preservation_ratio.csv (raw) ==="

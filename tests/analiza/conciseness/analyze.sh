@@ -31,7 +31,7 @@ uv run python3 ../plot_pct.py \
     --output conciseness_mean.jpg \
     --ylabel-for "Syntactic Uniqueness Ratio" "Syntactic uniqueness ratio (avg)" \
     --ylabel-for "Structural Redundancy" "Structural redundancy (avg)" \
-    --bar-fmt "%.4f"
+    --bar-fmt "%.2f"
 
 echo
 echo "=== syntactic_uniqueness_ratio.csv (raw, conference+swo only) ==="
