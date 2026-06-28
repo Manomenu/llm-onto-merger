@@ -14,6 +14,7 @@ class LoadedArguments(BaseModel):
     base_path: str
     candidate_path: str
     alignment_tool: str = "aml"
+    alignment_file: str | None = None
     output_dir: str
     merge_env_max_chars: int = 10_000
     parallel_llm_request_count: int = 4
@@ -38,6 +39,16 @@ def load_arguments() -> LoadedArguments:
         "--alignment-tool",
         default="aml",
         help="Alignment tool to use (default: aml)",
+    )
+    parser.add_argument(
+        "--alignment-file",
+        default=None,
+        help=(
+            "Path to a pre-computed OAEI alignment file (RDF/XML, same format as "
+            "AML/LogMap output).  When set, the matcher (--alignment-tool) is "
+            "skipped and these alignments are fed directly into the merge "
+            "pipeline — e.g. to inject the OAEI reference (gold-standard) alignment."
+        ),
     )
     parser.add_argument(
         "--output", default=None, help="Output directory (merged_ontology.owl and debug files are saved here)"
@@ -67,6 +78,8 @@ def load_arguments() -> LoadedArguments:
             parser.error(f"File not found for --{path_attr}: {path}")
         if not os.path.isfile(path):
             parser.error(f"Path for --{path_attr} is not a file: {path}")
+    if args.alignment_file is not None and not os.path.isfile(args.alignment_file):
+        parser.error(f"File not found for --alignment-file: {args.alignment_file}")
 
     if args.output is not None:
         output_dir = args.output
@@ -85,16 +98,19 @@ def load_arguments() -> LoadedArguments:
         base_path=args.base,
         candidate_path=args.candidate,
         alignment_tool=args.alignment_tool,
+        alignment_file=args.alignment_file,
         output_dir=output_dir,
         merge_env_max_chars=args.max_env_chars,
         parallel_llm_request_count=parallel_llm_request_count,
     )
     log.info(
         "Arguments loaded | base: %s | candidate: %s | alignment_tool: %s"
-        " | output_dir: %s | max_env_chars: %d | parallel_llm_request_count: %d",
+        " | alignment_file: %s | output_dir: %s | max_env_chars: %d"
+        " | parallel_llm_request_count: %d",
         loaded.base_path,
         loaded.candidate_path,
         loaded.alignment_tool,
+        loaded.alignment_file,
         loaded.output_dir,
         loaded.merge_env_max_chars,
         loaded.parallel_llm_request_count,

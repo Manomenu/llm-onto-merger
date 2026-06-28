@@ -1,0 +1,11 @@
+method,dataset,reference_total,aml_total,rejected_correct,accepted_aml_fp
+AROM,conference,13,9,0,1
+Applied Alignments,conference,13,9,0,1
+Boomer,conference,13,9,,1
+CoMerger,conference,13,9,5,1
+Proposed,conference,13,9,3,0
+AROM,human-mouse,1516,1393,0,59
+Applied Alignments,human-mouse,1516,1393,0,59
+Boomer,human-mouse,1516,1393,,58
+CoMerger,human-mouse,1516,1393,1516,0
+Proposed,human-mouse,1516,1393,1145,39

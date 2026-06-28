@@ -251,6 +251,37 @@ def _build_ptable_from_matcher(
     return count
 
 
+def _build_ptable_from_alignment_file(
+    alignment_path: Path,
+    ns_to_prefix: dict[str, str],
+    out: Path,
+) -> int:
+    """Build ptable from a pre-computed OAEI alignment file (e.g. the reference
+    alignment), using each cell's measure as p_equiv.  Same row format as the
+    matcher path — only the source of pairs differs (no matcher is run)."""
+    from llm_onto_merger.alignment.alignment import parse_oaei_alignment
+
+    alignments = parse_oaei_alignment(alignment_path)
+    print(f"  → loaded {len(alignments)} alignment cells from {alignment_path}")
+
+    count = 0
+    skipped = 0
+    with out.open("w", encoding="utf-8") as f:
+        for a in alignments:
+            c1 = _curie(a.entity1, ns_to_prefix)
+            c2 = _curie(a.entity2, ns_to_prefix)
+            if not c1 or not c2:
+                skipped += 1
+                continue
+            f.write(_format_ptable_row(c1, c2, a.measure))
+            count += 1
+    if skipped:
+        print(
+            f"  → skipped {skipped} alignment(s) — entity URIs not in any known namespace"
+        )
+    return count
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 
@@ -269,6 +300,13 @@ def main() -> None:
         "--use-logmap",
         action="store_true",
         help="Run LogMap and use its measure as p_equiv per row.",
+    )
+    matcher_group.add_argument(
+        "--alignment-file",
+        type=Path,
+        default=None,
+        help="Use a pre-computed OAEI alignment file (RDF/XML) for the ptable, "
+             "skipping the matcher (e.g. the OAEI reference alignment).",
     )
     args = parser.parse_args()
 
@@ -294,7 +332,14 @@ def main() -> None:
     _write_prefixes(prefix_to_ns, prefixes_path)
     print(f"  {len(prefix_to_ns)} prefixes → {prefixes_path}")
 
-    if args.use_aml:
+    if args.alignment_file is not None:
+        if not args.alignment_file.exists():
+            sys.exit(f"alignment file not found: {args.alignment_file}")
+        print(f"[generate_inputs] building ptable from alignment file {args.alignment_file} …")
+        n_pairs = _build_ptable_from_alignment_file(
+            args.alignment_file, ns_to_prefix, ptable_path
+        )
+    elif args.use_aml:
         print("[generate_inputs] building ptable from AML alignments …")
         n_pairs = _build_ptable_from_matcher(
             "aml", args.onto1, args.onto2, ns_to_prefix, ptable_path

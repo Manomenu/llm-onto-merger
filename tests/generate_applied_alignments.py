@@ -11,6 +11,7 @@ Usage:
         --onto2 path/to/onto2.owl \\
         --output path/to/cache_dir \\
         [--tool aml|logmap]
+        [--alignment-file path/to/reference.rdf]   # bypass matcher, use given alignment
 """
 
 import argparse
@@ -22,6 +23,7 @@ from pathlib import Path
 from rdflib import Graph
 
 from llm_onto_merger.alignment import alignment_modules_dict
+from llm_onto_merger.alignment.alignment import parse_oaei_alignment
 from llm_onto_merger.ontology import collapse_alignments_to_merged_ns, save_ontology
 
 
@@ -31,6 +33,12 @@ def main() -> None:
     parser.add_argument("--onto2", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--tool", default="aml", choices=list(alignment_modules_dict))
+    parser.add_argument(
+        "--alignment-file",
+        default=None,
+        type=Path,
+        help="Pre-computed OAEI alignment (RDF/XML). When set, --tool is ignored.",
+    )
     args = parser.parse_args()
 
     if not args.onto1.exists():
@@ -39,10 +47,17 @@ def main() -> None:
         sys.exit(f"onto2 not found: {args.onto2}")
     args.output.mkdir(parents=True, exist_ok=True)
 
-    print(f"[generate_applied_alignments] running {args.tool} alignment …")
-    module = alignment_modules_dict[args.tool]()
-    alignments = asyncio.run(module.create_alignment(args.onto1, args.onto2))
-    print(f"  {args.tool} returned {len(alignments)} alignments")
+    if args.alignment_file is not None:
+        if not args.alignment_file.exists():
+            sys.exit(f"alignment file not found: {args.alignment_file}")
+        print(f"[generate_applied_alignments] using alignment file {args.alignment_file} …")
+        alignments = parse_oaei_alignment(args.alignment_file)
+        print(f"  loaded {len(alignments)} alignments from file")
+    else:
+        print(f"[generate_applied_alignments] running {args.tool} alignment …")
+        module = alignment_modules_dict[args.tool]()
+        alignments = asyncio.run(module.create_alignment(args.onto1, args.onto2))
+        print(f"  {args.tool} returned {len(alignments)} alignments")
 
     raw_1 = Graph()
     raw_1.parse(str(args.onto1))
