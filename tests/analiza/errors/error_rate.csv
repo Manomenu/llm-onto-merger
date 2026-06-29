@@ -1,3 +1,3 @@
-dataset,total_environments,failed_environments,parse_fail,empty_graph,other_error,error_rate_pct
-conference,13,0,0,0,0,0.0
-human-mouse,1516,1023,0,1023,0,67.48
+dataset,total_environments,real_failures,degenerate_empty_input,parse_fail,empty_graph_total,other_error,real_error_rate_pct
+conference,13,0,0,0,0,0,0.0
+human-mouse,1516,0,0,0,0,0,0.0

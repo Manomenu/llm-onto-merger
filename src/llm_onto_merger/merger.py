@@ -87,6 +87,35 @@ class LLMOntologyMerger:
             )
             log.info("Saved relabeling map: %d entries → %s", len(relabeling_local), relabeling_path)
 
+        # Orient each alignment so entity1 ∈ onto_1 and entity2 ∈ onto_2.  AML
+        # emits pairs in (source=base, target=candidate) order, but external
+        # alignment files (e.g. the OAEI reference) may list them reversed.  A
+        # reversed pair makes both seeds unresolvable in their expected ontology
+        # → empty merge environment.  Swap reversed pairs; leave pairs matching
+        # neither orientation untouched.
+        onto_1_subjects = {str(s) for s in onto_1.subjects()}
+        onto_2_subjects = {str(s) for s in onto_2.subjects()}
+        swapped = 0
+        oriented: list[Alignment] = []
+        for a in alignments:
+            forward = a.entity1 in onto_1_subjects and a.entity2 in onto_2_subjects
+            reversed_ = a.entity1 in onto_2_subjects and a.entity2 in onto_1_subjects
+            if reversed_ and not forward:
+                oriented.append(Alignment(
+                    entity1=a.entity2, entity2=a.entity1,
+                    measure=a.measure, relation=a.relation,
+                ))
+                swapped += 1
+            else:
+                oriented.append(a)
+        alignments = oriented
+        if swapped:
+            log.info(
+                "Oriented %d/%d alignment pairs to (onto_1, onto_2) order "
+                "(entity1/entity2 were reversed vs base/candidate)",
+                swapped, len(alignments),
+            )
+
         log.info("Alignments applied: %d", len(alignments))
 
         _, code_to_ns, ns_to_code, well_known_codes = build_namespace_codec(onto_1, onto_2)

@@ -101,26 +101,50 @@ def _local_names(onto_path: Path) -> set[str]:
 
 
 def _comerger_accepted(comerger_owl: Path, names1: set[str], names2: set[str]) -> tuple[set[PairKey], int]:
-    """Recover CoMerger's accepted pairs from its merged# entities, validating
-    candidate splits against the source name sets (so '_' inside names is safe)."""
+    """Recover CoMerger's accepted pairs from its merged# entities.
+
+    CoMerger collapses an accepted pair into a `merged#` entity named by joining
+    the two source local names with '_'.  For same-named pairs the name is that
+    name (e.g. merged#Person).  Crucially, CoMerger STRIPS internal underscores
+    from the source names before joining, so an OBO pair (MA_0000009, NCI_C12472)
+    becomes merged#MA0000009_NCIC12472.  We therefore resolve each candidate split
+    token both directly AND against an underscore-stripped index of the source
+    names, mapping back to the original (with-underscore) name.  Returns
+    (accepted_keys, unresolved_count)."""
     g = Graph()
     g.parse(str(comerger_owl))
     merged_locals = {
         _local(str(t)) for t in g.all_nodes()
         if isinstance(t, URIRef) and str(t).startswith(_MERGED_NS)
     }
+    # Underscore-stripped index: stripped_name → original source name.
+    strip1 = {n.replace("_", ""): n for n in names1}
+    strip2 = {n.replace("_", ""): n for n in names2}
+
+    def resolve(tok: str, names: set[str], strip: dict[str, str]) -> str | None:
+        if tok in names:
+            return tok
+        return strip.get(tok)
+
     accepted: set[PairKey] = set()
     unresolved = 0
     for m in merged_locals:
-        if m in names1 and m in names2:
+        if not m:
+            continue
+        if m in names1 and m in names2:          # same local name (e.g. Person)
             accepted.add(frozenset((m,)))
             continue
         parts = m.split("_")
         found = None
         for i in range(1, len(parts)):
             a, b = "_".join(parts[:i]), "_".join(parts[i:])
-            if (a in names1 and b in names2) or (a in names2 and b in names1):
-                found = frozenset((a, b))
+            ra1, rb2 = resolve(a, names1, strip1), resolve(b, names2, strip2)
+            if ra1 and rb2:
+                found = frozenset((ra1, rb2))
+                break
+            ra2, rb1 = resolve(a, names2, strip2), resolve(b, names1, strip1)
+            if ra2 and rb1:
+                found = frozenset((rb1, ra2))
                 break
         if found is not None:
             accepted.add(found)
@@ -135,10 +159,13 @@ def _accepted_per_method(
 ) -> dict[str, set[PairKey]]:
     """Accepted-pair set per method for one run (input = reference or AML)."""
     inverse = _load_inverse_relabel(run_dir)
-    res: dict[str, set[PairKey]] = {
-        "Applied Alignments": set(input_pairs),   # apply-all
-        "AROM": set(input_pairs),                 # apply-all (≥ threshold 0)
-    }
+    res: dict[str, set[PairKey]] = {}
+    # AROM — ACTUAL accepted pairs from its provenance sidecar (NOT assumed
+    # apply-all).  AROM provenance uses original source local names → no inverse
+    # relabeling (that only applies to the merger's own relabelled URIs).
+    if (run_dir / "arom_stats.json").exists():
+        res["AROM"] = _provenance_pairs(run_dir / "arom_stats.json")
+    # Proposed (merger) — input minus the pairs it explicitly rejected.
     if (run_dir / "alignment_stats.json").exists():
         res["Proposed"] = input_pairs - _merger_rejected(run_dir, inverse)
     if (run_dir / "boomer_stats.json").exists():
@@ -163,6 +190,13 @@ def main() -> None:
     )
     parser.add_argument("--out-csv", type=Path, required=True)
     parser.add_argument("--out-jpg", type=Path, required=True)
+    parser.add_argument("--title",
+                        default="OAEI reference-alignment validation (Domain Coherence)",
+                        help="Figure suptitle.")
+    parser.add_argument("--no-flag", action="store_true",
+                        help="Disable the Boomer ambiguity hatch/dual-label. Use for "
+                             "the ADJUSTED run where Boomer's reference ptable uses a "
+                             "realistic (mean-AML) p_equiv instead of the artificial cap.")
     args = parser.parse_args()
 
     rows: list[dict] = []
@@ -214,39 +248,68 @@ def main() -> None:
         w.writerows(rows)
     print(f"  wrote {args.out_csv} ({len(rows)} rows)")
 
-    # ── aggregate (Σ over datasets, treating None as missing) + chart ────────
+    # ── per-dataset chart (NO cross-dataset aggregation) ─────────────────────
+    # Grid: one row per dataset (conference, human-mouse), two columns (the two
+    # measures).  Each dataset keeps its own y-scale (conference ~10s vs
+    # human-mouse ~1000s would otherwise be incomparable).
     methods: list[str] = []
     for r in rows:
         if r["method"] not in methods:
             methods.append(r["method"])
+    datasets: list[str] = []
+    for r in rows:
+        if r["dataset"] not in datasets:
+            datasets.append(r["dataset"])
+    lookup = {(r["method"], r["dataset"]): r for r in rows}
 
-    def _sum(metric: str, m: str):
-        vals = [r[metric] for r in rows if r["method"] == m and r[metric] is not None]
-        return sum(vals) if vals else None
+    # Uniform muted blue + black edge — same palette as the other thesis charts
+    # (tests/analiza/plot_pct.py).
+    BAR_COLOR = "#4472C4"
+    measures = [
+        ("rejected_correct", "Rejected correct alignments\n(reference input; lower = better)"),
+        ("accepted_aml_fp", "Accepted AML false-positives\n(AML input; lower = better)"),
+    ]
 
-    rej = {m: _sum("rejected_correct", m) for m in methods}
-    acc = {m: _sum("accepted_aml_fp", m) for m in methods}
+    # AMBIGUOUS cell(s): Boomer's human-mouse rejected_correct exists ONLY thanks
+    # to the artificial p_equiv cap (0.99) on the reference ptable — without it
+    # Boomer's solver fails ('No possible resolution of perplexity') → 0/undefined.
+    # ONLY this single bar is hatched and labelled "<capped>/0".  Boomer's other
+    # bars (conference, and accepted_aml_fp from the AML run) have no such issue.
+    FLAGGED_CELLS = set() if args.no_flag else {("Boomer", "human-mouse", "rejected_correct")}
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-    colors = ["#c0392b" if m == "Proposed" else "#95a5a6" for m in methods]
+    fig, axes = plt.subplots(len(datasets), 2, figsize=(12, 5 * len(datasets)),
+                             squeeze=False)
+    for di, ds in enumerate(datasets):
+        for mi, (metric, title) in enumerate(measures):
+            ax = axes[di][mi]
+            vals = [lookup.get((m, ds), {}).get(metric) for m in methods]
+            bars = ax.bar(methods, [v or 0 for v in vals], color=BAR_COLOR,
+                          edgecolor="black", linewidth=0.5)
+            labels = []
+            for bar, m, v in zip(bars, methods, vals):
+                flagged = (m, ds, metric) in FLAGGED_CELLS
+                if flagged:
+                    bar.set_hatch("///")
+                if v is None:
+                    labels.append("n/a")
+                elif flagged:
+                    labels.append(f"{v}/0")       # with-cap / without-cap (crash)
+                else:
+                    labels.append(str(v))
+            ax.bar_label(bars, labels=labels, padding=3)
+            ax.axhline(0, color="black", linewidth=0.6)
+            ax.set_title(f"{ds} — {title}")
+            ax.set_ylabel("count")
+            ax.tick_params(axis="x", rotation=20)
+            ax.margins(y=0.2)
 
-    rej_vals = [rej[m] or 0 for m in methods]
-    b1 = ax1.bar(methods, rej_vals, color=colors)
-    ax1.set_title("Rejected correct alignments\n(reference as input; lower = better)")
-    ax1.set_ylabel("count (Σ over OAEI datasets)")
-    ax1.bar_label(b1, labels=["n/a" if rej[m] is None else str(rej[m]) for m in methods], padding=3)
-
-    b2 = ax2.bar(methods, [acc[m] or 0 for m in methods], color=colors)
-    ax2.set_title("Accepted AML false-positives\n(AML as input; lower = better)")
-    ax2.set_ylabel("count (Σ over OAEI datasets)")
-    ax2.bar_label(b2, labels=["n/a" if acc[m] is None else str(acc[m]) for m in methods], padding=3)
-
-    for ax in (ax1, ax2):
-        ax.tick_params(axis="x", rotation=20)
-        ax.margins(y=0.15)
-
-    fig.suptitle("OAEI reference-alignment validation (Domain Coherence)")
-    fig.tight_layout()
+    fig.suptitle(args.title)
+    if FLAGGED_CELLS:
+        fig.text(0.5, 0.005,
+                 "Hatched bar (Boomer, human-mouse rejected): relies on an artificial "
+                 "p_equiv cap (0.99); uncapped Boomer fails to resolve the reference → 0/undefined.",
+                 ha="center", fontsize=8, style="italic")
+    fig.tight_layout(rect=(0, 0.03, 1, 1) if FLAGGED_CELLS else None)
     fig.savefig(args.out_jpg, dpi=150)
     print(f"  wrote {args.out_jpg}")
 

@@ -1,3 +1,5 @@
+import os
+
 from pydantic import BaseModel
 from rdflib import OWL, Graph, URIRef
 
@@ -12,6 +14,11 @@ from llm_onto_merger.ontology import (
 )
 
 log = get_logger(__name__)
+
+# Verbose error diagnostics: set LLM_MERGE_DEBUG=1 to dump the raw LLM response
+# for environments that produced an empty merged graph DESPITE non-empty input
+# (the genuinely interesting failures).  Used by scenario_4.sh.
+_VERBOSE_ERRORS = os.environ.get("LLM_MERGE_DEBUG", "") not in ("", "0")
 
 
 class MergedOntology(BaseModel):
@@ -30,7 +37,15 @@ def _local_keys(g: Graph) -> set[tuple[str, str, str]]:
     }
 
 
-def _audit_merge(idx: int, env: MergeEnvironment, merged: Graph) -> None:
+def _audit_merge(
+    idx: int,
+    env: MergeEnvironment,
+    merged: Graph,
+    n_entities: int | None = None,
+    drop: DropReport | None = None,
+    was_applied: bool | None = None,
+    raw=None,
+) -> None:
     """Per-env sanity checks. Emits warnings for suspicious merge outcomes."""
     input_graph = Graph()
     for t in env.onto_1:
@@ -59,7 +74,23 @@ def _audit_merge(idx: int, env: MergeEnvironment, merged: Graph) -> None:
     )
 
     if len(merged) == 0:
-        log.error("env %d: LLM returned EMPTY merged graph", idx)
+        cause = ("DEGENERATE (empty input env — nothing to merge)"
+                 if len(input_keys) == 0
+                 else "REAL (non-empty input produced nothing)")
+        log.error(
+            "env %d: LLM returned EMPTY merged graph — cause: %s | input_keys=%d "
+            "entities_received=%s dropped(invalid=%s,bad_subj=%s,bad_pred=%s) "
+            "alignment_applied=%s",
+            idx, cause, len(input_keys),
+            n_entities if n_entities is not None else "?",
+            len(drop.invalid_entities) if drop else "?",
+            len(drop.bad_subject_entities) if drop else "?",
+            len(drop.bad_predicate_triples) if drop else "?",
+            was_applied,
+        )
+        if _VERBOSE_ERRORS and raw is not None and len(input_keys) > 0:
+            log.error("env %d: EMPTY-with-input DEBUG | raw LLM response: %s",
+                      idx, str(raw)[:4000])
     if len(added) == 0 and len(input_keys) > 0:
         log.warning(
             "env %d: LLM added 0 new triples (deleted %d) — possible dead merge",
@@ -133,7 +164,13 @@ class MergeEnvironmentsModule:
         merged_graph, drop_report = entities_to_graph(
             merged.Merged_Ontology, code_to_uri
         )
-        _audit_merge(idx, merge_environment, merged_graph)
+        _audit_merge(
+            idx, merge_environment, merged_graph,
+            n_entities=len(merged.Merged_Ontology),
+            drop=drop_report,
+            was_applied=merged.Was_Alignment_Applied,
+            raw=response.value,
+        )
         return merged_graph, drop_report, merged.Was_Alignment_Applied
 
     @staticmethod

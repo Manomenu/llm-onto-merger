@@ -27,6 +27,7 @@ Usage:
 
 import argparse
 import asyncio
+import os
 import re
 import sys
 from collections import defaultdict
@@ -258,11 +259,19 @@ def _build_ptable_from_alignment_file(
 ) -> int:
     """Build ptable from a pre-computed OAEI alignment file (e.g. the reference
     alignment), using each cell's measure as p_equiv.  Same row format as the
-    matcher path — only the source of pairs differs (no matcher is run)."""
+    matcher path — only the source of pairs differs (no matcher is run).
+
+    A gold-standard reference lists every cell at measure=1.0.  Feeding Boomer
+    hard 1.0 probabilities leaves its probabilistic solver no slack to drop
+    conflicting pairs, which can trigger 'No possible resolution of perplexity'.
+    We therefore CAP p_equiv at BOOMER_REF_P_EQUIV (default 0.99) so the solver
+    keeps a small margin.  Set BOOMER_REF_P_EQUIV=1.0 to disable the cap."""
     from llm_onto_merger.alignment.alignment import parse_oaei_alignment
 
+    cap = float(os.environ.get("BOOMER_REF_P_EQUIV", "0.99"))
     alignments = parse_oaei_alignment(alignment_path)
-    print(f"  → loaded {len(alignments)} alignment cells from {alignment_path}")
+    print(f"  → loaded {len(alignments)} alignment cells from {alignment_path} "
+          f"(p_equiv capped at {cap})")
 
     count = 0
     skipped = 0
@@ -273,7 +282,7 @@ def _build_ptable_from_alignment_file(
             if not c1 or not c2:
                 skipped += 1
                 continue
-            f.write(_format_ptable_row(c1, c2, a.measure))
+            f.write(_format_ptable_row(c1, c2, min(a.measure, cap)))
             count += 1
     if skipped:
         print(

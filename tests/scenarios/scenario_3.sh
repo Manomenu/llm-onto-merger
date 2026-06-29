@@ -49,11 +49,16 @@ TAG="ref_15k_p24"
 # ── Arg parsing ─────────────────────────────────────────────────────────────
 SKIP_MINE=0
 SKIP_ALL=0
+ONLY_BOOMER=0
 DATASET=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --skip-mine) SKIP_MINE=1; shift ;;
     --skip-all)  SKIP_MINE=1; SKIP_ALL=1; shift ;;
+    # Run ONLY Boomer (reference input) — skip the LLM merger and the other
+    # baselines.  Used to populate the missing boomer_stats.json in an existing
+    # s3 dir without re-running the expensive LLM merge.
+    --only-boomer) ONLY_BOOMER=1; SKIP_MINE=1; shift ;;
     --help|-h)   sed -n '2,/^$/p' "$0" | sed 's/^# *//' >&2; exit 0 ;;
     -*)          echo "Unknown option: $1" >&2; exit 1 ;;
     *)
@@ -144,7 +149,7 @@ else
 fi
 
 # ── Applied Alignments baseline (reference as input) ────────────────────────
-if [ "$SKIP_ALL" != "1" ]; then
+if [ "$ONLY_BOOMER" != "1" ] && [ "$SKIP_ALL" != "1" ]; then
   echo "  → running applied alignments (reference) → $APPLIED_CACHE"
   mkdir -p "$APPLIED_CACHE"
   if ! uv run python tests/generate_applied_alignments.py \
@@ -156,9 +161,11 @@ if [ "$SKIP_ALL" != "1" ]; then
 fi
 [ -f "$APPLIED_CACHE/applied_alignments.owl" ] && \
   cp "$APPLIED_CACHE/applied_alignments.owl" "$OUT_DIR/applied_alignments.owl"
+[ -f "$APPLIED_CACHE/applied_stats.json" ] && \
+  cp "$APPLIED_CACHE/applied_stats.json" "$OUT_DIR/applied_stats.json"
 
 # ── AROM (reference as 4th-arg alignment file) ──────────────────────────────
-if [ "$SKIP_ALL" != "1" ]; then
+if [ "$ONLY_BOOMER" != "1" ] && [ "$SKIP_ALL" != "1" ]; then
   echo "  → running AROM (reference) → $AROM_CACHE"
   mkdir -p "$AROM_CACHE"
   if ! ./thirdparty/arom/arom.sh "$BASE" "$CANDIDATE" "$AROM_CACHE" "$REFERENCE" \
@@ -168,9 +175,11 @@ if [ "$SKIP_ALL" != "1" ]; then
 fi
 [ -f "$AROM_CACHE/arom_ontology.owl" ] && \
   cp "$AROM_CACHE/arom_ontology.owl" "$OUT_DIR/arom_ontology.owl"
+[ -f "$AROM_CACHE/arom_stats.json" ] && \
+  cp "$AROM_CACHE/arom_stats.json" "$OUT_DIR/arom_stats.json"
 
 # ── CoMerger (reference as 4th-arg alignment file) ──────────────────────────
-if [ "$SKIP_ALL" != "1" ]; then
+if [ "$ONLY_BOOMER" != "1" ] && [ "$SKIP_ALL" != "1" ]; then
   echo "  → running CoMerger (reference) → $COMERGER_CACHE"
   mkdir -p "$COMERGER_CACHE"
   if ! ./thirdparty/CoMerger-1.2/comerger.sh "$BASE" "$CANDIDATE" "$COMERGER_CACHE" "$REFERENCE" \
@@ -180,10 +189,12 @@ if [ "$SKIP_ALL" != "1" ]; then
 fi
 [ -f "$COMERGER_CACHE/merged_ontology.owl" ] && \
   cp "$COMERGER_CACHE/merged_ontology.owl" "$OUT_DIR/comerger_ontology.owl"
+[ -f "$COMERGER_CACHE/comerger_stats.json" ] && \
+  cp "$COMERGER_CACHE/comerger_stats.json" "$OUT_DIR/comerger_stats.json"
 
 # ── Boomer (reference via dedicated boomer_s3.sh wrapper) ───────────────────
 BOOMER_CACHE="$SCENARIO_DIR/.boomer_ref"
-if [ "$SKIP_ALL" != "1" ]; then
+if [ "$ONLY_BOOMER" = "1" ] || [ "$SKIP_ALL" != "1" ]; then
   echo "  → running Boomer (reference) → $BOOMER_CACHE"
   mkdir -p "$BOOMER_CACHE"
   if ! ./thirdparty/boomer/boomer_s3.sh "$BASE" "$CANDIDATE" "$BOOMER_CACHE" "$REFERENCE" \
@@ -193,6 +204,8 @@ if [ "$SKIP_ALL" != "1" ]; then
 fi
 [ -f "$BOOMER_CACHE/merged_ontology.owl" ] && \
   cp "$BOOMER_CACHE/merged_ontology.owl" "$OUT_DIR/boomer_ontology.owl"
+[ -f "$BOOMER_CACHE/boomer_stats.json" ] && \
+  cp "$BOOMER_CACHE/boomer_stats.json" "$OUT_DIR/boomer_stats.json"
 
 echo
 echo "Done. Proposed-method alignment stats: $OUT_DIR/alignment_stats.json"
