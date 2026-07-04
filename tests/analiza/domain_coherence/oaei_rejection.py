@@ -18,8 +18,9 @@ A method's accepted-pair set is recovered identically in both runs:
     Applied Alignments / AROM → all input pairs            (apply-all)
     Proposed (merger)         → input − rejected_alignments (alignment_stats.json)
     Boomer                    → code_provenance            (boomer_stats.json)
-    CoMerger                  → merged# entities in comerger_ontology.owl,
-                                resolved against source name sets (handles '_').
+    CoMerger                  → full input alignment when comerger_stats.json reports
+                                applied == input (deterministic full merger); else a
+                                fallback merged#-name reconstruction.
 where input = reference (scenario_3) or AML candidate set A (scenario_2).
 A is the provenance of Applied Alignments in scenario_2 (it applies ALL AML pairs).
 
@@ -36,6 +37,7 @@ warning) and only measure 2 is reported — run tests/scenarios/scenario_3.sh fi
 import argparse
 import csv
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -43,9 +45,10 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from rdflib import Graph, URIRef
+from rdflib import RDFS, Graph, Literal, URIRef
 
 from llm_onto_merger.alignment.alignment import parse_oaei_alignment
+from llm_onto_merger.alignment import AmlAlignmentModule
 
 PairKey = frozenset
 _MERGED_NS = "http://merged#"
@@ -56,26 +59,91 @@ def _local(uri: str) -> str:
     return uri[idx + 1:] if idx >= 0 else uri
 
 
-def _key(uri1: str, uri2: str, inverse_relabel: dict[str, str]) -> PairKey:
-    a = inverse_relabel.get(_local(uri1), _local(uri1))
-    b = inverse_relabel.get(_local(uri2), _local(uri2))
-    return frozenset((a, b))
+def _nsof(uri: str) -> str:
+    idx = max(uri.rfind("#"), uri.rfind("/"))
+    return uri[:idx + 1] if idx >= 0 else uri
 
 
-def _provenance_pairs(stats_path: Path, inverse_relabel: dict[str, str] | None = None) -> set[PairKey]:
-    inverse_relabel = inverse_relabel or {}
-    data = json.loads(stats_path.read_text(encoding="utf-8"))
-    out: set[PairKey] = set()
-    for entry in data.get("code_provenance", {}).values():
-        u1 = entry.get("1_uri") or entry.get("1")
-        u2 = entry.get("2_uri") or entry.get("2")
-        if u1 and u2:
-            out.add(_key(u1, u2, inverse_relabel))
-    return out
+# ── Entity identity: namespace-qualified (onto tag + local name) ──────────────
+# A merge pair like cmt#Person ↔ edas#Person collapses to the SAME local name
+# ("Person") — so identifying entities by local name alone conflates two distinct
+# entities.  We qualify every entity as "<tag>::<local>", where tag is "1" for the
+# base ontology (onto1) and "2" for the candidate (onto2), determined by namespace.
+# This, combined with union-find over accepted pairs, makes the "pair preserved?"
+# test correct under many-to-one references (one entity mapping to several) and
+# under same-local-name pairs — the two sources of the earlier counting artifact.
+
+def _main_ns(onto_path: Path) -> str:
+    """Dominant entity namespace of an ontology (host of its subjects)."""
+    g = Graph()
+    g.parse(str(onto_path))
+    counts: dict[str, int] = {}
+    for s in g.subjects():
+        if isinstance(s, URIRef):
+            ns = _nsof(str(s))
+            if ns.startswith(("http://www.w3.org/", "http://purl.org/dc/")):
+                continue
+            counts[ns] = counts.get(ns, 0) + 1
+    return max(counts, key=counts.get) if counts else ""
 
 
-def _reference_pairs(reference_path: Path) -> set[PairKey]:
-    return {_key(a.entity1, a.entity2, {}) for a in parse_oaei_alignment(reference_path)}
+class _UF:
+    """Union-find over hashable elements."""
+    def __init__(self) -> None:
+        self.parent: dict[str, str] = {}
+
+    def find(self, x: str) -> str:
+        self.parent.setdefault(x, x)
+        while self.parent[x] != x:
+            self.parent[x] = self.parent[self.parent[x]]
+            x = self.parent[x]
+        return x
+
+    def union(self, a: str, b: str) -> None:
+        self.parent[self.find(a)] = self.find(b)
+
+    def same(self, a: str, b: str) -> bool:
+        return a in self.parent and b in self.parent and self.find(a) == self.find(b)
+
+
+def _tag(uri: str, base_ns: str, cand_ns: str) -> str:
+    ns = _nsof(uri)
+    return "1" if ns == base_ns else ("2" if ns == cand_ns else "?")
+
+
+def _qual(uri: str, base_ns: str, cand_ns: str, inverse_relabel: dict[str, str] | None = None) -> str:
+    loc = _local(uri)
+    if inverse_relabel:
+        loc = inverse_relabel.get(loc, loc)
+    return f"{_tag(uri, base_ns, cand_ns)}::{loc}"
+
+
+def _reference_qpairs(reference_path: Path, base_ns: str, cand_ns: str) -> list[tuple[str, str]]:
+    return [
+        (_qual(a.entity1, base_ns, cand_ns), _qual(a.entity2, base_ns, cand_ns))
+        for a in parse_oaei_alignment(reference_path)
+    ]
+
+
+def _aml_qpairs(base_owl: Path, cand_owl: Path, base_ns: str, cand_ns: str) -> list[tuple[str, str]]:
+    """Full AML candidate set as qualified pairs — computed directly from the raw
+    AML alignment (deterministic).  We do NOT read it from applied_stats.json's
+    code_provenance, because collapsing many-to-one correspondences into a single
+    merged entity there drops some pairs (the same artifact fixed for measure 1) —
+    which would under-count the AML false-positive denominator |A − R|."""
+    import asyncio
+    import os
+    # Resolve inputs BEFORE chdir (relative paths are w.r.t. the current cwd).
+    base_abs, cand_abs = base_owl.resolve(), cand_owl.resolve()
+    # AML's jar path and output path are relative to the repo root; run from there.
+    repo_root = Path(__file__).resolve().parents[3]
+    prev = os.getcwd()
+    try:
+        os.chdir(repo_root)
+        al = asyncio.run(AmlAlignmentModule().create_alignment(base_abs, cand_abs))
+    finally:
+        os.chdir(prev)
+    return [(_qual(a.entity1, base_ns, cand_ns), _qual(a.entity2, base_ns, cand_ns)) for a in al]
 
 
 def _load_inverse_relabel(d: Path) -> dict[str, str]:
@@ -86,98 +154,168 @@ def _load_inverse_relabel(d: Path) -> dict[str, str]:
     return {new: old for old, new in raw.items()}
 
 
-def _merger_rejected(d: Path, inverse_relabel: dict[str, str]) -> set[PairKey]:
-    data = json.loads((d / "alignment_stats.json").read_text(encoding="utf-8"))
-    return {
-        _key(r["entity1"], r["entity2"], inverse_relabel)
-        for r in data.get("rejected_alignments", [])
-    }
-
-
 def _local_names(onto_path: Path) -> set[str]:
     g = Graph()
     g.parse(str(onto_path))
     return {_local(str(s)) for s in g.subjects() if isinstance(s, URIRef)}
 
 
-def _comerger_accepted(comerger_owl: Path, names1: set[str], names2: set[str]) -> tuple[set[PairKey], int]:
-    """Recover CoMerger's accepted pairs from its merged# entities.
+# ── Accepted-pair extractors (qualified) — one per method ────────────────────
+def _prov_qpairs(stats_path: Path, base_ns: str, cand_ns: str) -> list[tuple[str, str]]:
+    """From a *_stats.json code_provenance block (AROM sidecar, Boomer sidecar).
+    Uses full URIs (1_uri/2_uri) when present → qualified by namespace; else the
+    "1"/"2" onto-number keys (1=base, 2=candidate)."""
+    data = json.loads(stats_path.read_text(encoding="utf-8"))
+    out: list[tuple[str, str]] = []
+    for v in data.get("code_provenance", {}).values():
+        u1, u2 = v.get("1_uri"), v.get("2_uri")
+        if u1 and u2:
+            out.append((_qual(u1, base_ns, cand_ns), _qual(u2, base_ns, cand_ns)))
+        elif "1" in v and "2" in v:
+            out.append((f"1::{v['1']}", f"2::{v['2']}"))
+    return out
 
-    CoMerger collapses an accepted pair into a `merged#` entity named by joining
-    the two source local names with '_'.  For same-named pairs the name is that
-    name (e.g. merged#Person).  Crucially, CoMerger STRIPS internal underscores
-    from the source names before joining, so an OBO pair (MA_0000009, NCI_C12472)
-    becomes merged#MA0000009_NCIC12472.  We therefore resolve each candidate split
-    token both directly AND against an underscore-stripped index of the source
-    names, mapping back to the original (with-underscore) name.  Returns
-    (accepted_keys, unresolved_count)."""
+
+def _arom_cluster_qpairs(arom_owl: Path) -> list[tuple[str, str]]:
+    """AROM tags each merged Code_N entity with rdfs:label '<n>. <local>' for every
+    source member (n=1 base, 2 candidate).  Collecting ALL labels per Code_N gives
+    the FULL merged cluster (the sidecar's dict overwrote same-onto members, losing
+    many-to-one) → emit all internal pairs so union-find rebuilds the cluster."""
+    g = Graph()
+    g.parse(str(arom_owl))
+    pat = re.compile(r"^\s*(\d+)\.\s*(.+?)\s*$")
+    clusters: dict[str, set[str]] = {}
+    for s, _, o in g.triples((None, RDFS.label, None)):
+        if isinstance(s, URIRef) and "Code_" in str(s) and isinstance(o, Literal):
+            m = pat.match(str(o))
+            if m:
+                clusters.setdefault(str(s), set()).add(f"{m.group(1)}::{m.group(2)}")
+    out: list[tuple[str, str]] = []
+    for members in clusters.values():
+        ms = list(members)
+        for i in range(len(ms)):
+            for j in range(i + 1, len(ms)):
+                out.append((ms[i], ms[j]))
+    return out
+
+
+def _comerger_applied_all(stats_path: Path) -> bool:
+    """True iff CoMerger's own sidecar reports it applied EVERY input correspondence
+    (applied_equiv_* == input_corresponding_*).  CoMerger is a deterministic full
+    merger with GMR-consistency checking; on all our datasets it applies 100% of the
+    input alignment (it does not selectively reject).  We use this authoritative
+    signal instead of reconstructing the accepted set from merged# names, which is
+    fragile (see _method_uf)."""
+    d = json.loads(stats_path.read_text(encoding="utf-8"))
+    kinds = ("classes", "object_properties", "data_properties")
+    applied = sum(d.get(f"applied_equiv_{k}", 0) for k in kinds)
+    inp = sum(d.get(f"input_corresponding_{k}", 0) for k in kinds)
+    return inp > 0 and applied >= inp
+
+
+def _comerger_cluster_qpairs(comerger_owl: Path, names1: set[str], names2: set[str]) -> list[tuple[str, str]]:
+    """CoMerger collapses each accepted cluster into ONE merged# entity whose local
+    name is the source names (internal '_' stripped) joined by '_'.  A same-local
+    name (Person) present in both ontologies means the entity is the 1::/2:: pair;
+    otherwise split the name into ALL member tokens (multi-way — handles many-to-one
+    clusters like merged#NCIC.._MA.._NCIC..)."""
     g = Graph()
     g.parse(str(comerger_owl))
+    strip1 = {n.replace("_", ""): n for n in names1}
+    strip2 = {n.replace("_", ""): n for n in names2}
     merged_locals = {
         _local(str(t)) for t in g.all_nodes()
         if isinstance(t, URIRef) and str(t).startswith(_MERGED_NS)
     }
-    # Underscore-stripped index: stripped_name → original source name.
-    strip1 = {n.replace("_", ""): n for n in names1}
-    strip2 = {n.replace("_", ""): n for n in names2}
-
-    def resolve(tok: str, names: set[str], strip: dict[str, str]) -> str | None:
-        if tok in names:
-            return tok
-        return strip.get(tok)
-
-    accepted: set[PairKey] = set()
-    unresolved = 0
+    out: list[tuple[str, str]] = []
     for m in merged_locals:
         if not m:
             continue
-        if m in names1 and m in names2:          # same local name (e.g. Person)
-            accepted.add(frozenset((m,)))
-            continue
-        parts = m.split("_")
-        found = None
-        for i in range(1, len(parts)):
-            a, b = "_".join(parts[:i]), "_".join(parts[i:])
-            ra1, rb2 = resolve(a, names1, strip1), resolve(b, names2, strip2)
-            if ra1 and rb2:
-                found = frozenset((ra1, rb2))
-                break
-            ra2, rb1 = resolve(a, names2, strip2), resolve(b, names1, strip1)
-            if ra2 and rb1:
-                found = frozenset((rb1, ra2))
-                break
-        if found is not None:
-            accepted.add(found)
+        members: set[str] = set()
+        if m in names1:
+            members.add(f"1::{m}")
+        if m in names2:
+            members.add(f"2::{m}")
+        if not members:  # concatenated cluster: split and map each token
+            for tok in m.split("_"):
+                o1 = tok if tok in names1 else strip1.get(tok)
+                o2 = tok if tok in names2 else strip2.get(tok)
+                if o1:
+                    members.add(f"1::{o1}")
+                if o2:
+                    members.add(f"2::{o2}")
+        ms = list(members)
+        for i in range(len(ms)):
+            for j in range(i + 1, len(ms)):
+                out.append((ms[i], ms[j]))
+    return out
+
+
+def _merger_rejected_qkeys(run_dir: Path, base_ns: str, cand_ns: str,
+                           inverse_relabel: dict[str, str]) -> set[PairKey]:
+    """Pairs the LLM merger explicitly rejected (alignment_stats.json), as qualified
+    frozenset keys — used to derive Proposed's accepted set = input − rejected."""
+    data = json.loads((run_dir / "alignment_stats.json").read_text(encoding="utf-8"))
+    return {
+        frozenset((_qual(r["entity1"], base_ns, cand_ns, inverse_relabel),
+                   _qual(r["entity2"], base_ns, cand_ns, inverse_relabel)))
+        for r in data.get("rejected_alignments", [])
+    }
+
+
+def _method_uf(run_dir: Path, input_qpairs: list[tuple[str, str]],
+               base_ns: str, cand_ns: str, names1: set[str], names2: set[str],
+               method: str) -> _UF | None:
+    """Union-find of entities the method actually merged, for one run.  A gold pair
+    (a,b) is PRESERVED iff uf.same(a,b)."""
+    uf = _UF()
+    if method == "AROM":
+        # AROM has no rejection stage: it applies every input correspondence at/above
+        # its threshold (default 0.0 → all).  The codebase's applied_alignments metric
+        # treats it identically (accepted = total_align).  So the accepted set IS the
+        # full input.  We do NOT reconstruct clusters from Code_N rdfs:label triples:
+        # that recovery silently under-counts on some ontologies (e.g. swo-union, where
+        # it recovered 1 of 5 accepted pairs) — the same class of output-reconstruction
+        # fragility avoided for CoMerger.
+        if not (run_dir / "arom_ontology.owl").exists():
+            return None
+        pairs = list(input_qpairs)
+    elif method == "Boomer":
+        p = run_dir / "boomer_stats.json"
+        if not p.exists():
+            return None
+        pairs = _prov_qpairs(p, base_ns, cand_ns)
+    elif method == "CoMerger":
+        p = run_dir / "comerger_ontology.owl"
+        if not p.exists():
+            return None
+        # CoMerger applies its full input alignment (its sidecar confirms applied ==
+        # input on every dataset).  Recovering the accepted set by splitting merged#
+        # names is fragile — it fails on source names containing '_' (Poster_Paper),
+        # case differences (Social_event/Social_Event), and property merges that keep
+        # one source name instead of a merged# IRI — each spuriously reporting an
+        # APPLIED correspondence as "rejected".  When the sidecar confirms full
+        # application, take the accepted set to be the entire input (as for AROM).
+        stats = run_dir / "comerger_stats.json"
+        if stats.exists() and _comerger_applied_all(stats):
+            pairs = list(input_qpairs)
         else:
-            unresolved += 1
-    return accepted, unresolved
+            pairs = _comerger_cluster_qpairs(p, names1, names2)
+    elif method == "Proposed":
+        p = run_dir / "alignment_stats.json"
+        if not p.exists():
+            return None
+        rejected = _merger_rejected_qkeys(run_dir, base_ns, cand_ns,
+                                          _load_inverse_relabel(run_dir))
+        pairs = [(a, b) for a, b in input_qpairs if frozenset((a, b)) not in rejected]
+    else:
+        return None
+    for a, b in pairs:
+        uf.union(a, b)
+    return uf
 
 
-def _accepted_per_method(
-    run_dir: Path, input_pairs: set[PairKey],
-    names1: set[str], names2: set[str], dataset: str,
-) -> dict[str, set[PairKey]]:
-    """Accepted-pair set per method for one run (input = reference or AML)."""
-    inverse = _load_inverse_relabel(run_dir)
-    res: dict[str, set[PairKey]] = {}
-    # AROM — ACTUAL accepted pairs from its provenance sidecar (NOT assumed
-    # apply-all).  AROM provenance uses original source local names → no inverse
-    # relabeling (that only applies to the merger's own relabelled URIs).
-    if (run_dir / "arom_stats.json").exists():
-        res["AROM"] = _provenance_pairs(run_dir / "arom_stats.json")
-    # Proposed (merger) — input minus the pairs it explicitly rejected.
-    if (run_dir / "alignment_stats.json").exists():
-        res["Proposed"] = input_pairs - _merger_rejected(run_dir, inverse)
-    if (run_dir / "boomer_stats.json").exists():
-        res["Boomer"] = _provenance_pairs(run_dir / "boomer_stats.json")
-    cm = run_dir / "comerger_ontology.owl"
-    if cm.exists():
-        acc, unresolved = _comerger_accepted(cm, names1, names2)
-        res["CoMerger"] = acc
-        if unresolved:
-            print(f"  [{dataset}] CoMerger ({run_dir.name}): {unresolved} merged# "
-                  f"entit(ies) unresolved → excluded")
-    return res
+_METHODS = ["AROM", "CoMerger", "Boomer", "Proposed"]
 
 
 def main() -> None:
@@ -211,32 +349,46 @@ def main() -> None:
         if len(owls) != 2:
             sys.exit(f"[{name}] expected 2 .owl in {input_dir}, found {len(owls)}")
 
-        R = _reference_pairs(ref_path)
-        A = _provenance_pairs(applied_s2)               # full AML candidate set
+        base_ns, cand_ns = _main_ns(owls[0]), _main_ns(owls[1])
         names1, names2 = _local_names(owls[0]), _local_names(owls[1])
 
-        # Measure 2 (accept AML-FP) — from scenario_2 (AML input).
-        acc_s2 = _accepted_per_method(s2_dir, A, names1, names2, name)
-        # Measure 1 (reject correct) — from scenario_3 (reference input), if present.
-        acc_s3 = None
-        if (s3_dir / "applied_stats.json").exists() or (s3_dir / "alignment_stats.json").exists():
-            acc_s3 = _accepted_per_method(s3_dir, R, names1, names2, name)
-        else:
+        # Reference + AML candidate set as namespace-qualified pairs.
+        R_pairs = _reference_qpairs(ref_path, base_ns, cand_ns)
+        R_keys = {frozenset(p) for p in R_pairs}
+        # Full AML candidate set — from the raw AML alignment, not applied_stats
+        # (which drops many-to-one pairs when collapsing).
+        A_pairs = _aml_qpairs(owls[0], owls[1], base_ns, cand_ns)
+        # AML false-positives = AML pairs NOT in the reference (to test measure 2).
+        A_fp = [p for p in A_pairs if frozenset(p) not in R_keys]
+
+        has_s3 = (s3_dir / "alignment_stats.json").exists() or (s3_dir / "arom_ontology.owl").exists()
+        if not has_s3:
             print(f"  [{name}] scenario_3 outputs not found in {s3_dir} — measure 1 "
                   f"(rejected correct) skipped; run scenario_3.sh {name}")
 
-        methods = sorted(set(acc_s2) | set(acc_s3 or {}))
-        for m in methods:
-            accepted_aml_fp = len(acc_s2[m] & (A - R)) if m in acc_s2 else None
-            rejected_correct = len(R - acc_s3[m]) if acc_s3 and m in acc_s3 else None
+        for m in _METHODS:
+            # Measure 2 (accept AML-FP): built from scenario_2 (AML input).  A false
+            # positive is "accepted" iff the method merged both its entities.
+            uf2 = _method_uf(s2_dir, A_pairs, base_ns, cand_ns, names1, names2, m)
+            accepted_aml_fp = (sum(1 for a, b in A_fp if uf2.same(a, b))
+                               if uf2 is not None else None)
+            # Measure 1 (reject correct): from scenario_3 (reference input).  A gold
+            # pair is "rejected" iff the method did NOT merge both its entities.
+            rejected_correct = None
+            if has_s3:
+                uf1 = _method_uf(s3_dir, R_pairs, base_ns, cand_ns, names1, names2, m)
+                if uf1 is not None:
+                    rejected_correct = sum(1 for a, b in R_pairs if not uf1.same(a, b))
+            if accepted_aml_fp is None and rejected_correct is None:
+                continue
             rows.append({
                 "method": m, "dataset": name,
-                "reference_total": len(R), "aml_total": len(A),
+                "reference_total": len(R_pairs), "aml_total": len(A_pairs),
                 "rejected_correct": rejected_correct,
                 "accepted_aml_fp": accepted_aml_fp,
             })
-        print(f"  [{name}] |R|={len(R)} |A|={len(A)} methods={methods} "
-              f"measure1={'yes' if acc_s3 else 'NO (no scenario_3)'}")
+        print(f"  [{name}] |R|={len(R_pairs)} |A|={len(A_pairs)} "
+              f"measure1={'yes' if has_s3 else 'NO (no scenario_3)'}")
 
     # ── CSV ──────────────────────────────────────────────────────────────────
     fieldnames = ["method", "dataset", "reference_total", "aml_total",
