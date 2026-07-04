@@ -1,0 +1,5 @@
+dataset,model,total_environments,real_failures,degenerate_empty_input,parse_fail,empty_graph_total,other_error,real_error_rate_pct
+conference,gpt-oss-20b,13,0,0,0,0,0,0.0
+human-mouse,gpt-oss-20b,1516,0,0,0,0,0,0.0
+conference,deepseek-v4-flash,9,0,0,0,0,0,0.0
+human-mouse,deepseek-v4-flash,1396,80,0,80,0,0,5.73

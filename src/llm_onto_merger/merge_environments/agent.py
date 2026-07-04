@@ -145,7 +145,9 @@ def _build_instructions(ns_to_code: dict[str, str], code_to_ns: dict[str, str]) 
         """
 
 
-def build_merge_agent(ns_to_code: dict[str, str], code_to_ns: dict[str, str]):
+def build_merge_agent(
+    ns_to_code: dict[str, str], code_to_ns: dict[str, str], model: str | None = None
+):
     """Construct the merge agent with namespace codes substituted into instructions.
 
     The codec assigns short codes to all namespaces in the data plus the
@@ -159,18 +161,27 @@ def build_merge_agent(ns_to_code: dict[str, str], code_to_ns: dict[str, str]):
     Mutates both ns_to_code and code_to_ns if rdf/rdfs/owl namespaces are
     missing — they will be assigned fresh codes so the serializer/deserializer
     stay in sync with the instructions.
+
+    `model` selects the backend: when set (from --model), requests are routed
+    through OpenRouter using that model name; when None, falls back to the
+    existing Ollama/vLLM backend chosen via settings.use_vllm.
     """
     instructions = _build_instructions(ns_to_code, code_to_ns)
-    client = (
-        OpenAIChatClient(
+    if model is not None:
+        client = OpenAIChatClient(
+            model=model,
+            api_key=settings.openrouter_api_key,
+            base_url=settings.openrouter_host,
+        )
+    elif settings.use_vllm:
+        client = OpenAIChatClient(
             model=settings.vllm_model, api_key="Empty", base_url=settings.vllm_host
         )
-        if settings.use_vllm
-        else OllamaChatClient(
+    else:
+        client = OllamaChatClient(
             host=settings.ollama_host,
             model=settings.ollama_model,
         )
-    )
     return client.as_agent(
         name="Ontology Merger Agent",
         instructions=instructions,

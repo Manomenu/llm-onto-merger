@@ -1,0 +1,9 @@
+dataset,model,new_labels,new_comments,total_labels,total_comments
+conference-s2,gpt-oss-20b,223,209,223,224
+conference-s2,deepseek-v4-flash,352,339,352,353
+human-mouse-s2,gpt-oss-20b,145,5658,7013,5658
+human-mouse-s2,deepseek-v4-flash,176,5170,6789,5170
+acm-union-s2,gpt-oss-20b,16,399,557,680
+acm-union-s2,deepseek-v4-flash,12,344,510,626
+swo-union-s2,gpt-oss-20b,24,755,278,1211
+swo-union-s2,deepseek-v4-flash,18,744,278,1201

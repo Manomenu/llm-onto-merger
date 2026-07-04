@@ -3,6 +3,7 @@ import os
 from pydantic import BaseModel
 from rdflib import OWL, Graph, URIRef
 
+from llm_onto_merger.cost_tracker import CostTracker
 from llm_onto_merger.extract_environments.merge_environment import MergeEnvironment
 from llm_onto_merger.logger import get_logger
 from llm_onto_merger.ontology import (
@@ -113,9 +114,10 @@ def _audit_merge(
 
 
 class MergeEnvironmentsModule:
-    def __init__(self, agent) -> None:
+    def __init__(self, agent, model: str | None = None) -> None:
         self._agent = agent
         self._instruction_len = len(agent.default_options.get("instructions") or "")
+        self.cost_tracker = CostTracker(model)
 
     async def merge(
         self, merge_environment: MergeEnvironment, idx: int = 0, total: int = 0
@@ -145,6 +147,14 @@ class MergeEnvironmentsModule:
                 request,
                 options={"response_format": _MERGED_ONTOLOGY_SCHEMA},
             )
+        except Exception as exc:
+            return self._fallback_merge(merge_environment, idx, exc)
+
+        # Tokens are consumed (and billed) as soon as the call above succeeds,
+        # regardless of whether the response body parses cleanly below.
+        self.cost_tracker.record(idx, response.usage_details)
+
+        try:
             merged = MergedOntology.model_validate(response.value)
         except Exception as exc:
             return self._fallback_merge(merge_environment, idx, exc)

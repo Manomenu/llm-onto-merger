@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     vllm_model: str = ""
     vllm_host: str = "http://localhost:8000/v1"
 
+    # OpenRouter backend (OpenAI-compatible), selected via --model on the CLI
+    openrouter_api_key: str = ""
+    openrouter_host: str = "https://openrouter.ai/api/v1"
+
     parallel_llm_request_count: int = 4
     debug: bool = False
 

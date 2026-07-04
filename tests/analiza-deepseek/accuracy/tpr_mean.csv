@@ -1,0 +1,7 @@
+method,Triple Preservation Ratio
+Applied Alignments,0.9997
+AROM,0.9578
+CoMerger,0.9738
+Boomer,1.0000
+Proposed gpt-oss-20b,0.7767
+Proposed deepseek-v4-flash,0.8382

@@ -1,0 +1,9 @@
+method,dataset,reference_total,aml_total,rejected_correct,accepted_aml_fp
+AROM,conference,13,9,0,1
+Boomer,conference,13,9,0,1
+CoMerger,conference,13,9,5,1
+Proposed,conference,13,9,3,0
+AROM,human-mouse,1516,1393,26,58
+Boomer,human-mouse,1516,1393,27,58
+CoMerger,human-mouse,1516,1393,51,56
+Proposed,human-mouse,1516,1393,47,39

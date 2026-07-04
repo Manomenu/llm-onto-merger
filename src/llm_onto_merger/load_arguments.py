@@ -9,6 +9,8 @@ from .settings import settings
 
 log = get_logger(__name__)
 
+DEFAULT_OPENROUTER_MODEL = "deepseek/deepseek-v4-flash"
+
 
 class LoadedArguments(BaseModel):
     base_path: str
@@ -18,6 +20,7 @@ class LoadedArguments(BaseModel):
     output_dir: str
     merge_env_max_chars: int = 10_000
     parallel_llm_request_count: int = 4
+    model: str | None = None
 
 
 def load_arguments() -> LoadedArguments:
@@ -69,6 +72,20 @@ def load_arguments() -> LoadedArguments:
             f"(current: {settings.parallel_llm_request_count})."
         ),
     )
+    parser.add_argument(
+        "--model",
+        nargs="?",
+        const=DEFAULT_OPENROUTER_MODEL,
+        default=None,
+        help=(
+            "Route the merge LLM calls through OpenRouter instead of the "
+            "default Ollama/vLLM backend. Pass a model name (e.g. "
+            "'openai/gpt-4o-mini') to use that OpenRouter model, or pass "
+            f"--model with no value to use the default ({DEFAULT_OPENROUTER_MODEL}). "
+            "Omit --model entirely to keep using the current Ollama/vLLM setup. "
+            "Requires OPENROUTER_API_KEY in .env."
+        ),
+    )
     args = parser.parse_args()
 
     # Validation
@@ -80,6 +97,10 @@ def load_arguments() -> LoadedArguments:
             parser.error(f"Path for --{path_attr} is not a file: {path}")
     if args.alignment_file is not None and not os.path.isfile(args.alignment_file):
         parser.error(f"File not found for --alignment-file: {args.alignment_file}")
+    if args.model is not None and not settings.openrouter_api_key:
+        parser.error(
+            "--model requires OPENROUTER_API_KEY to be set in .env"
+        )
 
     if args.output is not None:
         output_dir = args.output
@@ -102,11 +123,12 @@ def load_arguments() -> LoadedArguments:
         output_dir=output_dir,
         merge_env_max_chars=args.max_env_chars,
         parallel_llm_request_count=parallel_llm_request_count,
+        model=args.model,
     )
     log.info(
         "Arguments loaded | base: %s | candidate: %s | alignment_tool: %s"
         " | alignment_file: %s | output_dir: %s | max_env_chars: %d"
-        " | parallel_llm_request_count: %d",
+        " | parallel_llm_request_count: %d | model: %s",
         loaded.base_path,
         loaded.candidate_path,
         loaded.alignment_tool,
@@ -114,5 +136,6 @@ def load_arguments() -> LoadedArguments:
         loaded.output_dir,
         loaded.merge_env_max_chars,
         loaded.parallel_llm_request_count,
+        loaded.model or "(default backend)",
     )
     return loaded

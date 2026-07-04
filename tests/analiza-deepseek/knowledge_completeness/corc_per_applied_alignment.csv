@@ -1,0 +1,5 @@
+dataset,Naive Union,Applied Alignments,AROM,CoMerger,Boomer,Proposed gpt-oss-20b,Proposed deepseek-v4-flash
+conference-s2,1.0,13.3333,13.3333,0.5556,13.3333,8.125,12.0
+human-mouse-s2,0.0,3.5344,3.5344,3.5338,3.5431,2.5671,2.1706
+acm-union-s2,0.0,5.1667,4.8333,0.0,5.1667,5.0,6.0
+swo-union-s2,1.0,163.2,162.8,17.75,2843.0,13.5,9.5

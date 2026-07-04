@@ -134,7 +134,7 @@ class LLMOntologyMerger:
 
         total     = len(merge_environments)
         semaphore = asyncio.Semaphore(args.parallel_llm_request_count)
-        merger    = MergeEnvironmentsModule(build_merge_agent(ns_to_code, code_to_ns))
+        merger    = MergeEnvironmentsModule(build_merge_agent(ns_to_code, code_to_ns, args.model), args.model)
 
         log.info(
             "Merging %d environments | parallel_llm_requests: %d",
@@ -156,6 +156,8 @@ class LLMOntologyMerger:
         merged_environments = [graph for graph, _, _ in results]
         drop_reports = [report for _, report, _ in results]
         alignment_applied_flags = [applied for _, _, applied in results]
+
+        log.info(merger.cost_tracker.summary())
 
         applied_count = sum(alignment_applied_flags)
         total_alignments = len(alignment_applied_flags)
@@ -181,6 +183,10 @@ class LLMOntologyMerger:
                 },
                 indent=2,
             ),
+            encoding="utf-8",
+        )
+        (out_dir / "cost_stats.json").write_text(
+            json.dumps(merger.cost_tracker.to_json_dict(), indent=2),
             encoding="utf-8",
         )
 
