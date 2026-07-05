@@ -57,16 +57,20 @@ def parse_oaei_alignment(alignment_path: Path) -> list[Alignment]:
         cell = map_el.find(f"{{{_NS_ALIGN}}}Cell")
         if cell is None:
             continue
+        entity1_el = cell.find(f"{{{_NS_ALIGN}}}entity1")
+        entity2_el = cell.find(f"{{{_NS_ALIGN}}}entity2")
+        entity1 = entity1_el.get(f"{{{_NS_RDF}}}resource") if entity1_el is not None else None
+        entity2 = entity2_el.get(f"{{{_NS_RDF}}}resource") if entity2_el is not None else None
+        if not entity1 or not entity2:
+            continue
         alignments.append(
             Alignment(
-                entity1=cell.find(f"{{{_NS_ALIGN}}}entity1").get(
-                    f"{{{_NS_RDF}}}resource"
-                ),
-                entity2=cell.find(f"{{{_NS_ALIGN}}}entity2").get(
-                    f"{{{_NS_RDF}}}resource"
-                ),
-                measure=float(cell.findtext(f"{{{_NS_ALIGN}}}measure")),
-                relation=cell.findtext(f"{{{_NS_ALIGN}}}relation"),
+                entity1=entity1,
+                entity2=entity2,
+                # Reference alignments occasionally omit measure/relation;
+                # default to a confident equivalence instead of crashing.
+                measure=float(cell.findtext(f"{{{_NS_ALIGN}}}measure") or 1.0),
+                relation=cell.findtext(f"{{{_NS_ALIGN}}}relation") or "=",
             )
         )
     return alignments

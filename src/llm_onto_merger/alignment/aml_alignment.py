@@ -21,6 +21,8 @@ class AmlAlignmentModule(AlignmentModule):
         base_ontology_path: Path,
         candidate_ontology_path: Path,
     ) -> list[Alignment]:
+        # AML does not create the output directory itself.
+        ALIGNMENT_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
         cmd = [
             "java",
             "-jar",

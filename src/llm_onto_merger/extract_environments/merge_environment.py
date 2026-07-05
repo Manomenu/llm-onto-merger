@@ -5,7 +5,7 @@ from collections import deque
 from rdflib import OWL, RDF, RDFS, XSD, Graph, Literal, URIRef
 
 from ..alignment.alignment import Alignment
-from ..ontology import KG2CODE_PREAMBLE, graph_to_string, namespace_of
+from ..ontology import graph_to_string, namespace_of, render_kg2code_preamble
 
 _CODEC_CHARS = string.ascii_lowercase
 
@@ -133,6 +133,10 @@ class MergeEnvironment:
         self.expanded_nodes_1: set[URIRef] = set()
         self.expanded_nodes_2: set[URIRef] = set()
 
+    @property
+    def ns_to_code(self) -> dict[str, str]:
+        return self._ns_to_code
+
     def interior_char_estimate(self) -> int:
         """Estimate serialized size of the two interior graphs combined."""
         return (
@@ -181,7 +185,7 @@ class MergeEnvironment:
         border1_str = self._render_border(self.border1_graph, self.expanded_nodes_1, base_chars)
         border2_str = self._render_border(self.border2_graph, self.expanded_nodes_2, base_chars + len(border1_str))
         text = f"""
-            {KG2CODE_PREAMBLE}
+            {render_kg2code_preamble(self._ns_to_code)}
 
 
             [Ontology_1]:

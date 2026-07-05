@@ -7,11 +7,11 @@ from .graph import (
     save_ontology,
 )
 from .kg2code import (
-    KG2CODE_PREAMBLE,
     DropReport,
     Entity,
     entities_to_graph,
     graph_to_string,
+    render_kg2code_preamble,
 )
 from .merge import apply_alignments, collapse_alignments, collapse_alignments_to_merged_ns
 from .uri import local_name, namespace_of
@@ -21,7 +21,7 @@ __all__ = [
     "local_name",
     "namespace_of",
     # kg2code
-    "KG2CODE_PREAMBLE",
+    "render_kg2code_preamble",
     "DropReport",
     "Entity",
     "graph_to_string",

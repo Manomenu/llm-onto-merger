@@ -1,11 +1,12 @@
 import os
 
 from pydantic import BaseModel
-from rdflib import OWL, Graph, URIRef
+from rdflib import OWL, Graph, Literal, URIRef
 
 from llm_onto_merger.cost_tracker import CostTracker
 from llm_onto_merger.extract_environments.merge_environment import MergeEnvironment
 from llm_onto_merger.logger import get_logger
+from llm_onto_merger.ontology.kg2code import ALIAS_PREDICATE, _encode
 from llm_onto_merger.ontology import (
     DropReport,
     Entity,
@@ -190,10 +191,17 @@ class MergeEnvironmentsModule:
         """Robust fallback when the LLM response can't be parsed.
 
         Builds a deterministic merge by unioning the env's interior graphs and
-        collapsing each alignment pair (entity2 → entity1) — exactly what
-        `apply_alignments` does for the whole-ontology baseline.  The result
-        always contains valid triples and preserves every input triple; cost
-        is that no cross-onto enhancement or comments are added.
+        collapsing each alignment pair (entity2 → entity1 URI substitution;
+        note: NOT the same as the apply_alignments baseline, which keeps both
+        URIs and links them with owl:equivalentClass).  The result always
+        contains valid triples and preserves every input triple; cost is that
+        no cross-onto enhancement or comments are added.
+
+        An alias triple (entity1, merged#alias, 'code;;LocalName(entity2)') is
+        emitted for every collapsed pair so the integration stage rewrites
+        references to entity2 held by OTHER environments (where it was frozen
+        border context) — without it the collapse would split the entity's
+        identity across the final graph.
         """
         seed_label = (
             env.alignments[0].to_string() if env.alignments else "<unknown>"
@@ -209,6 +217,22 @@ class MergeEnvironmentsModule:
             len(env.alignments),
         )
         fallback_graph = collapse_alignments(env.onto_1, env.onto_2, env.alignments)
+        alias_pred = URIRef(ALIAS_PREDICATE)
+        for al in env.alignments:
+            e1, e2 = URIRef(al.entity1), URIRef(al.entity2)
+            if e1 == e2:
+                continue
+            coded = _encode(str(e2), env.ns_to_code)
+            if "::" in coded:
+                fallback_graph.add(
+                    (e1, alias_pred, Literal(coded.replace("::", ";;", 1)))
+                )
+            else:
+                log.warning(
+                    "env %d: no namespace code for %s — alias not emitted, "
+                    "external references to it will not be rewritten",
+                    idx, al.entity2,
+                )
         log.warning(
             "env %d: fallback produced %d triples (input was %d)",
             idx,

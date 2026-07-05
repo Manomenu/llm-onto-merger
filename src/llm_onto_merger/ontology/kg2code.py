@@ -50,7 +50,7 @@ def _try_predicate_fallback(p_coded: str) -> URIRef | None:
     # Bare local name
     return _PREDICATE_FALLBACKS.get(p_coded)
 
-KG2CODE_PREAMBLE = """
+_KG2CODE_PREAMBLE_TEMPLATE = """
 Each ontology entity is represented as:
   Entity(uri, tuples)
 where:
@@ -61,13 +61,28 @@ where:
 
 Example:
   Entity('aa::Person', tuples=[
-      ('aa::Person', 'af::subClassOf', 'ab::Animal'),
-      ('aa::Person', 'ae::type', 'ah::Class'),
+      ('aa::Person', '{rdfs}::subClassOf', 'ab::Animal'),
+      ('aa::Person', '{rdf}::type', '{owl}::Class'),
   ])
 
 When generating a Merged_Ontology you MUST use the same code prefixes for existing entities.
 For entirely new concepts you may use 'zz::NewName'.
 """
+
+
+def render_kg2code_preamble(ns_to_code: dict[str, str]) -> str:
+    """Render the KG2Code preamble with this run's actual rdf/rdfs/owl codes.
+
+    The example predicates must use the codec's real codes: a fictional code
+    like 'af' may collide with a code actually assigned to a data namespace,
+    and an LLM mimicking the example would then emit predicates that decode
+    silently into the wrong namespace (e.g. http://cmt#subClassOf).
+    """
+    return _KG2CODE_PREAMBLE_TEMPLATE.format(
+        rdf=ns_to_code.get(str(RDF), "rdf"),
+        rdfs=ns_to_code.get(str(RDFS), "rdfs"),
+        owl=ns_to_code.get(str(OWL), "owl"),
+    )
 
 
 class Entity(BaseModel):
