@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# tests/article_scenarios/s2.sh — fixed 5-dataset batch run against the
+# tests/article_scenarios/s2.sh — fixed 4-dataset batch run against the
 # default LLM backend (.env Ollama/vLLM, e.g. gpt-oss-20b), labellable for
 # repeated-measurement studies.
 #
@@ -41,8 +41,11 @@
 # Outputs (under tests/article_scenarios/outputs/[<label>/]s2/<ds-label>/ —
 # gitignored), one per dataset:
 #   <ds-label>_aml_15k_p24/   LLM merger output + baselines
-#   .boomer_aml/ .arom/ .comerger/ .applied_aml/  cached baseline outputs
 #   m_i_raport_<ds-label>.html / .csv / .log
+# Baselines (Boomer/AROM/CoMerger/applied) are deterministic, so they are
+# computed ONCE per dataset into the label-independent shared cache
+# outputs/.baseline_cache/aml/<ds-label>/ and reused by every label (and by
+# s5.sh).  Delete that dir to force recomputation.
 
 set -euo pipefail
 shopt -s nullglob
@@ -169,10 +172,16 @@ for spec in "${DATASETS[@]}"; do
   OUT_DIR="$SCENARIO_DIR/${DS_LABEL}_$TAG"
   REPORT_HTML="$SCENARIO_DIR/m_i_raport_${DS_LABEL}.html"
   REPORT_LOG="$SCENARIO_DIR/m_i_raport_${DS_LABEL}.log"
-  BOOMER_CACHE="$SCENARIO_DIR/.boomer_$TOOL"
-  AROM_CACHE="$SCENARIO_DIR/.arom"
-  COMERGER_CACHE="$SCENARIO_DIR/.comerger"
-  APPLIED_CACHE="$SCENARIO_DIR/.applied_$TOOL"
+  # Baselines are deterministic (same inputs → same outputs), so their caches
+  # live OUTSIDE the per-label tree: one cache per dataset, shared by every
+  # label and by the s2.sh/s5.sh pair (identical baseline inputs).  Only the
+  # LLM merger is recomputed per label.  Delete a dataset's cache dir to force
+  # recomputation.
+  BASELINE_CACHE="tests/article_scenarios/outputs/.baseline_cache/$TOOL/$DS_LABEL"
+  BOOMER_CACHE="$BASELINE_CACHE/boomer"
+  AROM_CACHE="$BASELINE_CACHE/arom"
+  COMERGER_CACHE="$BASELINE_CACHE/comerger"
+  APPLIED_CACHE="$BASELINE_CACHE/applied"
   # Unique per (label, scenario, dataset): repeated turns of the same dataset
   # never share a prompt prefix, so nothing can be served from a prompt cache.
   RUN_NONCE="${LABEL:-single}:s2:$DS_LABEL"
@@ -214,13 +223,11 @@ for spec in "${DATASETS[@]}"; do
     fi
   fi
 
-  # ── Applied alignments baseline (cached per tool) ───────────────────────────
-  if [ "$SKIP_ALL" = "1" ]; then
-    if [ -f "$APPLIED_CACHE/applied_alignments.owl" ]; then
-      echo "  → --skip-all: reusing cached applied alignments ($TOOL) from $APPLIED_CACHE"
-    else
-      echo "  WARNING: --skip-all but $APPLIED_CACHE/applied_alignments.owl missing — applied_alignments column will be absent"
-    fi
+  # ── Applied alignments baseline (deterministic — shared cache) ──────────────
+  if [ -f "$APPLIED_CACHE/applied_alignments.owl" ]; then
+    echo "  → reusing cached applied alignments ($TOOL) from $APPLIED_CACHE"
+  elif [ "$SKIP_ALL" = "1" ]; then
+    echo "  WARNING: --skip-all but $APPLIED_CACHE/applied_alignments.owl missing — applied_alignments column will be absent"
   else
     echo "  → running applied alignments ($TOOL) → $APPLIED_CACHE"
     mkdir -p "$APPLIED_CACHE"
@@ -239,13 +246,11 @@ for spec in "${DATASETS[@]}"; do
     fi
   fi
 
-  # ── Boomer (cached per tool) ─────────────────────────────────────────────────
-  if [ "$SKIP_ALL" = "1" ]; then
-    if [ -f "$BOOMER_CACHE/merged_ontology.owl" ]; then
-      echo "  → --skip-all: reusing cached Boomer ($TOOL) from $BOOMER_CACHE"
-    else
-      echo "  WARNING: --skip-all but $BOOMER_CACHE/merged_ontology.owl missing — Boomer column will be absent"
-    fi
+  # ── Boomer (deterministic — shared cache) ───────────────────────────────────
+  if [ -f "$BOOMER_CACHE/merged_ontology.owl" ]; then
+    echo "  → reusing cached Boomer ($TOOL) from $BOOMER_CACHE"
+  elif [ "$SKIP_ALL" = "1" ]; then
+    echo "  WARNING: --skip-all but $BOOMER_CACHE/merged_ontology.owl missing — Boomer column will be absent"
   else
     echo "  → running Boomer ($TOOL) → $BOOMER_CACHE"
     mkdir -p "$BOOMER_CACHE"
@@ -262,13 +267,11 @@ for spec in "${DATASETS[@]}"; do
     echo "  → boomer_ontology.owl ← $BOOMER_CACHE/merged_ontology.owl"
   fi
 
-  # ── AROM (cached) ────────────────────────────────────────────────────────────
-  if [ "$SKIP_ALL" = "1" ]; then
-    if [ -f "$AROM_CACHE/arom_ontology.owl" ]; then
-      echo "  → --skip-all: reusing cached AROM from $AROM_CACHE"
-    else
-      echo "  WARNING: --skip-all but $AROM_CACHE/arom_ontology.owl missing — AROM column will be absent"
-    fi
+  # ── AROM (deterministic — shared cache) ─────────────────────────────────────
+  if [ -f "$AROM_CACHE/arom_ontology.owl" ]; then
+    echo "  → reusing cached AROM from $AROM_CACHE"
+  elif [ "$SKIP_ALL" = "1" ]; then
+    echo "  WARNING: --skip-all but $AROM_CACHE/arom_ontology.owl missing — AROM column will be absent"
   else
     echo "  → running AROM → $AROM_CACHE"
     mkdir -p "$AROM_CACHE"
@@ -285,13 +288,11 @@ for spec in "${DATASETS[@]}"; do
     echo "  → arom_ontology.owl ← $AROM_CACHE/arom_ontology.owl"
   fi
 
-  # ── CoMerger (cached) ────────────────────────────────────────────────────────
-  if [ "$SKIP_ALL" = "1" ]; then
-    if [ -f "$COMERGER_CACHE/merged_ontology.owl" ]; then
-      echo "  → --skip-all: reusing cached CoMerger from $COMERGER_CACHE"
-    else
-      echo "  WARNING: --skip-all but $COMERGER_CACHE/merged_ontology.owl missing — CoMerger column will be absent"
-    fi
+  # ── CoMerger (deterministic — shared cache) ─────────────────────────────────
+  if [ -f "$COMERGER_CACHE/merged_ontology.owl" ]; then
+    echo "  → reusing cached CoMerger from $COMERGER_CACHE"
+  elif [ "$SKIP_ALL" = "1" ]; then
+    echo "  WARNING: --skip-all but $COMERGER_CACHE/merged_ontology.owl missing — CoMerger column will be absent"
   else
     echo "  → running CoMerger → $COMERGER_CACHE"
     mkdir -p "$COMERGER_CACHE"

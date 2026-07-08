@@ -31,6 +31,12 @@ already exists the LLM step is never re-paid (`--skip-mine`: baselines +
 report only), and if the baseline outputs are also complete only the report
 is regenerated (`--skip-all`).
 
+The baselines (Boomer/AROM/CoMerger/applied alignments) are deterministic, so
+s5.sh/s6.sh compute them ONCE per dataset into the label-independent shared
+cache `tests/article_scenarios/outputs/.baseline_cache/aml|ref/<dataset>/` and
+every turn reuses them — across turns their metric columns are constant by
+construction (median = min = max). Only the LLM merger runs per turn.
+
 Dataset lists (display labels):
 
 - **s5 / core dimensions:** confOf-ekaw, human-mouse, swo-acm, swo-union

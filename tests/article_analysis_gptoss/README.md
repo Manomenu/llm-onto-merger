@@ -25,7 +25,11 @@ Per turn × dataset, data is resolved in this order:
    dataset dir in the article tree before running — if `merged_ontology.owl`
    already exists the LLM step is never re-paid (`--skip-mine`: baselines +
    report only), and if the baseline outputs are also complete only the
-   report is regenerated (`--skip-all`).
+   report is regenerated (`--skip-all`). The baselines themselves
+   (Boomer/AROM/CoMerger/applied alignments) are deterministic, so s2.sh/s3.sh
+   compute them ONCE per dataset into the label-independent shared cache
+   `tests/article_scenarios/outputs/.baseline_cache/aml|ref/<dataset>/` and
+   every turn reuses them — only the LLM merger runs per turn.
 
 Because the variance tree is checked first, `extend.sh 5` on a machine that
 already ran `tests/analiza-variance/extend.sh 5` recomputes **nothing** — it

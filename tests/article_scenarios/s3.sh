@@ -47,8 +47,11 @@
 # Outputs (under tests/article_scenarios/outputs/[<label>/]s3/<ds-label>/ —
 # gitignored), one per dataset:
 #   <ds-label>_ref_15k_p24/   LLM merger output + baselines
-#   .boomer_ref/ .arom_ref/ .comerger_ref/ .applied_ref/  cached baseline outputs
 #   m_i_raport_<ds-label>.html / .csv / .log
+# Baselines (Boomer/AROM/CoMerger/applied) are deterministic, so they are
+# computed ONCE per dataset into the label-independent shared cache
+# outputs/.baseline_cache/ref/<ds-label>/ and reused by every label (and by
+# s6.sh).  Delete that dir to force recomputation.
 
 set -euo pipefail
 shopt -s nullglob
@@ -177,10 +180,16 @@ for spec in "${DATASETS[@]}"; do
   OUT_DIR="$SCENARIO_DIR/${DS_LABEL}_$TAG"
   REPORT_HTML="$SCENARIO_DIR/m_i_raport_${DS_LABEL}.html"
   REPORT_LOG="$SCENARIO_DIR/m_i_raport_${DS_LABEL}.log"
-  BOOMER_CACHE="$SCENARIO_DIR/.boomer_ref"
-  AROM_CACHE="$SCENARIO_DIR/.arom_ref"
-  COMERGER_CACHE="$SCENARIO_DIR/.comerger_ref"
-  APPLIED_CACHE="$SCENARIO_DIR/.applied_ref"
+  # Baselines are deterministic (same inputs → same outputs), so their caches
+  # live OUTSIDE the per-label tree: one cache per dataset, shared by every
+  # label and by the s3.sh/s6.sh pair (identical baseline inputs).  Only the
+  # LLM merger is recomputed per label.  Delete a dataset's cache dir to force
+  # recomputation.
+  BASELINE_CACHE="tests/article_scenarios/outputs/.baseline_cache/ref/$DS_LABEL"
+  BOOMER_CACHE="$BASELINE_CACHE/boomer"
+  AROM_CACHE="$BASELINE_CACHE/arom"
+  COMERGER_CACHE="$BASELINE_CACHE/comerger"
+  APPLIED_CACHE="$BASELINE_CACHE/applied"
   # Unique per (label, scenario, dataset): repeated turns of the same dataset
   # never share a prompt prefix, so nothing can be served from a prompt cache.
   RUN_NONCE="${LABEL:-single}:s3:$DS_LABEL"
@@ -223,13 +232,11 @@ for spec in "${DATASETS[@]}"; do
     fi
   fi
 
-  # ── Applied Alignments baseline (reference as input) ────────────────────────
-  if [ "$SKIP_ALL" = "1" ]; then
-    if [ -f "$APPLIED_CACHE/applied_alignments.owl" ]; then
-      echo "  → --skip-all: reusing cached applied alignments (reference) from $APPLIED_CACHE"
-    else
-      echo "  WARNING: --skip-all but $APPLIED_CACHE/applied_alignments.owl missing — applied_alignments column will be absent"
-    fi
+  # ── Applied Alignments baseline (reference input; deterministic — shared cache)
+  if [ -f "$APPLIED_CACHE/applied_alignments.owl" ]; then
+    echo "  → reusing cached applied alignments (reference) from $APPLIED_CACHE"
+  elif [ "$SKIP_ALL" = "1" ]; then
+    echo "  WARNING: --skip-all but $APPLIED_CACHE/applied_alignments.owl missing — applied_alignments column will be absent"
   else
     echo "  → running applied alignments (reference) → $APPLIED_CACHE"
     mkdir -p "$APPLIED_CACHE"
@@ -248,13 +255,11 @@ for spec in "${DATASETS[@]}"; do
     fi
   fi
 
-  # ── AROM (reference as 4th-arg alignment file) ──────────────────────────────
-  if [ "$SKIP_ALL" = "1" ]; then
-    if [ -f "$AROM_CACHE/arom_ontology.owl" ]; then
-      echo "  → --skip-all: reusing cached AROM (reference) from $AROM_CACHE"
-    else
-      echo "  WARNING: --skip-all but $AROM_CACHE/arom_ontology.owl missing — AROM column will be absent"
-    fi
+  # ── AROM (reference as 4th-arg alignment file; deterministic — shared cache) ─
+  if [ -f "$AROM_CACHE/arom_ontology.owl" ]; then
+    echo "  → reusing cached AROM (reference) from $AROM_CACHE"
+  elif [ "$SKIP_ALL" = "1" ]; then
+    echo "  WARNING: --skip-all but $AROM_CACHE/arom_ontology.owl missing — AROM column will be absent"
   else
     echo "  → running AROM (reference) → $AROM_CACHE"
     mkdir -p "$AROM_CACHE"
@@ -271,13 +276,11 @@ for spec in "${DATASETS[@]}"; do
     echo "  → arom_ontology.owl ← $AROM_CACHE/arom_ontology.owl"
   fi
 
-  # ── CoMerger (reference as 4th-arg alignment file) ──────────────────────────
-  if [ "$SKIP_ALL" = "1" ]; then
-    if [ -f "$COMERGER_CACHE/merged_ontology.owl" ]; then
-      echo "  → --skip-all: reusing cached CoMerger (reference) from $COMERGER_CACHE"
-    else
-      echo "  WARNING: --skip-all but $COMERGER_CACHE/merged_ontology.owl missing — CoMerger column will be absent"
-    fi
+  # ── CoMerger (reference as 4th-arg alignment file; deterministic — shared cache)
+  if [ -f "$COMERGER_CACHE/merged_ontology.owl" ]; then
+    echo "  → reusing cached CoMerger (reference) from $COMERGER_CACHE"
+  elif [ "$SKIP_ALL" = "1" ]; then
+    echo "  WARNING: --skip-all but $COMERGER_CACHE/merged_ontology.owl missing — CoMerger column will be absent"
   else
     echo "  → running CoMerger (reference) → $COMERGER_CACHE"
     mkdir -p "$COMERGER_CACHE"
@@ -294,13 +297,11 @@ for spec in "${DATASETS[@]}"; do
     echo "  → comerger_ontology.owl ← $COMERGER_CACHE/merged_ontology.owl"
   fi
 
-  # ── Boomer (reference via dedicated boomer_s3.sh wrapper) ───────────────────
-  if [ "$SKIP_ALL" = "1" ]; then
-    if [ -f "$BOOMER_CACHE/merged_ontology.owl" ]; then
-      echo "  → --skip-all: reusing cached Boomer (reference) from $BOOMER_CACHE"
-    else
-      echo "  WARNING: --skip-all but $BOOMER_CACHE/merged_ontology.owl missing — Boomer column will be absent"
-    fi
+  # ── Boomer (reference via boomer_s3.sh wrapper; deterministic — shared cache) ─
+  if [ -f "$BOOMER_CACHE/merged_ontology.owl" ]; then
+    echo "  → reusing cached Boomer (reference) from $BOOMER_CACHE"
+  elif [ "$SKIP_ALL" = "1" ]; then
+    echo "  WARNING: --skip-all but $BOOMER_CACHE/merged_ontology.owl missing — Boomer column will be absent"
   else
     echo "  → running Boomer (reference) → $BOOMER_CACHE"
     mkdir -p "$BOOMER_CACHE"
