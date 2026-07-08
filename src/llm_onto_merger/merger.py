@@ -134,7 +134,10 @@ class LLMOntologyMerger:
 
         total     = len(merge_environments)
         semaphore = asyncio.Semaphore(args.parallel_llm_request_count)
-        merger    = MergeEnvironmentsModule(build_merge_agent(ns_to_code, code_to_ns, args.model), args.model)
+        merger    = MergeEnvironmentsModule(
+            build_merge_agent(ns_to_code, code_to_ns, args.model, args.run_nonce),
+            args.model,
+        )
 
         log.info(
             "Merging %d environments | parallel_llm_requests: %d",

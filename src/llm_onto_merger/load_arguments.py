@@ -21,6 +21,7 @@ class LoadedArguments(BaseModel):
     merge_env_max_chars: int = 10_000
     parallel_llm_request_count: int = 4
     model: str | None = None
+    run_nonce: str | None = None
 
 
 def load_arguments() -> LoadedArguments:
@@ -86,6 +87,17 @@ def load_arguments() -> LoadedArguments:
             "Requires OPENROUTER_API_KEY in .env."
         ),
     )
+    parser.add_argument(
+        "--run-nonce",
+        default=None,
+        help=(
+            "Opaque per-run identifier prepended to the LLM system instructions. "
+            "Repeated measurement runs of the same dataset should pass a "
+            "different nonce so their prompts share no common prefix — this "
+            "defeats provider-side prompt/prefix caching (OpenRouter, DeepSeek) "
+            "and guarantees independently sampled responses per run."
+        ),
+    )
     args = parser.parse_args()
 
     # Validation
@@ -124,11 +136,12 @@ def load_arguments() -> LoadedArguments:
         merge_env_max_chars=args.max_env_chars,
         parallel_llm_request_count=parallel_llm_request_count,
         model=args.model,
+        run_nonce=args.run_nonce,
     )
     log.info(
         "Arguments loaded | base: %s | candidate: %s | alignment_tool: %s"
         " | alignment_file: %s | output_dir: %s | max_env_chars: %d"
-        " | parallel_llm_request_count: %d | model: %s",
+        " | parallel_llm_request_count: %d | model: %s | run_nonce: %s",
         loaded.base_path,
         loaded.candidate_path,
         loaded.alignment_tool,
@@ -137,5 +150,6 @@ def load_arguments() -> LoadedArguments:
         loaded.merge_env_max_chars,
         loaded.parallel_llm_request_count,
         loaded.model or "(default backend)",
+        loaded.run_nonce or "(none)",
     )
     return loaded

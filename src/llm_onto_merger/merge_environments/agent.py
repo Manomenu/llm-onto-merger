@@ -146,7 +146,10 @@ def _build_instructions(ns_to_code: dict[str, str], code_to_ns: dict[str, str]) 
 
 
 def build_merge_agent(
-    ns_to_code: dict[str, str], code_to_ns: dict[str, str], model: str | None = None
+    ns_to_code: dict[str, str],
+    code_to_ns: dict[str, str],
+    model: str | None = None,
+    run_nonce: str | None = None,
 ):
     """Construct the merge agent with namespace codes substituted into instructions.
 
@@ -165,8 +168,20 @@ def build_merge_agent(
     `model` selects the backend: when set (from --model), requests are routed
     through OpenRouter using that model name; when None, falls back to the
     existing Ollama/vLLM backend chosen via settings.use_vllm.
+
+    `run_nonce` (from --run-nonce), when set, is prepended to the instructions
+    so repeated runs share no prompt prefix at all — a provider-side prefix
+    cache (OpenRouter/DeepSeek) can never reuse state from an earlier run of
+    the byte-identical request.
     """
     instructions = _build_instructions(ns_to_code, code_to_ns)
+    if run_nonce:
+        # Prepended, not appended: prefix caches key on the longest common
+        # leading bytes, so only a difference at position 0 disables them.
+        instructions = (
+            f"Run nonce: {run_nonce} (opaque per-run identifier; carries no "
+            "ontology information — ignore it when merging).\n" + instructions
+        )
     if model is not None:
         client = OpenAIChatClient(
             model=model,
