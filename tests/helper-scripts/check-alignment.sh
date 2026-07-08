@@ -40,6 +40,8 @@ import asyncio
 import sys
 from pathlib import Path
 
+from rdflib import Graph, RDFS
+
 from llm_onto_merger.alignment import AmlAlignmentModule
 
 
@@ -47,13 +49,29 @@ def _local(uri: str) -> str:
     return uri.split("#")[-1] if "#" in uri else uri.rsplit("/", 1)[-1]
 
 
+def _load_labels(*paths: Path) -> dict[str, str]:
+    """Map entity URI -> rdfs:label across the given ontology files."""
+    labels: dict[str, str] = {}
+    for path in paths:
+        g = Graph()
+        g.parse(path.as_posix())
+        for subj, label in g.subject_objects(RDFS.label):
+            labels.setdefault(str(subj), str(label))
+    return labels
+
+
 async def main() -> None:
     base, candidate = Path(sys.argv[1]), Path(sys.argv[2])
+    labels = _load_labels(base, candidate)
+
+    def name(uri: str) -> str:
+        return labels.get(uri) or _local(uri)
+
     alignments = await AmlAlignmentModule().create_alignment(base, candidate)
 
     print(f"\nFound {len(alignments)} alignment(s):\n")
     for a in alignments:
-        print(f"  {_local(a.entity1)} ↔ {_local(a.entity2)}  "
+        print(f"  {name(a.entity1)} ↔ {name(a.entity2)}  "
               f"(relation: {a.relation}, measure: {a.measure:.3f})")
 
 
