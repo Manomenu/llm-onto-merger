@@ -6,8 +6,14 @@
 *.egg-info/
 dist/
 build/
-**/c:\uploads*
-**/C:\uploads*
+# Upload artifacts (never commit ontology upload dumps).
+# Note: files literally named "c:\uploads\..." (backslashes in the name,
+# created on Linux/Mac) are invalid paths on Windows and break checkout.
+uploads/
+**/uploads/
+*subMergedOnt*.owl
+c:\uploads*
+C:\uploads*
 **/*.csv
 **/*.jpg
 
