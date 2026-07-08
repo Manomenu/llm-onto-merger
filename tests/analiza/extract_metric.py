@@ -27,8 +27,8 @@ METHOD_ORDER = [
 ]
 
 
-def extract(dataset: str, metric: str) -> dict[str, str]:
-    csv_path = SCENARIO_OUT / dataset / f"m_i_raport_{dataset}.csv"
+def extract(dataset: str, metric: str, outputs_root: Path = SCENARIO_OUT) -> dict[str, str]:
+    csv_path = outputs_root / dataset / f"m_i_raport_{dataset}.csv"
     if not csv_path.exists():
         sys.exit(f"missing: {csv_path}")
     row_values: dict[str, str] = {}
@@ -50,13 +50,19 @@ def main() -> None:
     parser.add_argument("--metric", required=True)
     parser.add_argument("--datasets", nargs="+", required=True)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument(
+        "--outputs-root", type=Path, default=SCENARIO_OUT,
+        help="root under which <dataset>/m_i_raport_<dataset>.csv lives "
+             "(default: tests/scenarios/outputs; pass e.g. .../outputs/turn1 "
+             "for a labelled repeated run).",
+    )
     args = parser.parse_args()
 
     with args.output.open("w", newline="") as fh:
         writer = csv.writer(fh)
         writer.writerow(["dataset", *METHOD_ORDER])
         for ds in args.datasets:
-            vals = extract(ds, args.metric)
+            vals = extract(ds, args.metric, args.outputs_root)
             writer.writerow([ds, *(vals.get(m, "") for m in METHOD_ORDER)])
 
     print(f"wrote {args.output}")

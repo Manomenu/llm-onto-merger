@@ -16,8 +16,12 @@
 #   tests/scenarios/scenario_2.sh human-mouse              # explicit dataset
 #   tests/scenarios/scenario_2.sh --skip-mine human-mouse  # reuse LLM, rerun Boomer/AROM/CoMerger
 #   tests/scenarios/scenario_2.sh --skip-all human-mouse   # reuse ALL caches, only regenerate report+charts
+#   tests/scenarios/scenario_2.sh --label turn1 human-mouse  # nest outputs under an extra <label>/ folder
 #
 # Outputs (under tests/scenarios/outputs/<dataset>-s2/ — gitignored).
+# With --label <name>, outputs go under tests/scenarios/outputs/<name>/<dataset>-s2/
+# instead (useful for storing multiple independent runs of the same dataset,
+# e.g. a variance / repeated-runs study).
 # The `-s2` suffix keeps scenario_2 results separate from scenario_1's outputs
 # for the same dataset (so you can run both side-by-side on the same data).
 #   <dataset>-s2_aml_15k_p24/   LLM merger output + boomer/arom/comerger + insights
@@ -46,6 +50,7 @@ TAG="aml_15k_p24"
 # ── Arg parsing (mirrors scenario_1.sh: --skip-mine / --skip-all + DATASET) ──
 SKIP_MINE=0
 SKIP_ALL=0
+LABEL=""
 DATASET=""
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -59,6 +64,10 @@ while [ $# -gt 0 ]; do
       SKIP_MINE=1
       SKIP_ALL=1
       shift
+      ;;
+    --label)
+      LABEL="$2"
+      shift 2
       ;;
     --help|-h)
       sed -n '2,/^$/p' "$0" | sed 's/^# *//' >&2
@@ -79,6 +88,11 @@ while [ $# -gt 0 ]; do
       ;;
   esac
 done
+
+if [[ "$LABEL" == */* ]]; then
+  echo "Error: --label must be a simple folder name (no slashes), got: $LABEL" >&2
+  exit 1
+fi
 
 if [ -z "$DATASET" ]; then
   echo "Available input folders:"
@@ -108,7 +122,12 @@ CANDIDATE="${OWL_SORTED[1]}"
 
 # ── Output paths (`-s2` suffix keeps scenario_2 separate from scenario_1) ──
 DATASET_S2="${DATASET}-s2"
-SCENARIO_DIR="tests/scenarios/outputs/$DATASET_S2"
+if [ -n "$LABEL" ]; then
+  # --label nests an extra folder above <dataset>-s2 (for repeated/variance runs).
+  SCENARIO_DIR="tests/scenarios/outputs/$LABEL/$DATASET_S2"
+else
+  SCENARIO_DIR="tests/scenarios/outputs/$DATASET_S2"
+fi
 OUT_DIR="$SCENARIO_DIR/${DATASET_S2}_$TAG"
 REPORT_HTML="$SCENARIO_DIR/m_i_raport_${DATASET_S2}.html"
 REPORT_LOG="$SCENARIO_DIR/m_i_raport_${DATASET_S2}.log"

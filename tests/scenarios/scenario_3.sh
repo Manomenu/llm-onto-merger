@@ -17,9 +17,13 @@
 #   tests/scenarios/scenario_3.sh conference               # explicit dataset
 #   tests/scenarios/scenario_3.sh --skip-mine human-mouse  # reuse LLM, rerun baselines
 #   tests/scenarios/scenario_3.sh --skip-all human-mouse   # reuse all caches
+#   tests/scenarios/scenario_3.sh --label turn1 conference # nest outputs under an extra <label>/ folder
 #
 # Outputs under tests/scenarios/outputs/<dataset>-s3/ (gitignored).  The `-s3`
 # suffix keeps these separate from scenario_2's `-s2` outputs for the same data.
+# With --label <name>, outputs go under tests/scenarios/outputs/<name>/<dataset>-s3/
+# instead (useful for storing multiple independent runs of the same dataset,
+# e.g. a variance / repeated-runs study).
 #
 # Boomer uses the dedicated thirdparty/boomer/boomer_s3.sh wrapper, which builds
 # its ptable from the reference alignment (via generate_inputs.py --alignment-file)
@@ -50,6 +54,7 @@ TAG="ref_15k_p24"
 SKIP_MINE=0
 SKIP_ALL=0
 ONLY_BOOMER=0
+LABEL=""
 DATASET=""
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -59,6 +64,7 @@ while [ $# -gt 0 ]; do
     # baselines.  Used to populate the missing boomer_stats.json in an existing
     # s3 dir without re-running the expensive LLM merge.
     --only-boomer) ONLY_BOOMER=1; SKIP_MINE=1; shift ;;
+    --label)     LABEL="$2"; shift 2 ;;
     --help|-h)   sed -n '2,/^$/p' "$0" | sed 's/^# *//' >&2; exit 0 ;;
     -*)          echo "Unknown option: $1" >&2; exit 1 ;;
     *)
@@ -68,6 +74,11 @@ while [ $# -gt 0 ]; do
       shift ;;
   esac
 done
+
+if [[ "$LABEL" == */* ]]; then
+  echo "Error: --label must be a simple folder name (no slashes), got: $LABEL" >&2
+  exit 1
+fi
 
 if [ -z "$DATASET" ]; then
   echo "Datasets with a reference alignment:"
@@ -103,7 +114,12 @@ CANDIDATE="${OWL_SORTED[1]}"
 
 # ── Output paths (`-s3` suffix) ─────────────────────────────────────────────
 DATASET_S3="${DATASET}-s3"
-SCENARIO_DIR="tests/scenarios/outputs/$DATASET_S3"
+if [ -n "$LABEL" ]; then
+  # --label nests an extra folder above <dataset>-s3 (for repeated/variance runs).
+  SCENARIO_DIR="tests/scenarios/outputs/$LABEL/$DATASET_S3"
+else
+  SCENARIO_DIR="tests/scenarios/outputs/$DATASET_S3"
+fi
 OUT_DIR="$SCENARIO_DIR/${DATASET_S3}_$TAG"
 AROM_CACHE="$SCENARIO_DIR/.arom_ref"
 COMERGER_CACHE="$SCENARIO_DIR/.comerger_ref"

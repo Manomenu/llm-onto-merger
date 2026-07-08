@@ -6,6 +6,10 @@
 *.egg-info/
 dist/
 build/
+**/c:\uploads*
+**/C:\uploads*
+**/*.csv
+**/*.jpg
 
 tests/**outputs/
 tests/**/**outputs/
