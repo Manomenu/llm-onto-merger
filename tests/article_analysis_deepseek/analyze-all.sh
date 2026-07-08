@@ -1,36 +1,38 @@
 #!/usr/bin/env bash
-# Repeated-runs analysis for the deepseek-v4-flash (OpenRouter) pipeline —
-# mirrors every chart/table in tests/analiza-variance/ but reads the
-# tests/article_scenarios/ s5 (AML input) / s6 (reference input) outputs and
-# reports MEDIAN with MIN/MAX whiskers (bar height = median; min and max are
-# marked on every bar; tables show "median [min; max]").
+# Combined two-backend repeated-runs analysis — every chart/table from
+# tests/article_analysis_gptoss/ EXTENDED with one extra method column:
+#   ... AROM, CoMerger, Boomer, Proposed: gpt-oss, Proposed: deepseek-v4-flash
+# reporting MEDIAN with MIN/MAX whiskers (bar height = median; min and max
+# are marked on every bar; tables show "median [min; max]").
 #
-# Each dimension below follows tests/analiza-variance/analyze-all.sh exactly
-# (same metric names, aggregation type, exclusions, plot flags) — the only
-# differences are the data source (article_scenarios outputs, one folder per
-# turn) and the median/min/max statistic (combine_turns.py / plot_turns.py /
-# combine_oaei.py in THIS folder).
+# DATA REUSE: everything that article_analysis_gptoss already resolves is
+# taken from it, never recomputed here.  Step 0 delegates to
+# ../article_analysis_gptoss/analyze-all.sh (same turns, --no-run passed
+# through), which resolves the gpt-oss data (tests/analiza-variance tree
+# first, own backfill second) and leaves:
+#   - per-turn report views under article_analysis_gptoss/work/source/<turn>/
+#     → source of the baseline columns + "Proposed: gpt-oss"
+#   - per-turn OAEI CSVs under article_analysis_gptoss/domain_coherence/work/
+# This folder only ADDS the deepseek side: per turn it ensures the s5
+# (AML-input) / s6 (reference-input) OpenRouter deepseek-v4-flash runs exist
+# under tests/article_scenarios/outputs/<turn>/ (granular backfill via
+# s5.sh/s6.sh --label <turn> --only <dataset>), then aggregates the combined
+# columns.
 #
-# Dataset lists (display labels, as used by s5.sh/s6.sh):
+# Dataset lists (display labels):
 #   s5 / core (all non-OAEI dims):   confOf-ekaw human-mouse swo-acm swo-union
 #   s6 (reference-input):            cmt-edas confOf-ekaw human-mouse
 #   OAEI validation:                 confOf-ekaw human-mouse — cmt-edas is
-#     measured ONLY under the reference input (s6), and oaei_rejection.py
+#     measured ONLY under the reference input, and oaei_rejection.py
 #     hard-requires each dataset's AML-input run (applied_stats.json) for the
 #     accepted-AML-FP measure, so cmt-edas cannot appear in the OAEI charts.
 #
 # Usage:
 #   bash analyze-all.sh                       # turns = turn1 turn2 turn3 (default)
 #   bash analyze-all.sh turn1 turn2           # explicit turn list
-#   bash analyze-all.sh --no-run              # never invoke s5.sh/s6.sh —
+#   bash analyze-all.sh --no-run              # never invoke any scenario script —
 #                                              # turns with missing data are
 #                                              # skipped (with a warning)
-#
-# EXISTENCE CHECK + AUTO-RUN: before aggregating, every turn is checked for the
-# m_i_raport CSVs each dimension needs.  Missing data triggers
-# tests/article_scenarios/s5.sh / s6.sh --label <turn> --only <dataset> to
-# produce it (slow — invokes the OpenRouter LLM merger) — UNLESS --no-run is
-# given, in which case the turn (or just the affected dataset) is skipped.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -50,9 +52,19 @@ else
   TURNS=(turn1 turn2 turn3)
 fi
 
-echo "=== deepseek repeated-runs analysis over turns: ${TURNS[*]} (no-run=$NO_RUN) ==="
+echo "=== combined gpt-oss + deepseek repeated-runs analysis over turns: ${TURNS[*]} (no-run=$NO_RUN) ==="
 
-OUTROOT="../article_scenarios/outputs"
+OUTROOT="../article_scenarios/outputs"   # deepseek s5/s6 runs
+GPTOSS="../article_analysis_gptoss"      # gpt-oss side (resolved data + OAEI CSVs)
+
+# ── Step 0: gpt-oss side — delegate entirely to article_analysis_gptoss ─────
+echo
+echo "--- [0] gpt-oss side (delegated to $GPTOSS/analyze-all.sh) ---"
+if [ "$NO_RUN" = "1" ]; then
+  bash "$GPTOSS/analyze-all.sh" --no-run "${TURNS[@]}"
+else
+  bash "$GPTOSS/analyze-all.sh" "${TURNS[@]}"
+fi
 
 # Display labels as produced by s5.sh / s6.sh.
 CORE_DATASETS=(confOf-ekaw human-mouse swo-acm swo-union)
@@ -74,6 +86,10 @@ _s5_report_exists() {  # turn, display label
 
 _s6_report_exists() {  # turn, display label
   [ -f "$OUTROOT/$1/s6/$2/m_i_raport_$2.csv" ]
+}
+
+_gptoss_view_exists() {  # turn, display label — step 0 built this view
+  [ -f "$GPTOSS/work/source/$1/$2/m_i_raport_$2.csv" ]
 }
 
 _input_for() {  # display label -> tests/inputs folder name
@@ -112,12 +128,14 @@ _backfill() {  # scenario (s5|s6), turn, display label
   fi
 }
 
-# ── Per-turn existence check + auto-run (guarded by --no-run) ──────────────
+# ── Step 1: deepseek side — per-turn existence check + auto-run backfill ────
+echo
+echo "--- [1] deepseek side (s5/s6 runs under $OUTROOT/<turn>/) ---"
 for T in "${TURNS[@]}"; do
   for ds in "${CORE_DATASETS[@]}"; do
     if ! _s5_report_exists "$T" "$ds"; then
       if [ "$NO_RUN" = "1" ]; then
-        echo "  [$T] WARNING: missing s5 report for '$ds' and --no-run is set — skipping where needed."
+        echo "  [$T] WARNING: missing deepseek s5 report for '$ds' and --no-run is set — skipping where needed."
       else
         _backfill s5 "$T" "$ds"
       fi
@@ -126,7 +144,7 @@ for T in "${TURNS[@]}"; do
   for ds in "${S6_DATASETS[@]}"; do
     if ! _s6_report_exists "$T" "$ds"; then
       if [ "$NO_RUN" = "1" ]; then
-        echo "  [$T] WARNING: missing s6 report for '$ds' and --no-run is set — skipping where needed."
+        echo "  [$T] WARNING: missing deepseek s6 report for '$ds' and --no-run is set — skipping where needed."
       else
         _backfill s6 "$T" "$ds"
       fi
@@ -134,26 +152,38 @@ for T in "${TURNS[@]}"; do
   done
 done
 
-# ── Active turns for the "core" dimensions (need all 4 core datasets' s5) ──
+# ── Active turns for the "core" dimensions: each needs BOTH sides complete
+# for all 4 core datasets (gpt-oss view from step 0 + deepseek s5 report). ──
 CORE_TURNS=()
 for T in "${TURNS[@]}"; do
   ok=1
   for ds in "${CORE_DATASETS[@]}"; do
-    _s5_report_exists "$T" "$ds" || ok=0
+    { _gptoss_view_exists "$T" "$ds" && _s5_report_exists "$T" "$ds"; } || ok=0
   done
   if [ "$ok" = "1" ]; then
     CORE_TURNS+=("$T")
   else
-    echo "  WARNING: turn '$T' is missing core (4-dataset) s5 data — excluded from all core-dimension aggregates."
+    echo "  WARNING: turn '$T' is missing core (4-dataset) gpt-oss and/or deepseek data — excluded from all core-dimension aggregates."
   fi
 done
 
 if [ ${#CORE_TURNS[@]} -eq 0 ]; then
-  echo "ERROR: no turn has complete core s5 data — nothing to aggregate. Re-run without --no-run, or check $OUTROOT." >&2
+  echo "ERROR: no turn has complete core data on both sides — nothing to aggregate. Re-run without --no-run, or check $GPTOSS/work/source and $OUTROOT." >&2
   exit 1
 fi
-echo "Core turns (4-dataset s5 complete): ${CORE_TURNS[*]}"
+echo "Core turns (both sides complete): ${CORE_TURNS[*]}"
 N_CORE=${#CORE_TURNS[@]}
+
+# Shorthand: combined two-backend extraction for one turn.
+_extract() {  # turn, metric, output csv, datasets...
+  local T="$1" metric="$2" out="$3"
+  shift 3
+  uv run python3 extract_metric_combined.py \
+      --gptoss-root "$GPTOSS/work/source/$T" \
+      --deepseek-root "$OUTROOT/$T/s5" \
+      --metric "$metric" --datasets "$@" \
+      --output "$out"
+}
 
 # ═══════════════════════════════════════════════════════════════════════════
 # accuracy — triple_preservation_ratio (aggregate_mean, exclude Naive Union)
@@ -164,9 +194,8 @@ mkdir -p "$DIM"
 AGG_INPUTS=()
 for T in "${CORE_TURNS[@]}"; do
   mkdir -p "$DIM/work/$T"
-  uv run python3 ../analiza/extract_metric.py --outputs-root "$OUTROOT/$T/s5" \
-      --metric triple_preservation_ratio --datasets "${DATASETS[@]}" \
-      --output "$DIM/work/$T/raw_triple_preservation_ratio.csv"
+  _extract "$T" triple_preservation_ratio \
+      "$DIM/work/$T/raw_triple_preservation_ratio.csv" "${DATASETS[@]}"
   uv run python3 ../analiza/aggregate_mean.py \
       --metric "Triple Preservation Ratio" "$DIM/work/$T/raw_triple_preservation_ratio.csv" \
       --exclude-method "Naive Union" \
@@ -189,12 +218,10 @@ mkdir -p "$DIM"
 AGG_INPUTS=()
 for T in "${CORE_TURNS[@]}"; do
   mkdir -p "$DIM/work/$T"
-  uv run python3 ../analiza/extract_metric.py --outputs-root "$OUTROOT/$T/s5" \
-      --metric syntactic_uniqueness_ratio --datasets "${SUR_DATASETS[@]}" \
-      --output "$DIM/work/$T/raw_syntactic_uniqueness_ratio.csv"
-  uv run python3 ../analiza/extract_metric.py --outputs-root "$OUTROOT/$T/s5" \
-      --metric structural_redundancy --datasets "${DATASETS[@]}" \
-      --output "$DIM/work/$T/raw_structural_redundancy.csv"
+  _extract "$T" syntactic_uniqueness_ratio \
+      "$DIM/work/$T/raw_syntactic_uniqueness_ratio.csv" "${SUR_DATASETS[@]}"
+  _extract "$T" structural_redundancy \
+      "$DIM/work/$T/raw_structural_redundancy.csv" "${DATASETS[@]}"
   uv run python3 ../analiza/aggregate_mean.py \
       --metric "Syntactic Uniqueness Ratio" "$DIM/work/$T/raw_syntactic_uniqueness_ratio.csv" \
       --metric "Structural Redundancy" "$DIM/work/$T/raw_structural_redundancy.csv" \
@@ -219,9 +246,7 @@ mkdir -p "$DIM"
 AGG_INPUTS=()
 for T in "${CORE_TURNS[@]}"; do
   mkdir -p "$DIM/work/$T"
-  uv run python3 ../analiza/extract_metric.py --outputs-root "$OUTROOT/$T/s5" \
-      --metric cycle_count --datasets "${DATASETS[@]}" \
-      --output "$DIM/work/$T/raw_cycle_count.csv"
+  _extract "$T" cycle_count "$DIM/work/$T/raw_cycle_count.csv" "${DATASETS[@]}"
   uv run python3 ../analiza/aggregate_mean.py \
       --metric "Cycle Count" "$DIM/work/$T/raw_cycle_count.csv" \
       --output "$DIM/work/$T/agg.csv"
@@ -241,15 +266,9 @@ mkdir -p "$DIM"
 NCRC_INPUTS=(); TCC_INPUTS=()
 for T in "${CORE_TURNS[@]}"; do
   mkdir -p "$DIM/work/$T"
-  uv run python3 ../analiza/extract_metric.py --outputs-root "$OUTROOT/$T/s5" \
-      --metric new_cross_onto_relations_count --datasets "${DATASETS[@]}" \
-      --output "$DIM/work/$T/raw_ncrc.csv"
-  uv run python3 ../analiza/extract_metric.py --outputs-root "$OUTROOT/$T/s5" \
-      --metric new_intra_onto_relations_count --datasets "${DATASETS[@]}" \
-      --output "$DIM/work/$T/raw_nirc.csv"
-  uv run python3 ../analiza/extract_metric.py --outputs-root "$OUTROOT/$T/s5" \
-      --metric triple_count_delta --datasets "${DATASETS[@]}" \
-      --output "$DIM/work/$T/raw_tcc.csv"
+  _extract "$T" new_cross_onto_relations_count "$DIM/work/$T/raw_ncrc.csv" "${DATASETS[@]}"
+  _extract "$T" new_intra_onto_relations_count "$DIM/work/$T/raw_nirc.csv" "${DATASETS[@]}"
+  _extract "$T" triple_count_delta "$DIM/work/$T/raw_tcc.csv" "${DATASETS[@]}"
   uv run python3 ../analiza/aggregate_mean.py \
       --metric "NCRC" "$DIM/work/$T/raw_ncrc.csv" \
       --metric "NIRC" "$DIM/work/$T/raw_nirc.csv" \
@@ -290,9 +309,7 @@ AGG_INPUTS=()
 for T in "${CORE_TURNS[@]}"; do
   mkdir -p "$DIM/work/$T"
   for METRIC in "${HIQ_METRICS[@]}"; do
-    uv run python3 ../analiza/extract_metric.py --outputs-root "$OUTROOT/$T/s5" \
-        --metric "$METRIC" --datasets "${DATASETS[@]}" \
-        --output "$DIM/work/$T/raw_${METRIC}.csv"
+    _extract "$T" "$METRIC" "$DIM/work/$T/raw_${METRIC}.csv" "${DATASETS[@]}"
   done
   uv run python3 ../analiza/aggregate_pct.py \
       --metric average_depth "$DIM/work/$T/raw_average_depth.csv" \
@@ -317,9 +334,8 @@ mkdir -p "$DIM"
 AGG_INPUTS=()
 for T in "${CORE_TURNS[@]}"; do
   mkdir -p "$DIM/work/$T"
-  uv run python3 ../analiza/extract_metric.py --outputs-root "$OUTROOT/$T/s5" \
-      --metric comment_coverage_ratio --datasets "${DATASETS[@]}" \
-      --output "$DIM/work/$T/raw_comment_coverage_ratio.csv"
+  _extract "$T" comment_coverage_ratio \
+      "$DIM/work/$T/raw_comment_coverage_ratio.csv" "${DATASETS[@]}"
   uv run python3 ../analiza/aggregate_mean.py \
       --metric "Comment Coverage Ratio" "$DIM/work/$T/raw_comment_coverage_ratio.csv" \
       --output "$DIM/work/$T/agg.csv"
@@ -341,12 +357,10 @@ mkdir -p "$DIM"
 AA_INPUTS=(); MDR_INPUTS=()
 for T in "${CORE_TURNS[@]}"; do
   mkdir -p "$DIM/work/$T"
-  uv run python3 ../analiza/extract_metric.py --outputs-root "$OUTROOT/$T/s5" \
-      --metric applied_alignments --datasets "${DATASETS[@]}" \
-      --output "$DIM/work/$T/raw_applied_alignments.csv"
-  uv run python3 ../analiza/extract_metric.py --outputs-root "$OUTROOT/$T/s5" \
-      --metric multi_domain_range_change_per_alignment --datasets "${DR_DATASETS[@]}" \
-      --output "$DIM/work/$T/raw_multi_dr.csv"
+  _extract "$T" applied_alignments \
+      "$DIM/work/$T/raw_applied_alignments.csv" "${DATASETS[@]}"
+  _extract "$T" multi_domain_range_change_per_alignment \
+      "$DIM/work/$T/raw_multi_dr.csv" "${DR_DATASETS[@]}"
   uv run python3 ../analiza/aggregate_pct.py \
       --metric "Applied Alignments" "$DIM/work/$T/raw_applied_alignments.csv" \
       --baseline "Applied Alignments" \
@@ -379,9 +393,11 @@ uv run python3 plot_turns.py \
     --bar-fmt-for "Multi D/R Change per Alignment" "%+.2f"
 
 # ═══════════════════════════════════════════════════════════════════════════
-# domain_coherence (b) — OAEI reference-alignment validation (adjusted):
-# needs both the s5 (AML-input) and s6 (reference-input) run of each dataset,
-# which excludes cmt-edas (s6-only — no AML-input run exists for it).
+# domain_coherence (b) — OAEI reference-alignment validation (adjusted).
+# The gpt-oss per-turn CSV comes straight from article_analysis_gptoss's step-0
+# run; only the deepseek run of oaei_rejection.py happens here, and
+# merge_oaei_runs.py grafts its "Proposed" row in as the extra method column.
+# cmt-edas is excluded (reference-input only — no AML-input run exists).
 # ═══════════════════════════════════════════════════════════════════════════
 echo; echo "--- domain_coherence (OAEI validation) ---"
 OAEI_DATASETS=(confOf-ekaw human-mouse)
@@ -390,6 +406,11 @@ OAEI_PM_INPUTS=()
 N_OAEI_TURNS=0
 for T in "${TURNS[@]}"; do
   mkdir -p "$DIM/work/$T"
+  GPTOSS_OAEI="$GPTOSS/domain_coherence/work/$T/oaei.csv"
+  if [ ! -f "$GPTOSS_OAEI" ]; then
+    echo "  [$T] no gpt-oss OAEI CSV ($GPTOSS_OAEI) — turn skipped for OAEI aggregation."
+    continue
+  fi
   OAEI_ARGS=()
   for ds in "${OAEI_DATASETS[@]}"; do
     INPUT_NAME="$(_input_for "$ds")"
@@ -400,18 +421,21 @@ for T in "${TURNS[@]}"; do
     if [ -f "$S5_DIR/applied_stats.json" ]; then
       OAEI_ARGS+=(--dataset "$ds" "$REF" "$S5_DIR" "$S6_DIR" "$INPUT_DIR")
     else
-      echo "  [$T] skip OAEI dataset '$ds': $S5_DIR/applied_stats.json missing"
+      echo "  [$T] skip deepseek OAEI dataset '$ds': $S5_DIR/applied_stats.json missing"
     fi
   done
   if [ ${#OAEI_ARGS[@]} -gt 0 ]; then
     uv run python3 ../analiza/domain_coherence/oaei_rejection.py \
         "${OAEI_ARGS[@]}" \
         --no-flag \
-        --out-csv "$DIM/work/$T/oaei.csv" --out-jpg "$DIM/work/$T/oaei.jpg"
+        --out-csv "$DIM/work/$T/oaei_deepseek.csv" --out-jpg "$DIM/work/$T/oaei_deepseek.jpg"
+    uv run python3 merge_oaei_runs.py \
+        --gptoss "$GPTOSS_OAEI" --deepseek "$DIM/work/$T/oaei_deepseek.csv" \
+        --output "$DIM/work/$T/oaei.csv"
     OAEI_PM_INPUTS+=(--input "$DIM/work/$T/oaei.csv")
     N_OAEI_TURNS=$((N_OAEI_TURNS + 1))
   else
-    echo "  [$T] no OAEI datasets available for this turn — skipped for OAEI aggregation."
+    echo "  [$T] no deepseek OAEI datasets available for this turn — skipped for OAEI aggregation."
   fi
 done
 if [ "$N_OAEI_TURNS" -gt 0 ]; then
@@ -420,8 +444,8 @@ if [ "$N_OAEI_TURNS" -gt 0 ]; then
       --jpg-output "$DIM/adjusted_oaei_rejection_med.jpg" \
       --n-turns "$N_OAEI_TURNS"
 else
-  echo "  OAEI aggregation skipped entirely — no turn had any OAEI dataset data."
+  echo "  OAEI aggregation skipped entirely — no turn had both sides' OAEI data."
 fi
 
 echo
-echo "=== Done. Median/min/max outputs under tests/article_analysis_deepseek/<dim>/ ==="
+echo "=== Done. Combined median/min/max outputs under tests/article_analysis_deepseek/<dim>/ ==="
