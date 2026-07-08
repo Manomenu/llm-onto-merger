@@ -6,8 +6,8 @@
 # to analyze-all.sh with that explicit list.  analyze-all.sh ALREADY does
 # everything the growth needs, per turn:
 #   - checks turnK has complete s5 (AML-input) data for the datasets
-#     swo-acm, cmt-edas, confOf-ekaw, human-mouse, swo-union, and s6
-#     (reference-input) data for cmt-edas/confOf-ekaw/human-mouse
+#     swo-acm, confOf-ekaw, human-mouse, swo-union, and s6 (reference-input)
+#     data for cmt-edas/confOf-ekaw/human-mouse
 #   - for anything missing, runs tests/article_scenarios/s5.sh / s6.sh
 #     --label turnK --only <dataset> to backfill it (slow — invokes the
 #     OpenRouter deepseek-v4-flash merger; each turn gets its own --run-nonce

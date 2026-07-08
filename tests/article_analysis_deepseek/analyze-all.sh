@@ -12,9 +12,12 @@
 # combine_oaei.py in THIS folder).
 #
 # Dataset lists (display labels, as used by s5.sh/s6.sh):
-#   core (all non-OAEI dimensions):  cmt-edas human-mouse swo-acm swo-union
-#   extra s5 for OAEI:               confOf-ekaw
-#   s6 (reference-input, OAEI):      cmt-edas confOf-ekaw human-mouse
+#   s5 / core (all non-OAEI dims):   confOf-ekaw human-mouse swo-acm swo-union
+#   s6 (reference-input):            cmt-edas confOf-ekaw human-mouse
+#   OAEI validation:                 confOf-ekaw human-mouse — cmt-edas is
+#     measured ONLY under the reference input (s6), and oaei_rejection.py
+#     hard-requires each dataset's AML-input run (applied_stats.json) for the
+#     accepted-AML-FP measure, so cmt-edas cannot appear in the OAEI charts.
 #
 # Usage:
 #   bash analyze-all.sh                       # turns = turn1 turn2 turn3 (default)
@@ -52,13 +55,12 @@ echo "=== deepseek repeated-runs analysis over turns: ${TURNS[*]} (no-run=$NO_RU
 OUTROOT="../article_scenarios/outputs"
 
 # Display labels as produced by s5.sh / s6.sh.
-CORE_DATASETS=(cmt-edas human-mouse swo-acm swo-union)
-OAEI_EXTRA_S5=(confOf-ekaw)                     # OAEI needs this extra dataset's s5 run
-S6_DATASETS=(cmt-edas confOf-ekaw human-mouse)  # reference-input runs (OAEI)
+CORE_DATASETS=(confOf-ekaw human-mouse swo-acm swo-union)
+S6_DATASETS=(cmt-edas confOf-ekaw human-mouse)  # reference-input runs
 
 DATASETS=("${CORE_DATASETS[@]}")
-SUR_DATASETS=(cmt-edas swo-union)
-DR_DATASETS=(cmt-edas swo-union)
+SUR_DATASETS=(confOf-ekaw swo-union)
+DR_DATASETS=(confOf-ekaw swo-union)
 
 # Output-dir tags as computed by s5.sh/s6.sh with default flags
 # (limit 15000, parallel 1000, model deepseek/deepseek-v4-flash).
@@ -112,7 +114,7 @@ _backfill() {  # scenario (s5|s6), turn, display label
 
 # ── Per-turn existence check + auto-run (guarded by --no-run) ──────────────
 for T in "${TURNS[@]}"; do
-  for ds in "${CORE_DATASETS[@]}" "${OAEI_EXTRA_S5[@]}"; do
+  for ds in "${CORE_DATASETS[@]}"; do
     if ! _s5_report_exists "$T" "$ds"; then
       if [ "$NO_RUN" = "1" ]; then
         echo "  [$T] WARNING: missing s5 report for '$ds' and --no-run is set — skipping where needed."
@@ -378,10 +380,11 @@ uv run python3 plot_turns.py \
 
 # ═══════════════════════════════════════════════════════════════════════════
 # domain_coherence (b) — OAEI reference-alignment validation (adjusted):
-# needs both the s5 (AML-input) and s6 (reference-input) run of each dataset.
+# needs both the s5 (AML-input) and s6 (reference-input) run of each dataset,
+# which excludes cmt-edas (s6-only — no AML-input run exists for it).
 # ═══════════════════════════════════════════════════════════════════════════
 echo; echo "--- domain_coherence (OAEI validation) ---"
-OAEI_DATASETS=(cmt-edas confOf-ekaw human-mouse)
+OAEI_DATASETS=(confOf-ekaw human-mouse)
 mkdir -p "$DIM/work"
 OAEI_PM_INPUTS=()
 N_OAEI_TURNS=0

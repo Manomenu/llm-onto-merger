@@ -10,14 +10,16 @@
 # repetitions of the same datasets can coexist.  The AML-input counterpart of
 # s3.sh, and the default-backend counterpart of s5.sh.
 #
-# Fixed dataset batch (tests/inputs folder → display label):
-#   swo-acm, conference → cmt-edas, confOf-ekaw, human-mouse, swo-union
+# Fixed dataset batch (tests/inputs folders):
+#   swo-acm, confOf-ekaw, human-mouse, swo-union
+# (conference/cmt-edas is deliberately absent — it is measured only under the
+# reference-alignment input, i.e. s3.sh.)
 #
 # Hardcoded config (same as scenario_2.sh):
 #   alignment tool aml, max env chars 15000, parallel llm request count 24
 #
 # Usage:
-#   tests/article_scenarios/s2.sh                             # all 5 datasets
+#   tests/article_scenarios/s2.sh                             # all 4 datasets
 #   tests/article_scenarios/s2.sh --label turn1               # outputs under outputs/turn1/s2/
 #   tests/article_scenarios/s2.sh --label turn1 --only swo-acm  # single dataset backfill
 #   tests/article_scenarios/s2.sh --limit 20000               # override max-env-chars
@@ -56,11 +58,8 @@ if [ -f "$REPO_ROOT/.env" ]; then
 fi
 
 # ── Fixed dataset batch: (tests/inputs folder, display label) ───────────────
-# "conference" is displayed as "cmt-edas" in every output artifact — same
-# display-only rename as s5.sh/s6.sh.
 DATASETS=(
   "swo-acm     swo-acm"
-  "conference  cmt-edas"
   "confOf-ekaw confOf-ekaw"
   "human-mouse human-mouse"
   "swo-union   swo-union"
@@ -134,7 +133,7 @@ fi
 
 echo "========================================"
 echo "  s2 / batch run (AML input, default backend)"
-echo "    datasets:    swo-acm, conference→cmt-edas, confOf-ekaw, human-mouse, swo-union"
+echo "    datasets:    swo-acm, confOf-ekaw, human-mouse, swo-union"
 echo "    only:        $([ ${#ONLY[@]} -gt 0 ] && echo "${ONLY[*]}" || echo "(all)")"
 echo "    alignment:   $TOOL"
 echo "    max chars:   $LIMIT"

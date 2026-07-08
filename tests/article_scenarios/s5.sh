@@ -9,11 +9,13 @@
 # is ALWAYS OpenRouter, and --label nests every output under a per-run folder
 # so N independent repetitions of the same datasets can coexist.
 #
-# Fixed dataset batch (tests/inputs folder → display label):
-#   swo-acm, conference → cmt-edas, confOf-ekaw, human-mouse, swo-union
+# Fixed dataset batch (tests/inputs folders):
+#   swo-acm, confOf-ekaw, human-mouse, swo-union
+# (conference/cmt-edas is deliberately absent — it is measured only under the
+# reference-alignment input, i.e. s6.sh.)
 #
 # Usage:
-#   tests/article_scenarios/s5.sh                             # all 5 datasets
+#   tests/article_scenarios/s5.sh                             # all 4 datasets
 #   tests/article_scenarios/s5.sh --label turn1               # outputs under outputs/turn1/s5/
 #   tests/article_scenarios/s5.sh --label turn1 --only swo-acm  # single dataset backfill
 #   tests/article_scenarios/s5.sh --model openai/gpt-4o-mini  # other OpenRouter model
@@ -56,11 +58,8 @@ if [ -f "$REPO_ROOT/.env" ]; then
 fi
 
 # ── Fixed dataset batch: (tests/inputs folder, display label) ───────────────
-# "conference" is displayed as "cmt-edas" in every output artifact — same
-# display-only rename as tests/scenarios/scenario_5.sh.
 DATASETS=(
   "swo-acm     swo-acm"
-  "conference  cmt-edas"
   "confOf-ekaw confOf-ekaw"
   "human-mouse human-mouse"
   "swo-union   swo-union"
@@ -144,7 +143,7 @@ fi
 
 echo "========================================"
 echo "  s5 / batch run (AML input, OpenRouter)"
-echo "    datasets:    swo-acm, conference→cmt-edas, confOf-ekaw, human-mouse, swo-union"
+echo "    datasets:    swo-acm, confOf-ekaw, human-mouse, swo-union"
 echo "    only:        $([ ${#ONLY[@]} -gt 0 ] && echo "${ONLY[*]}" || echo "(all)")"
 echo "    alignment:   $TOOL"
 echo "    max chars:   $LIMIT"

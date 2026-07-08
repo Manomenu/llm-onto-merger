@@ -12,9 +12,9 @@ Per turn × dataset, data is resolved in this order:
 
 1. **`tests/scenarios/outputs/<turn>/<name>-s2|-s3/`** — the
    `tests/analiza-variance` run tree (produced by `scenario_2.sh` /
-   `scenario_3.sh --label <turn>`). Display labels map onto the legacy
-   dataset names: `cmt-edas → conference`, `swo-acm → acm-union` (both
-   spellings are checked).
+   `scenario_3.sh --label <turn>`). The `cmt-edas` label maps onto the legacy
+   `conference` dataset name (both spellings are checked); `swo-acm` and every
+   other label are looked up under their own names only.
 2. **`tests/article_scenarios/outputs/<turn>/s2|s3/<label>/`** — data this
    folder's own backfill produced earlier.
 3. **Fallback**: `tests/article_scenarios/s2.sh` / `s3.sh --label <turn>
@@ -41,9 +41,11 @@ bash analyze-all.sh --no-run                   # aggregate only; skip missing da
 
 Dataset lists (display labels, same as article_analysis_deepseek):
 
-- **s2, core dimensions:** cmt-edas, human-mouse, swo-acm, swo-union
-- **s2, extra for OAEI:** confOf-ekaw
-- **s3 (reference-input, OAEI):** cmt-edas, confOf-ekaw, human-mouse
+- **s2 / core dimensions:** confOf-ekaw, human-mouse, swo-acm, swo-union
+- **s3 (reference-input):** cmt-edas, confOf-ekaw, human-mouse
+- **OAEI validation:** confOf-ekaw, human-mouse — cmt-edas is measured only
+  under the reference input (s3), and the OAEI validation hard-requires each
+  dataset's AML-input run, so cmt-edas cannot appear in the OAEI charts.
 
 ## Outputs (per dimension, under `tests/article_analysis_gptoss/<dim>/`)
 

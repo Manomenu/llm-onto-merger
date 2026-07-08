@@ -5,9 +5,12 @@
 # For --number N: builds the turn list turn1..turnN, then delegates straight
 # to analyze-all.sh with that explicit list.  analyze-all.sh ALREADY does
 # everything the growth needs, per turn:
-#   - resolves each dataset's data from the tests/analiza-variance run tree
-#     (tests/scenarios/outputs/<turn>/<name>-s2|-s3/ — already-computed data
-#     is NEVER recomputed), then from tests/article_scenarios/outputs/<turn>/
+#   - resolves each dataset's s2 (swo-acm/confOf-ekaw/human-mouse/swo-union)
+#     and s3 (cmt-edas/confOf-ekaw/human-mouse) data from the
+#     tests/analiza-variance run tree
+#     (tests/scenarios/outputs/<turn>/<name>-s2|-s3/ — already-computed
+#     data is NEVER recomputed), then from
+#     tests/article_scenarios/outputs/<turn>/
 #   - only when NEITHER exists, runs tests/article_scenarios/s2.sh / s3.sh
 #     --label turnK --only <dataset> to backfill it (slow — invokes the
 #     default-backend LLM merger; each turn gets its own --run-nonce via

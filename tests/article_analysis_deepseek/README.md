@@ -33,9 +33,11 @@ is regenerated (`--skip-all`).
 
 Dataset lists (display labels):
 
-- **s5, core dimensions:** cmt-edas, human-mouse, swo-acm, swo-union
-- **s5, extra for OAEI:** confOf-ekaw
-- **s6 (reference-input, OAEI):** cmt-edas, confOf-ekaw, human-mouse
+- **s5 / core dimensions:** confOf-ekaw, human-mouse, swo-acm, swo-union
+- **s6 (reference-input):** cmt-edas, confOf-ekaw, human-mouse
+- **OAEI validation:** confOf-ekaw, human-mouse — cmt-edas is measured only
+  under the reference input (s6), and the OAEI validation hard-requires each
+  dataset's AML-input run, so cmt-edas cannot appear in the OAEI charts.
 
 ```bash
 bash tests/article_analysis_deepseek/analyze-all.sh                 # turn1..turn3
