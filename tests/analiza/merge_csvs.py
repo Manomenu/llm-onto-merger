@@ -22,11 +22,15 @@ def main() -> None:
 
     for i, path in enumerate(args.input):
         with path.open() as fh:
-            rdr = csv.reader(fh)
-            h = next(rdr)
+            # Skip '#'-prefixed comment lines (e.g. the CoMerger-timeout NOTE
+            # combine_turns.py prepends) so they are never mistaken for the
+            # header — matches plot_turns.py / extract_metric.py behaviour.
+            rows = [r for r in csv.reader(fh)
+                    if r and not r[0].lstrip().startswith("#")]
+            h = rows[0]
             metrics = h[1:]
             header.extend(metrics)
-            for row in rdr:
+            for row in rows[1:]:
                 m = row[0]
                 if m not in rows_by_method:
                     rows_by_method[m] = []

@@ -14,7 +14,7 @@
 #
 # Fixed dataset batch (only datasets with tests/inputs/<name>/reference.rdf;
 # tests/inputs folder → display label):
-#   conference → cmt-edas, confOf-ekaw, human-mouse
+#   swo-acm, confOf-ekaw, human-mouse
 #
 # Hardcoded config (same as scenario_3.sh):
 #   max env chars 15000, parallel llm request count 24
@@ -22,7 +22,7 @@
 # Usage:
 #   tests/article_scenarios/s3.sh                             # all 3 datasets
 #   tests/article_scenarios/s3.sh --label turn1               # outputs under outputs/turn1/s3/
-#   tests/article_scenarios/s3.sh --label turn1 --only cmt-edas  # single dataset backfill
+#   tests/article_scenarios/s3.sh --label turn1 --only swo-acm  # single dataset backfill
 #   tests/article_scenarios/s3.sh --limit 20000               # override max-env-chars
 #   tests/article_scenarios/s3.sh --skip-mine                 # reuse LLM outputs, rerun baselines + report
 #   tests/article_scenarios/s3.sh --skip-all                  # reuse ALL caches, only regenerate reports
@@ -68,7 +68,7 @@ fi
 
 # ── Fixed dataset batch: (tests/inputs folder, display label) ───────────────
 DATASETS=(
-  "conference  cmt-edas"
+  "swo-acm     swo-acm"
   "confOf-ekaw confOf-ekaw"
   "human-mouse human-mouse"
 )
@@ -140,7 +140,7 @@ fi
 
 echo "========================================"
 echo "  s3 / batch run (REFERENCE alignment input, default backend)"
-echo "    datasets:    conference→cmt-edas, confOf-ekaw, human-mouse"
+echo "    datasets:    swo-acm, confOf-ekaw, human-mouse"
 echo "    only:        $([ ${#ONLY[@]} -gt 0 ] && echo "${ONLY[*]}" || echo "(all)")"
 echo "    max chars:   $LIMIT"
 echo "    parallel:    $PARALLEL"
@@ -279,6 +279,8 @@ for spec in "${DATASETS[@]}"; do
   # ── CoMerger (reference as 4th-arg alignment file; deterministic — shared cache)
   if [ -f "$COMERGER_CACHE/merged_ontology.owl" ]; then
     echo "  → reusing cached CoMerger (reference) from $COMERGER_CACHE"
+  elif [ -f "$COMERGER_CACHE/comerger_timeout.txt" ]; then
+    echo "  → reusing cached CoMerger TIMEOUT from $COMERGER_CACHE — comerger column will be absent"
   elif [ "$SKIP_ALL" = "1" ]; then
     echo "  WARNING: --skip-all but $COMERGER_CACHE/merged_ontology.owl missing — CoMerger column will be absent"
   else
@@ -286,7 +288,11 @@ for spec in "${DATASETS[@]}"; do
     mkdir -p "$COMERGER_CACHE"
     if ! ./thirdparty/CoMerger-1.2/comerger.sh "$BASE" "$CANDIDATE" "$COMERGER_CACHE" "$REFERENCE" \
         >"$COMERGER_CACHE/run.log" 2>&1; then
-      echo "  WARNING: CoMerger failed — comerger column will be absent. See $COMERGER_CACHE/run.log"
+      if [ -f "$COMERGER_CACHE/comerger_timeout.txt" ]; then
+        echo "  WARNING: CoMerger timed out (3 min) — comerger column will be absent. See $COMERGER_CACHE/run.log"
+      else
+        echo "  WARNING: CoMerger failed — comerger column will be absent. See $COMERGER_CACHE/run.log"
+      fi
     fi
   fi
   if [ -f "$COMERGER_CACHE/merged_ontology.owl" ]; then
@@ -295,6 +301,9 @@ for spec in "${DATASETS[@]}"; do
       cp "$COMERGER_CACHE/comerger_stats.json" "$OUT_DIR/comerger_stats.json"
     fi
     echo "  → comerger_ontology.owl ← $COMERGER_CACHE/merged_ontology.owl"
+  elif [ -f "$COMERGER_CACHE/comerger_timeout.txt" ]; then
+    cp "$COMERGER_CACHE/comerger_timeout.txt" "$OUT_DIR/comerger_timeout.txt"
+    echo "  → comerger_timeout.txt ← $COMERGER_CACHE (CoMerger exceeded 3-min limit)"
   fi
 
   # ── Boomer (reference via boomer_s3.sh wrapper; deterministic — shared cache) ─

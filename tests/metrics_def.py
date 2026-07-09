@@ -359,6 +359,25 @@ def _local(uri: URIRef) -> str:
     return s.split("#")[-1] if "#" in s else s.rsplit("/", 1)[-1]
 
 
+# Predicates whose subject/object are semantically interchangeable.  Tools like
+# AROM may re-serialize these in the opposite direction from the raw input
+# (e.g. input has `RO_0002212 owl:inverseOf RO_0002335`, output has the
+# reverse), which would otherwise register as a spurious "new relation" in the
+# NCRC/NIRC set-difference below.
+_SYMMETRIC_PREDICATES = frozenset(
+    {OWL.inverseOf, OWL.equivalentClass, OWL.equivalentProperty, _OWL_DISJOINT_WITH, OWL.sameAs}
+)
+
+
+def _canon_key(p: URIRef, s_key: str, p_key: str, o_key: str) -> tuple[str, str, str]:
+    """Build an (s, p, o) key, ordering subject/object lexicographically for
+    symmetric predicates so that a direction-flipped triple maps to the same
+    key.  No-op for other predicates."""
+    if p in _SYMMETRIC_PREDICATES and o_key < s_key:
+        s_key, o_key = o_key, s_key
+    return (s_key, p_key, o_key)
+
+
 def _classes(g: Graph) -> set[URIRef]:
     result: set[URIRef] = set()
     for s in g.subjects(RDF.type, _OWL_CLASS):
@@ -895,7 +914,7 @@ def _compute_self_metrics(
         # we resolve to that primary source so intra-onto triples via merged entities
         # are counted correctly.
         union_keys = {
-            (_local(s), _local(p), _local(o))
+            _canon_key(p, _local(s), _local(p), _local(o))
             for s, p, o in union
             if isinstance(s, URIRef) and isinstance(o, URIRef)
         }
@@ -931,7 +950,7 @@ def _compute_self_metrics(
                 and not (_is_both(s) and _is_both(o))  # both↔both excluded (same as CORC rule)
                 and _intra_source(s) is not None
                 and _intra_source(s) == _intra_source(o)
-                and (_local(s), _local(p), _local(o)) not in union_keys
+                and _canon_key(p, _local(s), _local(p), _local(o)) not in union_keys
             )
         )
 
@@ -946,7 +965,7 @@ def _compute_self_metrics(
         # introduced by the merge logic (e.g. LLM-created cross-onto axioms)
         # remain.
         union_keys_norm = {
-            (_norm_uri(s), _norm_uri(p), _norm_uri(o))
+            _canon_key(p, _norm_uri(s), _norm_uri(p), _norm_uri(o))
             for s, p, o in union
             if isinstance(s, URIRef) and isinstance(o, URIRef)
         }
@@ -955,7 +974,7 @@ def _compute_self_metrics(
             for s, p, o in g
             if isinstance(s, URIRef) and isinstance(o, URIRef)
             and _is_cross(s, o)
-            and (_local(s), _local(p), _local(o)) not in union_keys_norm
+            and _canon_key(p, _local(s), _local(p), _local(o)) not in union_keys_norm
         ))
 
     else:

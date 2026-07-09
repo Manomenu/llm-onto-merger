@@ -260,12 +260,18 @@ if [ "$SKIP_ALL" = "1" ]; then
   else
     echo "  WARNING: --skip-all but $COMERGER_CACHE/merged_ontology.owl missing — CoMerger column will be absent"
   fi
+elif [ -f "$COMERGER_CACHE/comerger_timeout.txt" ]; then
+  echo "  → cached CoMerger TIMEOUT at $COMERGER_CACHE — skipping 3-min re-run; comerger column will be absent"
 else
   echo "  → running CoMerger → $COMERGER_CACHE"
   mkdir -p "$COMERGER_CACHE"
   if ! ./thirdparty/CoMerger-1.2/comerger.sh "$BASE" "$CANDIDATE" "$COMERGER_CACHE" \
       >"$COMERGER_CACHE/run.log" 2>&1; then
-    echo "  WARNING: CoMerger failed (exit $?) — comerger column will be absent. See $COMERGER_CACHE/run.log"
+    if [ -f "$COMERGER_CACHE/comerger_timeout.txt" ]; then
+      echo "  WARNING: CoMerger timed out (3 min) — comerger column will be absent. See $COMERGER_CACHE/run.log"
+    else
+      echo "  WARNING: CoMerger failed (exit $?) — comerger column will be absent. See $COMERGER_CACHE/run.log"
+    fi
   fi
 fi
 if [ -f "$COMERGER_CACHE/merged_ontology.owl" ]; then
@@ -274,6 +280,9 @@ if [ -f "$COMERGER_CACHE/merged_ontology.owl" ]; then
     cp "$COMERGER_CACHE/comerger_stats.json" "$OUT_DIR/comerger_stats.json"
   fi
   echo "  → comerger_ontology.owl ← $COMERGER_CACHE/merged_ontology.owl"
+elif [ -f "$COMERGER_CACHE/comerger_timeout.txt" ]; then
+  cp "$COMERGER_CACHE/comerger_timeout.txt" "$OUT_DIR/comerger_timeout.txt"
+  echo "  → comerger_timeout.txt ← $COMERGER_CACHE (CoMerger exceeded 3-min limit)"
 fi
 
 # ── Report (single-scenario: metrics + insights + Boomer column) ────────────

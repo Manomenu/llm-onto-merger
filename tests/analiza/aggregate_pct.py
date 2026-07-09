@@ -52,9 +52,15 @@ def main() -> None:
         default=[],
         help="method name to skip in output rows (repeatable)",
     )
+    parser.add_argument(
+        "--only", default=None,
+        help="restrict to this single dataset (%%-change for that dataset only, "
+             "not averaged) — used for per-dataset (non-averaged) charts.",
+    )
     args = parser.parse_args()
     baseline = args.baseline
     exclude_methods = set(args.exclude_method)
+    only_ds = args.only
 
     metric_names = [m for m, _ in args.metric]
     exclude = set(args.exclude)
@@ -70,6 +76,8 @@ def main() -> None:
             pcts: list[float] = []
             for ds, vals in raw.items():
                 if ds in exclude:
+                    continue
+                if only_ds is not None and ds != only_ds:
                     continue
                 bv = vals.get(baseline, float("nan"))
                 mv = vals.get(method, float("nan"))

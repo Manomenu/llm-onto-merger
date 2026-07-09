@@ -222,6 +222,10 @@ def _compute_scenario(
         "has_boomer": boomer is not None,
         "has_arom": arom is not None,
         "has_comerger": comerger is not None,
+        # CoMerger's holistic merge blows up (Pellet RBox) on ontologies with
+        # many object-property chains and is capped by comerger.sh; the wrapper
+        # writes this marker instead of merged_ontology.owl when it times out.
+        "comerger_timeout": (out_dir / "comerger_timeout.txt").exists(),
     }
 
 
@@ -478,9 +482,23 @@ def _align_stats_label(stats: dict | None) -> str:
 def _scenario_metrics_block(s: dict) -> str:
     applied_mark = "✓" if s["has_applied"] else "✗"
     arom_mark = "✓" if s["has_arom"] else "✗"
-    comerger_mark = "✓" if s["has_comerger"] else "✗"
+    comerger_timeout = s.get("comerger_timeout", False)
+    comerger_mark = (
+        "⏱ timeout (3 min)" if comerger_timeout
+        else "✓" if s["has_comerger"] else "✗"
+    )
     boomer_mark = "✓" if s["has_boomer"] else "✗"
     align_label = _align_stats_label(s["alignment_stats"])
+    # Explicit banner so the missing CoMerger column is not mistaken for a plain
+    # "not run" — it was capped at the 3-minute limit (see comerger.sh).
+    timeout_note = (
+        '<div style="margin:0.4rem 0;padding:6px 10px;border-left:4px solid #e67e22;'
+        'background:#fdf3e7;color:#8a5000;font-size:0.85rem;">'
+        "⏱ <strong>CoMerger:</strong> przekroczono limit 3&nbsp;min — kolumna CoMerger "
+        "pominięta (brak danych)."
+        "</div>"
+        if comerger_timeout else ""
+    )
     return (
         f'<div class="scenario-section"><h3>Scenariusz: <code>{s["label"]}</code></h3>'
         f'<div class="scenario-meta">'
@@ -491,6 +509,7 @@ def _scenario_metrics_block(s: dict) -> str:
         f"boomer_ontology.owl: {boomer_mark} &nbsp; "
         f"alignment_stats: {align_label}"
         f"</div>"
+        f"{timeout_note}"
         f"{_render_metrics_table(s)}</div>"
     )
 
@@ -572,6 +591,12 @@ def _build_html(scenarios: list[dict], inputs_dir: Path) -> str:
 
 def _build_csv_rows(scenarios: list[dict]) -> list[list[str]]:
     rows: list[list[str]] = []
+    for s in scenarios:
+        if s.get("comerger_timeout"):
+            rows.append(
+                [f"# NOTE: CoMerger timed out (3-min limit) for scenario "
+                 f"'{s['label']}' — comerger_ontology column absent (no data)."]
+            )
     rows.append(["# section: metrics (per scenario, per metric, per graph)"])
     rows.append(["section", "scenario", "metric", "graph", "value", "suspected"])
     for s in scenarios:

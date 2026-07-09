@@ -196,17 +196,27 @@ fi
 
 # ── CoMerger (reference as 4th-arg alignment file) ──────────────────────────
 if [ "$ONLY_BOOMER" != "1" ] && [ "$SKIP_ALL" != "1" ]; then
-  echo "  → running CoMerger (reference) → $COMERGER_CACHE"
-  mkdir -p "$COMERGER_CACHE"
-  if ! ./thirdparty/CoMerger-1.2/comerger.sh "$BASE" "$CANDIDATE" "$COMERGER_CACHE" "$REFERENCE" \
-      >"$COMERGER_CACHE/run.log" 2>&1; then
-    echo "  WARNING: CoMerger failed — see $COMERGER_CACHE/run.log"
+  if [ -f "$COMERGER_CACHE/comerger_timeout.txt" ]; then
+    echo "  → cached CoMerger TIMEOUT at $COMERGER_CACHE — skipping 3-min re-run; comerger column will be absent"
+  else
+    echo "  → running CoMerger (reference) → $COMERGER_CACHE"
+    mkdir -p "$COMERGER_CACHE"
+    if ! ./thirdparty/CoMerger-1.2/comerger.sh "$BASE" "$CANDIDATE" "$COMERGER_CACHE" "$REFERENCE" \
+        >"$COMERGER_CACHE/run.log" 2>&1; then
+      if [ -f "$COMERGER_CACHE/comerger_timeout.txt" ]; then
+        echo "  WARNING: CoMerger timed out (3 min) — see $COMERGER_CACHE/run.log"
+      else
+        echo "  WARNING: CoMerger failed — see $COMERGER_CACHE/run.log"
+      fi
+    fi
   fi
 fi
 [ -f "$COMERGER_CACHE/merged_ontology.owl" ] && \
   cp "$COMERGER_CACHE/merged_ontology.owl" "$OUT_DIR/comerger_ontology.owl"
 [ -f "$COMERGER_CACHE/comerger_stats.json" ] && \
   cp "$COMERGER_CACHE/comerger_stats.json" "$OUT_DIR/comerger_stats.json"
+[ -f "$COMERGER_CACHE/comerger_timeout.txt" ] && \
+  cp "$COMERGER_CACHE/comerger_timeout.txt" "$OUT_DIR/comerger_timeout.txt"
 
 # ── Boomer (reference via dedicated boomer_s3.sh wrapper) ───────────────────
 BOOMER_CACHE="$SCENARIO_DIR/.boomer_ref"

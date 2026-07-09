@@ -35,7 +35,7 @@ def _metric_by_graph(csv_path: Path, metric: str) -> dict[str, str]:
     if not csv_path.exists():
         sys.exit(f"missing: {csv_path}")
     with csv_path.open() as fh:
-        lines = [ln for ln in fh if not ln.lstrip().startswith('"#')]
+        lines = [ln for ln in fh if not ln.lstrip().lstrip('"').startswith('#')]
     out: dict[str, str] = {}
     for row in csv.DictReader(lines):
         if row.get("section") == "metrics" and row.get("metric") == metric:

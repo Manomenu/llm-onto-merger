@@ -29,10 +29,16 @@ def main() -> None:
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--exclude", action="append", default=[])
     parser.add_argument("--exclude-method", action="append", default=[])
+    parser.add_argument(
+        "--only", default=None,
+        help="restrict averaging to this single dataset (mean over 1 dataset = "
+             "that dataset's value) — used for per-dataset (non-averaged) charts.",
+    )
     args = parser.parse_args()
 
     exclude_ds = set(args.exclude)
     exclude_methods = set(args.exclude_method)
+    only_ds = args.only
 
     methods_first, _ = read_raw(Path(args.metric[0][1]))
     methods = [m for m in methods_first if m not in exclude_methods]
@@ -44,7 +50,9 @@ def main() -> None:
         for method in methods:
             vals = [
                 v[method] for ds, v in raw.items()
-                if ds not in exclude_ds and v.get(method, float("nan")) == v.get(method, float("nan"))
+                if ds not in exclude_ds
+                and (only_ds is None or ds == only_ds)
+                and v.get(method, float("nan")) == v.get(method, float("nan"))
             ]
             means[method][label] = sum(vals) / len(vals) if vals else float("nan")
 

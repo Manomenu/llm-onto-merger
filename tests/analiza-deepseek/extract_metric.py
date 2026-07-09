@@ -33,7 +33,7 @@ def extract(dataset: str, metric: str) -> dict[str, str]:
         sys.exit(f"missing: {csv_path}")
     row_values: dict[str, str] = {}
     with csv_path.open() as fh:
-        lines = [ln for ln in fh if not ln.lstrip().startswith('"#')]
+        lines = [ln for ln in fh if not ln.lstrip().lstrip('"').startswith('#')]
     for row in csv.DictReader(lines):
         if row.get("section") != "metrics":
             continue

@@ -77,7 +77,21 @@ CP="$(cat "$SRC_DIR/target/cp_full.txt")"
 echo
 echo "========================================"
 echo "  Running CoMerger (HolisticMerger)"
+# Time limit (seconds).  CoMerger's holistic-merge "refine" phase runs the
+# Pellet reasoner, whose RBox automaton construction blows up (exponential)
+# on ontologies with many object-property chains (e.g. SWO, which pulls in
+# BFO/RO/OBI).  On such pairs it never terminates, so we cap it and record a
+# timeout marker instead of hanging the whole analysis run.  Override with
+# COMERGER_TIMEOUT=<seconds> (0 disables the limit).
+COMERGER_TIMEOUT="${COMERGER_TIMEOUT:-180}"
+TIMEOUT_MARKER="$OUT_DIR_ABS/comerger_timeout.txt"
+rm -f "$TIMEOUT_MARKER"
+
 echo "========================================"
+echo "  time limit: ${COMERGER_TIMEOUT}s (COMERGER_TIMEOUT to override; 0 = none)"
+
+# Run java in the background so a watchdog can enforce the limit portably
+# (macOS has no `timeout`/`gtimeout` by default).
 java --add-opens=java.base/java.lang=ALL-UNNAMED \
   -cp "$CP" \
   fusion.comerger.algorithm.merger.holisticMerge.CoMergerRunner \
@@ -85,10 +99,41 @@ java --add-opens=java.base/java.lang=ALL-UNNAMED \
   "$ONT2_ABS" \
   "$ALIGNMENT_ABS" \
   "$OUT_DIR_ABS/merged_ontology.owl" \
-  2>&1 | tee "$OUT_DIR_ABS/run.log"
+  >"$OUT_DIR_ABS/run.log" 2>&1 &
+JAVA_PID=$!
+
+TIMED_OUT=0
+if [ "$COMERGER_TIMEOUT" -gt 0 ]; then
+  elapsed=0
+  while kill -0 "$JAVA_PID" 2>/dev/null; do
+    if [ "$elapsed" -ge "$COMERGER_TIMEOUT" ]; then
+      TIMED_OUT=1
+      echo "  TIMEOUT: CoMerger exceeded ${COMERGER_TIMEOUT}s — killing PID $JAVA_PID" \
+        | tee -a "$OUT_DIR_ABS/run.log"
+      pkill -P "$JAVA_PID" 2>/dev/null || true
+      kill -TERM "$JAVA_PID" 2>/dev/null || true
+      sleep 2
+      kill -KILL "$JAVA_PID" 2>/dev/null || true
+      break
+    fi
+    sleep 2
+    elapsed=$((elapsed + 2))
+  done
+fi
+
+JAVA_RC=0
+wait "$JAVA_PID" 2>/dev/null || JAVA_RC=$?
+
+if [ "$TIMED_OUT" = "1" ]; then
+  printf 'CoMerger timed out after %s seconds (limit reached).\n' "$COMERGER_TIMEOUT" \
+    > "$TIMEOUT_MARKER"
+  rm -f "$OUT_DIR_ABS/merged_ontology.owl"
+  echo "TIMEOUT: no merged_ontology.owl produced — wrote $TIMEOUT_MARKER" >&2
+  exit 124
+fi
 
 if [ ! -f "$OUT_DIR_ABS/merged_ontology.owl" ]; then
-  echo "ERROR: CoMerger did not produce $OUT_DIR_ABS/merged_ontology.owl" >&2
+  echo "ERROR: CoMerger did not produce $OUT_DIR_ABS/merged_ontology.owl (java exit $JAVA_RC)" >&2
   exit 1
 fi
 

@@ -45,7 +45,7 @@ bash analyze-all.sh --no-run                   # aggregate only; skip missing da
 
 Dataset lists (display labels, same as article_analysis_deepseek):
 
-- **s2 / core dimensions:** confOf-ekaw, human-mouse, swo-acm, swo-union
+- **s2 / core dimensions:** confOf-ekaw, human-mouse, swo-acm
 - **s3 (reference-input):** cmt-edas, confOf-ekaw, human-mouse
 - **OAEI validation:** confOf-ekaw, human-mouse — cmt-edas is measured only
   under the reference input (s3), and the OAEI validation hard-requires each
@@ -65,5 +65,4 @@ Dimensions mirrored from `tests/analiza-variance/`: accuracy (TPR),
 conciseness (SUR, SR), structural_coherence (cycle count — table only),
 knowledge_completeness (NCRC, NIRC, TCC), hierarchy_integration_quality (ARC,
 depth, breadth %-change), understandability (CCR), domain_coherence
-(applied-alignments %-change, multi-D/R, **and** the OAEI reference
-validation).
+(applied-alignments %-change **and** the OAEI reference validation).

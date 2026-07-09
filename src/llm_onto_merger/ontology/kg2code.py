@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from rdflib import OWL, RDF, RDFS, Graph, Literal, URIRef
+from rdflib.namespace import split_uri
 
 from ..logger import get_logger
 from .uri import namespace_of
@@ -163,6 +164,24 @@ def graph_to_string(graph: Graph, ns_to_code: dict[str, str]) -> str:
     return "\n".join(lines)
 
 
+def _predicate_serializable(p: URIRef) -> bool:
+    """True iff *p* can be written as an RDF/XML predicate (a splittable QName).
+
+    RDF/XML emits every predicate as an element QName, so its local part must be
+    a valid XML NCName.  LLM hallucinations occasionally yield a decodable but
+    non-NCName local name (e.g. 'http://merged#alias?' from a stray 'zz::alias?')
+    which decodes fine yet makes graph.serialize(format="xml") raise
+    ValueError("Can't split ...").  We mirror the serializer's own check
+    (rdflib.namespace.split_uri) so such triples are dropped up front instead of
+    crashing the whole merge at save time.
+    """
+    try:
+        split_uri(str(p))
+        return True
+    except ValueError:
+        return False
+
+
 def _is_valid_entity(e: Entity, code_to_ns: dict[str, str]) -> bool:
     uri = e.uri.strip()
     if not uri:
@@ -282,8 +301,18 @@ def entities_to_graph(entities: list[Entity], code_to_ns: dict[str, str]) -> tup
                     )
                     p = fallback
             o = _decode(o_coded, code_to_ns)
-            if isinstance(p, URIRef):
+            if isinstance(p, URIRef) and _predicate_serializable(p):
                 graph.add((subj, p, o))
+            elif isinstance(p, URIRef):
+                # Decoded to a URI but its local name is not a valid XML NCName
+                # (e.g. 'http://merged#alias?') — unusable as an RDF/XML
+                # predicate, so drop it rather than crash serialization later.
+                log.warning(
+                    "Triple dropped: predicate '%s' → '%s' is not RDF/XML-serializable "
+                    "(invalid NCName local name; subject was '%s')",
+                    p_coded, str(p), entity.uri,
+                )
+                bad_preds.append((entity.uri, p_coded))
             else:
                 log.warning(
                     "Triple dropped: predicate '%s' did not decode as URI (subject was '%s')",

@@ -39,7 +39,7 @@ def deepseek_value(metric: str, label: str) -> str:
     if not p.exists():
         return ""
     with p.open() as fh:
-        lines = [ln for ln in fh if not ln.lstrip().startswith('"#')]
+        lines = [ln for ln in fh if not ln.lstrip().lstrip('"').startswith('#')]
     for row in csv.DictReader(lines):
         if (
             row.get("section") == "metrics"

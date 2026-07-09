@@ -18,6 +18,7 @@ charts are visually consistent with the single-run thesis figures.
 import argparse
 import csv
 import math
+import os
 from pathlib import Path
 
 import matplotlib
@@ -144,7 +145,20 @@ def main() -> None:
         subtitle = f"{args.title}  ({tag})" if args.title else tag
     if subtitle:
         fig.suptitle(subtitle, fontsize=12, wrap=True)
-    plt.tight_layout(rect=(0, 0, 1, 0.94) if subtitle else None)
+
+    # CoMerger timeout footnote: analyze-all.sh exports COMERGER_TIMEOUT_NOTE
+    # when a dataset's CoMerger run hit the 3-min cap.  Any CoMerger bar shown
+    # here is a mean over the *remaining* datasets, so flag that explicitly.
+    timeout_note = os.environ.get("COMERGER_TIMEOUT_NOTE", "").strip()
+    bottom_rect = 0.0
+    if timeout_note:
+        # Plain-text prefix (no emoji): DejaVu Sans lacks the stopwatch glyph.
+        fig.text(0.5, 0.01, f"Note: {timeout_note}", ha="center", va="bottom",
+                 fontsize=8, color="#8a5000", wrap=True)
+        bottom_rect = 0.05
+
+    top_rect = 0.94 if subtitle else 1.0
+    plt.tight_layout(rect=(0, bottom_rect, 1, top_rect))
     plt.savefig(args.output, dpi=150,
                 format="jpg" if args.output.suffix == ".jpg" else None)
     print(f"wrote {args.output}")

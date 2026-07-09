@@ -27,6 +27,7 @@ Two outputs are written:
 
 import argparse
 import csv
+import os
 import statistics
 from pathlib import Path
 
@@ -97,8 +98,16 @@ def main() -> None:
 
     n_turns = len(args.input)
 
+    # CoMerger timeout note (set by analyze-all.sh when a dataset hit the 3-min
+    # cap): recorded as a leading '#' comment so the tables document that any
+    # CoMerger row is a mean over the remaining datasets.  Readers (plot_turns)
+    # skip '#'-prefixed lines.
+    timeout_note = os.environ.get("COMERGER_TIMEOUT_NOTE", "").strip()
+
     # ── wide plot CSV: method, m1, m1_min, m1_max, m2, m2_min, m2_max, ... ──
     with args.output.open("w", newline="") as fh:
+        if timeout_note:
+            fh.write(f"# NOTE: {timeout_note}\n")
         w = csv.writer(fh)
         header = ["method"]
         for metric in metrics:
@@ -117,6 +126,8 @@ def main() -> None:
     # ── plus-minus table CSV (thesis) ──
     if args.pm_output is not None:
         with args.pm_output.open("w", newline="") as fh:
+            if timeout_note:
+                fh.write(f"# NOTE: {timeout_note}\n")
             fh.write(f"# median [min; max] across {n_turns} turn(s); "
                      f"per-turn CSVs: {', '.join(str(p) for p in args.input)}\n")
             w = csv.writer(fh)

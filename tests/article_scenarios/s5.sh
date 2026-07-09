@@ -10,12 +10,12 @@
 # so N independent repetitions of the same datasets can coexist.
 #
 # Fixed dataset batch (tests/inputs folders):
-#   swo-acm, confOf-ekaw, human-mouse, swo-union
-# (conference/cmt-edas is deliberately absent — it is measured only under the
+#   swo-acm, confOf-ekaw, human-mouse
+# (all three carry a reference.rdf, so the same set is used under the
 # reference-alignment input, i.e. s6.sh.)
 #
 # Usage:
-#   tests/article_scenarios/s5.sh                             # all 4 datasets
+#   tests/article_scenarios/s5.sh                             # all 3 datasets
 #   tests/article_scenarios/s5.sh --label turn1               # outputs under outputs/turn1/s5/
 #   tests/article_scenarios/s5.sh --label turn1 --only swo-acm  # single dataset backfill
 #   tests/article_scenarios/s5.sh --model openai/gpt-4o-mini  # other OpenRouter model
@@ -65,7 +65,6 @@ DATASETS=(
   "swo-acm     swo-acm"
   "confOf-ekaw confOf-ekaw"
   "human-mouse human-mouse"
-  "swo-union   swo-union"
 )
 
 # ── Hardcoded config ─────────────────────────────────────────────────────────
@@ -146,7 +145,7 @@ fi
 
 echo "========================================"
 echo "  s5 / batch run (AML input, OpenRouter)"
-echo "    datasets:    swo-acm, confOf-ekaw, human-mouse, swo-union"
+echo "    datasets:    swo-acm, confOf-ekaw, human-mouse"
 echo "    only:        $([ ${#ONLY[@]} -gt 0 ] && echo "${ONLY[*]}" || echo "(all)")"
 echo "    alignment:   $TOOL"
 echo "    max chars:   $LIMIT"
@@ -302,6 +301,8 @@ for spec in "${DATASETS[@]}"; do
   # ── CoMerger (deterministic — shared cache) ─────────────────────────────────
   if [ -f "$COMERGER_CACHE/merged_ontology.owl" ]; then
     echo "  → reusing cached CoMerger from $COMERGER_CACHE"
+  elif [ -f "$COMERGER_CACHE/comerger_timeout.txt" ]; then
+    echo "  → reusing cached CoMerger TIMEOUT from $COMERGER_CACHE — comerger column will be absent"
   elif [ "$SKIP_ALL" = "1" ]; then
     echo "  WARNING: --skip-all but $COMERGER_CACHE/merged_ontology.owl missing — CoMerger column will be absent"
   else
@@ -309,7 +310,11 @@ for spec in "${DATASETS[@]}"; do
     mkdir -p "$COMERGER_CACHE"
     if ! ./thirdparty/CoMerger-1.2/comerger.sh "$BASE" "$CANDIDATE" "$COMERGER_CACHE" \
         >"$COMERGER_CACHE/run.log" 2>&1; then
-      echo "  WARNING: CoMerger failed — comerger column will be absent. See $COMERGER_CACHE/run.log"
+      if [ -f "$COMERGER_CACHE/comerger_timeout.txt" ]; then
+        echo "  WARNING: CoMerger timed out (3 min) — comerger column will be absent. See $COMERGER_CACHE/run.log"
+      else
+        echo "  WARNING: CoMerger failed — comerger column will be absent. See $COMERGER_CACHE/run.log"
+      fi
     fi
   fi
   if [ -f "$COMERGER_CACHE/merged_ontology.owl" ]; then
@@ -318,6 +323,9 @@ for spec in "${DATASETS[@]}"; do
       cp "$COMERGER_CACHE/comerger_stats.json" "$OUT_DIR/comerger_stats.json"
     fi
     echo "  → comerger_ontology.owl ← $COMERGER_CACHE/merged_ontology.owl"
+  elif [ -f "$COMERGER_CACHE/comerger_timeout.txt" ]; then
+    cp "$COMERGER_CACHE/comerger_timeout.txt" "$OUT_DIR/comerger_timeout.txt"
+    echo "  → comerger_timeout.txt ← $COMERGER_CACHE (CoMerger exceeded 3-min limit)"
   fi
 
   # ── Report (single-scenario: metrics + insights + baselines) ────────────────

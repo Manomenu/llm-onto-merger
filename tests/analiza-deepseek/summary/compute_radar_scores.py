@@ -68,7 +68,7 @@ def extract_from_mir(metric: str) -> dict[str, dict[str, float]]:
         p = SCEN_OUT / ds / f"m_i_raport_{ds}.csv"
         if p.exists():
             with p.open() as fh:
-                lines = [ln for ln in fh if not ln.lstrip().startswith('"#')]
+                lines = [ln for ln in fh if not ln.lstrip().lstrip('"').startswith('#')]
             for row in csv.DictReader(lines):
                 if row.get("section") != "metrics" or row.get("metric") != metric:
                     continue
@@ -81,7 +81,7 @@ def extract_from_mir(metric: str) -> dict[str, dict[str, float]]:
         p5 = SCEN_OUT / "s5" / label / f"m_i_raport_{label}.csv"
         if p5.exists():
             with p5.open() as fh:
-                lines = [ln for ln in fh if not ln.lstrip().startswith('"#')]
+                lines = [ln for ln in fh if not ln.lstrip().lstrip('"').startswith('#')]
             for row in csv.DictReader(lines):
                 if (row.get("section") == "metrics" and row.get("metric") == metric
                         and row.get("graph") == "merged_ontology"):

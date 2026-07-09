@@ -19,13 +19,13 @@
 # s5.sh/s6.sh --label <turn> --only <dataset>), then aggregates the combined
 # columns.
 #
-# Dataset lists (display labels):
-#   s5 / core (all non-OAEI dims):   confOf-ekaw human-mouse swo-acm swo-union
-#   s6 (reference-input):            cmt-edas confOf-ekaw human-mouse
-#   OAEI validation:                 confOf-ekaw human-mouse — cmt-edas is
-#     measured ONLY under the reference input, and oaei_rejection.py
-#     hard-requires each dataset's AML-input run (applied_stats.json) for the
-#     accepted-AML-FP measure, so cmt-edas cannot appear in the OAEI charts.
+# Dataset lists (display labels).  All three carry a reference.rdf, so the same
+# set is used everywhere (swo-union and cmt-edas were dropped):
+#   s5 / core (all non-OAEI dims):   confOf-ekaw human-mouse swo-acm
+#   s6 (reference-input):            confOf-ekaw human-mouse swo-acm
+#   OAEI validation:                 confOf-ekaw human-mouse swo-acm — each has
+#     both an AML-input (s5) and reference-input (s6) run, which oaei_rejection.py
+#     requires (applied_stats.json) for the accepted-AML-FP measure.
 #
 # Usage:
 #   bash analyze-all.sh                       # turns = turn1 turn2 turn3 (default)
@@ -67,12 +67,10 @@ else
 fi
 
 # Display labels as produced by s5.sh / s6.sh.
-CORE_DATASETS=(confOf-ekaw human-mouse swo-acm swo-union)
-S6_DATASETS=(cmt-edas confOf-ekaw human-mouse)  # reference-input runs
+CORE_DATASETS=(confOf-ekaw human-mouse swo-acm)
+S6_DATASETS=(confOf-ekaw human-mouse swo-acm)  # reference-input runs (same 3)
 
 DATASETS=("${CORE_DATASETS[@]}")
-SUR_DATASETS=(confOf-ekaw swo-union)
-DR_DATASETS=(confOf-ekaw swo-union)
 
 # Output-dir tags as computed by s5.sh/s6.sh with default flags
 # (limit 15000, parallel 1000, model deepseek/deepseek-v4-flash).
@@ -93,10 +91,7 @@ _gptoss_view_exists() {  # turn, display label — step 0 built this view
 }
 
 _input_for() {  # display label -> tests/inputs folder name
-  case "$1" in
-    cmt-edas) echo conference ;;
-    *)        echo "$1" ;;
-  esac
+  echo "$1"
 }
 
 # ── Granular backfill: look INSIDE the dataset dir and run only what's missing.
@@ -153,7 +148,7 @@ for T in "${TURNS[@]}"; do
 done
 
 # ── Active turns for the "core" dimensions: each needs BOTH sides complete
-# for all 4 core datasets (gpt-oss view from step 0 + deepseek s5 report). ──
+# for all 3 core datasets (gpt-oss view from step 0 + deepseek s5 report). ──
 CORE_TURNS=()
 for T in "${TURNS[@]}"; do
   ok=1
@@ -163,7 +158,7 @@ for T in "${TURNS[@]}"; do
   if [ "$ok" = "1" ]; then
     CORE_TURNS+=("$T")
   else
-    echo "  WARNING: turn '$T' is missing core (4-dataset) gpt-oss and/or deepseek data — excluded from all core-dimension aggregates."
+    echo "  WARNING: turn '$T' is missing core (3-dataset) gpt-oss and/or deepseek data — excluded from all core-dimension aggregates."
   fi
 done
 
@@ -185,28 +180,50 @@ _extract() {  # turn, metric, output csv, datasets...
       --output "$out"
 }
 
+# ── Per-dataset grouped charts (NO averaging over datasets) ─────────────────
+# One figure per metric with datasets as coloured series (x = method), min/max
+# whiskers across turns — see article_analysis_gptoss/analyze-all.sh.
+# _grouped <dim> <base> <agg_fn> <plot-args...>: <agg_fn> <turn> <dataset> <out>
+# produces that dataset's aggregation (via --only); results are combined across
+# turns and drawn as series in <dim>/<base>.jpg.
+_grouped() {
+  local dim="$1" base="$2" aggfn="$3"; shift 3
+  local plot_args=("$@")
+  local PLOT_DS=() ds T DS_INPUTS
+  for ds in "${DATASETS[@]}"; do
+    DS_INPUTS=()
+    for T in "${CORE_TURNS[@]}"; do
+      mkdir -p "$dim/work/$T"
+      "$aggfn" "$T" "$ds" "$dim/work/$T/${base}_agg_${ds}.csv"
+      DS_INPUTS+=(--input "$dim/work/$T/${base}_agg_${ds}.csv")
+    done
+    uv run python3 combine_turns.py "${DS_INPUTS[@]}" \
+        --output "$dim/work/${base}_${ds}.csv" \
+        --pm-output "$dim/work/${base}_pm_${ds}.csv"
+    PLOT_DS+=(--dataset "$ds" "$dim/work/${base}_${ds}.csv")
+  done
+  uv run python3 plot_grouped.py "${PLOT_DS[@]}" \
+      --output "$dim/${base}.jpg" --n-turns "$N_CORE" "${plot_args[@]}"
+}
+
 # ═══════════════════════════════════════════════════════════════════════════
 # accuracy — triple_preservation_ratio (aggregate_mean, exclude Naive Union)
 # ═══════════════════════════════════════════════════════════════════════════
 echo; echo "--- accuracy ---"
 DIM=accuracy
 mkdir -p "$DIM"
-AGG_INPUTS=()
 for T in "${CORE_TURNS[@]}"; do
   mkdir -p "$DIM/work/$T"
   _extract "$T" triple_preservation_ratio \
       "$DIM/work/$T/raw_triple_preservation_ratio.csv" "${DATASETS[@]}"
-  uv run python3 ../analiza/aggregate_mean.py \
-      --metric "Triple Preservation Ratio" "$DIM/work/$T/raw_triple_preservation_ratio.csv" \
-      --exclude-method "Naive Union" \
-      --output "$DIM/work/$T/agg.csv"
-  AGG_INPUTS+=(--input "$DIM/work/$T/agg.csv")
 done
-uv run python3 combine_turns.py "${AGG_INPUTS[@]}" \
-    --output "$DIM/tpr_med.csv" --pm-output "$DIM/tpr_pm.csv"
-uv run python3 plot_turns.py \
-    --input "$DIM/tpr_med.csv" --output "$DIM/tpr_med.jpg" --n-turns "$N_CORE" \
-    --ylabel-for "Triple Preservation Ratio" "Triple preservation ratio (avg over 4 datasets)" \
+_agg_accuracy() {  # turn, only-dataset, out
+  uv run python3 ../analiza/aggregate_mean.py \
+      --metric "Triple Preservation Ratio" "$DIM/work/$1/raw_triple_preservation_ratio.csv" \
+      --exclude-method "Naive Union" --only "$2" --output "$3"
+}
+_grouped "$DIM" tpr_med _agg_accuracy \
+    --ylabel-for "Triple Preservation Ratio" "Triple preservation ratio" \
     --bar-fmt "%.2f"
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -215,46 +232,49 @@ uv run python3 plot_turns.py \
 echo; echo "--- conciseness ---"
 DIM=conciseness
 mkdir -p "$DIM"
-AGG_INPUTS=()
 for T in "${CORE_TURNS[@]}"; do
   mkdir -p "$DIM/work/$T"
   _extract "$T" syntactic_uniqueness_ratio \
-      "$DIM/work/$T/raw_syntactic_uniqueness_ratio.csv" "${SUR_DATASETS[@]}"
+      "$DIM/work/$T/raw_syntactic_uniqueness_ratio.csv" "${DATASETS[@]}"
   _extract "$T" structural_redundancy \
       "$DIM/work/$T/raw_structural_redundancy.csv" "${DATASETS[@]}"
-  uv run python3 ../analiza/aggregate_mean.py \
-      --metric "Syntactic Uniqueness Ratio" "$DIM/work/$T/raw_syntactic_uniqueness_ratio.csv" \
-      --metric "Structural Redundancy" "$DIM/work/$T/raw_structural_redundancy.csv" \
-      --output "$DIM/work/$T/agg.csv"
-  AGG_INPUTS+=(--input "$DIM/work/$T/agg.csv")
 done
-uv run python3 combine_turns.py "${AGG_INPUTS[@]}" \
-    --output "$DIM/conciseness_med.csv" --pm-output "$DIM/conciseness_pm.csv"
-uv run python3 plot_turns.py \
-    --input "$DIM/conciseness_med.csv" --output "$DIM/conciseness_med.jpg" --n-turns "$N_CORE" \
-    --ylabel-for "Syntactic Uniqueness Ratio" "Syntactic uniqueness ratio (avg)" \
-    --ylabel-for "Structural Redundancy" "Structural redundancy (avg)" \
+_agg_conciseness() {  # turn, only-dataset, out
+  uv run python3 ../analiza/aggregate_mean.py \
+      --metric "Syntactic Uniqueness Ratio" "$DIM/work/$1/raw_syntactic_uniqueness_ratio.csv" \
+      --metric "Structural Redundancy" "$DIM/work/$1/raw_structural_redundancy.csv" \
+      --only "$2" --output "$3"
+}
+_grouped "$DIM" conciseness_med _agg_conciseness \
+    --ylabel-for "Syntactic Uniqueness Ratio" "Syntactic uniqueness ratio" \
+    --ylabel-for "Structural Redundancy" "Structural redundancy" \
     --bar-fmt "%.2f"
 
 # ═══════════════════════════════════════════════════════════════════════════
-# structural_coherence — cycle_count (aggregate_mean, all 4 ds).  Table only —
+# structural_coherence — cycle_count (aggregate_mean, all 3 ds).  Table only —
 # mirrors tests/analiza-variance (the original has no chart for this metric).
 # ═══════════════════════════════════════════════════════════════════════════
 echo; echo "--- structural_coherence ---"
 DIM=structural_coherence
 mkdir -p "$DIM"
-AGG_INPUTS=()
 for T in "${CORE_TURNS[@]}"; do
   mkdir -p "$DIM/work/$T"
   _extract "$T" cycle_count "$DIM/work/$T/raw_cycle_count.csv" "${DATASETS[@]}"
-  uv run python3 ../analiza/aggregate_mean.py \
-      --metric "Cycle Count" "$DIM/work/$T/raw_cycle_count.csv" \
-      --output "$DIM/work/$T/agg.csv"
-  AGG_INPUTS+=(--input "$DIM/work/$T/agg.csv")
 done
-uv run python3 combine_turns.py "${AGG_INPUTS[@]}" \
-    --output "$DIM/cycle_count_med.csv" --pm-output "$DIM/cycle_count_pm.csv"
-echo "(no chart for structural_coherence — mirrors the original's table-only output)"
+# Table only (no chart, as in the original) — but per dataset, not averaged.
+for ds in "${DATASETS[@]}"; do
+  CC_INPUTS=()
+  for T in "${CORE_TURNS[@]}"; do
+    uv run python3 ../analiza/aggregate_mean.py \
+        --metric "Cycle Count" "$DIM/work/$T/raw_cycle_count.csv" \
+        --only "$ds" --output "$DIM/work/$T/cc_agg_${ds}.csv"
+    CC_INPUTS+=(--input "$DIM/work/$T/cc_agg_${ds}.csv")
+  done
+  uv run python3 combine_turns.py "${CC_INPUTS[@]}" \
+      --output "$DIM/work/cycle_count_med_${ds}.csv" \
+      --pm-output "$DIM/cycle_count_pm_${ds}.csv"
+done
+echo "(no chart for structural_coherence — per-dataset table only)"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # knowledge_completeness — NCRC+NIRC (aggregate_mean, exclude Naive Union,
@@ -263,67 +283,57 @@ echo "(no chart for structural_coherence — mirrors the original's table-only o
 echo; echo "--- knowledge_completeness ---"
 DIM=knowledge_completeness
 mkdir -p "$DIM"
-NCRC_INPUTS=(); TCC_INPUTS=()
 for T in "${CORE_TURNS[@]}"; do
   mkdir -p "$DIM/work/$T"
   _extract "$T" new_cross_onto_relations_count "$DIM/work/$T/raw_ncrc.csv" "${DATASETS[@]}"
   _extract "$T" new_intra_onto_relations_count "$DIM/work/$T/raw_nirc.csv" "${DATASETS[@]}"
   _extract "$T" triple_count_delta "$DIM/work/$T/raw_tcc.csv" "${DATASETS[@]}"
-  uv run python3 ../analiza/aggregate_mean.py \
-      --metric "NCRC" "$DIM/work/$T/raw_ncrc.csv" \
-      --metric "NIRC" "$DIM/work/$T/raw_nirc.csv" \
-      --exclude-method "Naive Union" \
-      --output "$DIM/work/$T/agg_ncrc_nirc.csv"
-  uv run python3 ../analiza/aggregate_mean.py \
-      --metric "Triples Count Change" "$DIM/work/$T/raw_tcc.csv" \
-      --exclude-method "Naive Union" \
-      --output "$DIM/work/$T/agg_tcc.csv"
-  NCRC_INPUTS+=(--input "$DIM/work/$T/agg_ncrc_nirc.csv")
-  TCC_INPUTS+=(--input "$DIM/work/$T/agg_tcc.csv")
 done
-uv run python3 combine_turns.py "${NCRC_INPUTS[@]}" \
-    --output "$DIM/ncrc_nirc_med.csv" --pm-output "$DIM/ncrc_nirc_pm.csv"
-uv run python3 plot_turns.py \
-    --input "$DIM/ncrc_nirc_med.csv" --output "$DIM/ncrc_nirc_med.jpg" --n-turns "$N_CORE" \
-    --ylabel-for "NCRC" "New cross-onto relations (avg, log)" \
-    --ylabel-for "NIRC" "New intra-onto relations (avg, log)" \
-    --log-for "NCRC" \
-    --log-for "NIRC" \
-    --bar-fmt "%.1f"
-uv run python3 combine_turns.py "${TCC_INPUTS[@]}" \
-    --output "$DIM/tcc_med.csv" --pm-output "$DIM/tcc_pm.csv"
-uv run python3 plot_turns.py \
-    --input "$DIM/tcc_med.csv" --output "$DIM/tcc_med.jpg" --n-turns "$N_CORE" \
-    --ylabel-for "Triples Count Change" "Triples count change (avg)" \
-    --bar-fmt "%+.0f"
+# Absolute counts → symlog Y so every dataset stays visible (per-dataset).
+_agg_ncrc_nirc() {  # turn, only-dataset, out
+  uv run python3 ../analiza/aggregate_mean.py \
+      --metric "NCRC" "$DIM/work/$1/raw_ncrc.csv" \
+      --metric "NIRC" "$DIM/work/$1/raw_nirc.csv" \
+      --exclude-method "Naive Union" --only "$2" --output "$3"
+}
+_grouped "$DIM" ncrc_nirc_med _agg_ncrc_nirc \
+    --ylabel-for "NCRC" "New cross-onto relations (log)" \
+    --ylabel-for "NIRC" "New intra-onto relations (log)" \
+    --log-for "NCRC" --log-for "NIRC" --bar-fmt "%.0f"
+_agg_tcc() {  # turn, only-dataset, out
+  uv run python3 ../analiza/aggregate_mean.py \
+      --metric "Triples Count Change" "$DIM/work/$1/raw_tcc.csv" \
+      --exclude-method "Naive Union" --only "$2" --output "$3"
+}
+_grouped "$DIM" tcc_med _agg_tcc \
+    --ylabel-for "Triples Count Change" "Triples count change (symlog)" \
+    --log-for "Triples Count Change" --bar-fmt "%+.0f"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # hierarchy_integration_quality — average_depth/ARC/average_breadth/max_breadth
-# (aggregate_pct, exclude dataset swo-union; max_depth dropped as in original)
+# (aggregate_pct over all datasets; max_depth dropped as in original)
 # ═══════════════════════════════════════════════════════════════════════════
 echo; echo "--- hierarchy_integration_quality ---"
 DIM=hierarchy_integration_quality
 mkdir -p "$DIM"
 HIQ_METRICS=(ARC average_depth max_depth average_breadth max_breadth)
-AGG_INPUTS=()
 for T in "${CORE_TURNS[@]}"; do
   mkdir -p "$DIM/work/$T"
   for METRIC in "${HIQ_METRICS[@]}"; do
     _extract "$T" "$METRIC" "$DIM/work/$T/raw_${METRIC}.csv" "${DATASETS[@]}"
   done
-  uv run python3 ../analiza/aggregate_pct.py \
-      --metric average_depth "$DIM/work/$T/raw_average_depth.csv" \
-      --metric ARC "$DIM/work/$T/raw_ARC.csv" \
-      --metric average_breadth "$DIM/work/$T/raw_average_breadth.csv" \
-      --metric max_breadth "$DIM/work/$T/raw_max_breadth.csv" \
-      --exclude swo-union \
-      --output "$DIM/work/$T/agg.csv"
-  AGG_INPUTS+=(--input "$DIM/work/$T/agg.csv")
 done
-uv run python3 combine_turns.py "${AGG_INPUTS[@]}" \
-    --output "$DIM/hiq_pct_change_med.csv" --pm-output "$DIM/hiq_pct_change_pm.csv"
-uv run python3 plot_turns.py \
-    --input "$DIM/hiq_pct_change_med.csv" --output "$DIM/hiq_pct_change_med.jpg" --n-turns "$N_CORE"
+_agg_hiq() {  # turn, only-dataset, out — %-change vs Naive Union, that dataset only
+  uv run python3 ../analiza/aggregate_pct.py \
+      --metric average_depth "$DIM/work/$1/raw_average_depth.csv" \
+      --metric ARC "$DIM/work/$1/raw_ARC.csv" \
+      --metric average_breadth "$DIM/work/$1/raw_average_breadth.csv" \
+      --metric max_breadth "$DIM/work/$1/raw_max_breadth.csv" \
+      --only "$2" --output "$3"
+}
+# average_depth and ARC span very different %-changes across datasets → symlog Y.
+_grouped "$DIM" hiq_pct_change_med _agg_hiq --bar-fmt "%+.1f" \
+    --log-for average_depth --log-for ARC
 
 # ═══════════════════════════════════════════════════════════════════════════
 # understandability — comment_coverage_ratio (aggregate_mean, no excludes)
@@ -331,65 +341,43 @@ uv run python3 plot_turns.py \
 echo; echo "--- understandability ---"
 DIM=understandability
 mkdir -p "$DIM"
-AGG_INPUTS=()
 for T in "${CORE_TURNS[@]}"; do
   mkdir -p "$DIM/work/$T"
   _extract "$T" comment_coverage_ratio \
       "$DIM/work/$T/raw_comment_coverage_ratio.csv" "${DATASETS[@]}"
-  uv run python3 ../analiza/aggregate_mean.py \
-      --metric "Comment Coverage Ratio" "$DIM/work/$T/raw_comment_coverage_ratio.csv" \
-      --output "$DIM/work/$T/agg.csv"
-  AGG_INPUTS+=(--input "$DIM/work/$T/agg.csv")
 done
-uv run python3 combine_turns.py "${AGG_INPUTS[@]}" \
-    --output "$DIM/ccr_med.csv" --pm-output "$DIM/ccr_pm.csv"
-uv run python3 plot_turns.py \
-    --input "$DIM/ccr_med.csv" --output "$DIM/ccr_med.jpg" --n-turns "$N_CORE" \
-    --ylabel-for "Comment Coverage Ratio" "Comment coverage ratio (avg over 4 datasets)" \
+_agg_understand() {  # turn, only-dataset, out
+  uv run python3 ../analiza/aggregate_mean.py \
+      --metric "Comment Coverage Ratio" "$DIM/work/$1/raw_comment_coverage_ratio.csv" \
+      --only "$2" --output "$3"
+}
+_grouped "$DIM" ccr_med _agg_understand \
+    --ylabel-for "Comment Coverage Ratio" "Comment coverage ratio" \
     --bar-fmt "%.2f"
 
 # ═══════════════════════════════════════════════════════════════════════════
-# domain_coherence (a) — non-OAEI: Applied Alignments %-change + Multi D/R mean
+# domain_coherence (a) — non-OAEI: Multi D/R mean.  (The applied-alignments
+# %-change measure was dropped from the paper — symmetric count, superseded
+# by the ground-truth OAEI measures below — so this dimension now has one
+# non-OAEI metric instead of two, and no longer needs merge_csvs.py to
+# combine two per-(turn,dataset) aggregates into one.)
 # ═══════════════════════════════════════════════════════════════════════════
 echo; echo "--- domain_coherence (non-OAEI) ---"
 DIM=domain_coherence
 mkdir -p "$DIM"
-AA_INPUTS=(); MDR_INPUTS=()
 for T in "${CORE_TURNS[@]}"; do
   mkdir -p "$DIM/work/$T"
-  _extract "$T" applied_alignments \
-      "$DIM/work/$T/raw_applied_alignments.csv" "${DATASETS[@]}"
   _extract "$T" multi_domain_range_change_per_alignment \
-      "$DIM/work/$T/raw_multi_dr.csv" "${DR_DATASETS[@]}"
-  uv run python3 ../analiza/aggregate_pct.py \
-      --metric "Applied Alignments" "$DIM/work/$T/raw_applied_alignments.csv" \
-      --baseline "Applied Alignments" \
-      --exclude-method "Naive Union" \
-      --exclude-method "Applied Alignments" \
-      --output "$DIM/work/$T/agg_applied_alignments.csv"
-  uv run python3 ../analiza/aggregate_mean.py \
-      --metric "Multi D/R Change per Alignment" "$DIM/work/$T/raw_multi_dr.csv" \
-      --exclude-method "Naive Union" \
-      --exclude-method "Applied Alignments" \
-      --output "$DIM/work/$T/agg_multi_dr.csv"
-  AA_INPUTS+=(--input "$DIM/work/$T/agg_applied_alignments.csv")
-  MDR_INPUTS+=(--input "$DIM/work/$T/agg_multi_dr.csv")
+      "$DIM/work/$T/raw_multi_dr.csv" "${DATASETS[@]}"
 done
-uv run python3 combine_turns.py "${AA_INPUTS[@]}" \
-    --output "$DIM/applied_alignments_med.csv" --pm-output "$DIM/applied_alignments_pm.csv"
-uv run python3 combine_turns.py "${MDR_INPUTS[@]}" \
-    --output "$DIM/multi_dr_med.csv" --pm-output "$DIM/multi_dr_pm.csv"
-# Combined chart (mirrors the original's merge_csvs.py → one plot call).
-uv run python3 ../analiza/merge_csvs.py \
-    --input "$DIM/applied_alignments_med.csv" \
-    --input "$DIM/multi_dr_med.csv" \
-    --output "$DIM/domain_coherence_combined_med.csv"
-uv run python3 plot_turns.py \
-    --input "$DIM/domain_coherence_combined_med.csv" \
-    --output "$DIM/domain_coherence_combined_med.jpg" --n-turns "$N_CORE" \
-    --ylabel-for "Applied Alignments" "% change vs Applied Alignments" \
+_agg_dc() {  # turn, only-dataset, out
+  uv run python3 ../analiza/aggregate_mean.py \
+      --metric "Multi D/R Change per Alignment" "$DIM/work/$1/raw_multi_dr.csv" \
+      --exclude-method "Naive Union" --exclude-method "Applied Alignments" \
+      --only "$2" --output "$3"
+}
+_grouped "$DIM" domain_coherence_combined_med _agg_dc \
     --ylabel-for "Multi D/R Change per Alignment" "Multi D/R Δ per alignment" \
-    --bar-fmt-for "Applied Alignments" "%+.1f%%" \
     --bar-fmt-for "Multi D/R Change per Alignment" "%+.2f"
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -397,13 +385,13 @@ uv run python3 plot_turns.py \
 # The gpt-oss per-turn CSV comes straight from article_analysis_gptoss's step-0
 # run; only the deepseek run of oaei_rejection.py happens here, and
 # merge_oaei_runs.py grafts its "Proposed" row in as the extra method column.
-# cmt-edas is excluded (reference-input only — no AML-input run exists).
+# All three datasets have both an AML-input (s5) and reference-input (s6) run.
+# Restyled to the same _grouped house style as every other dimension: per-
+# dataset pm CSVs + ONE grouped JPG with datasets as series.
 # ═══════════════════════════════════════════════════════════════════════════
 echo; echo "--- domain_coherence (OAEI validation) ---"
-OAEI_DATASETS=(confOf-ekaw human-mouse)
+OAEI_DATASETS=(confOf-ekaw human-mouse swo-acm)
 mkdir -p "$DIM/work"
-OAEI_PM_INPUTS=()
-N_OAEI_TURNS=0
 for T in "${TURNS[@]}"; do
   mkdir -p "$DIM/work/$T"
   GPTOSS_OAEI="$GPTOSS/domain_coherence/work/$T/oaei.csv"
@@ -432,20 +420,36 @@ for T in "${TURNS[@]}"; do
     uv run python3 merge_oaei_runs.py \
         --gptoss "$GPTOSS_OAEI" --deepseek "$DIM/work/$T/oaei_deepseek.csv" \
         --output "$DIM/work/$T/oaei.csv"
-    OAEI_PM_INPUTS+=(--input "$DIM/work/$T/oaei.csv")
-    N_OAEI_TURNS=$((N_OAEI_TURNS + 1))
   else
     echo "  [$T] no deepseek OAEI datasets available for this turn — skipped for OAEI aggregation."
   fi
 done
-if [ "$N_OAEI_TURNS" -gt 0 ]; then
-  uv run python3 combine_oaei.py "${OAEI_PM_INPUTS[@]}" \
-      --pm-output "$DIM/adjusted_oaei_rejection_pm.csv" \
-      --jpg-output "$DIM/adjusted_oaei_rejection_med.jpg" \
-      --n-turns "$N_OAEI_TURNS"
-else
-  echo "  OAEI aggregation skipped entirely — no turn had both sides' OAEI data."
-fi
+# _grouped reuses CORE_TURNS/DATASETS — a turn/dataset cell with no oaei.csv
+# (or no row for that dataset) yields an empty per-turn agg CSV from
+# oaei_to_agg.py, which combine_turns.py's NaN-skip already treats as "no
+# data for that turn" without dropping the rest.
+_agg_oaei() {  # turn, only-dataset, out
+  uv run python3 oaei_to_agg.py \
+      --input "$DIM/work/$1/oaei.csv" --dataset "$2" --output "$3" \
+      --totals-output "$DIM/work/oaei_totals_${2}.txt"
+}
+_grouped "$DIM" adjusted_oaei_rejection_med _agg_oaei \
+    --title "Adjusted OAEI reference-alignment validation" \
+    --ylabel-for "Rejected Correct" "Rejected correct alignments (log, lower = better)" \
+    --ylabel-for "Accepted AML FP" "Accepted AML false-positives (log, lower = better)" \
+    --log-for "Rejected Correct" --log-for "Accepted AML FP" \
+    --bar-fmt "%.0f"
+# Prepend the deterministic reference_total/aml_total note (written by
+# oaei_to_agg.py) to each dataset's pm CSV, mirroring combine_turns.py's own
+# '# NOTE:' comment convention (e.g. the CoMerger-timeout note).
+for ds in "${OAEI_DATASETS[@]}"; do
+  NOTE="$DIM/work/oaei_totals_${ds}.txt"
+  PM="$DIM/work/adjusted_oaei_rejection_med_pm_${ds}.csv"
+  if [ -f "$NOTE" ] && [ -f "$PM" ]; then
+    cat "$NOTE" "$PM" > "$PM.tmp" && mv "$PM.tmp" "$PM"
+    rm -f "$NOTE"
+  fi
+done
 
 echo
 echo "=== Done. Combined median/min/max outputs under tests/article_analysis_deepseek/<dim>/ ==="
