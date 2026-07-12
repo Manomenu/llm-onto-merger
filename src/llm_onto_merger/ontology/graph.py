@@ -1,11 +1,40 @@
 import re
 from pathlib import Path
 
-from rdflib import RDFS, Graph, URIRef
+from rdflib import RDFS, Graph, Literal, URIRef
 
 from ..logger import get_logger
 
 log = get_logger(__name__)
+
+# Control characters that are illegal in XML 1.0 (everything in C0 except
+# tab / LF / CR).  LLM-generated comments/labels occasionally contain one — e.g.
+# deepseek mangled "Büchi" into "B\x00fcchi" (a NUL) — and rdflib's RDF/XML
+# serializer writes it verbatim, producing a file it can no longer re-parse
+# ("not well-formed (invalid token)").  We strip these from every literal right
+# before serialization so the output OWL is always well-formed.
+_XML_ILLEGAL_RE = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+
+def _strip_xml_illegal_chars(graph: Graph) -> int:
+    """Rewrite literal objects that contain XML-illegal control chars in-place.
+
+    Returns the number of literals sanitized (0 if the graph was already clean).
+    Datatype and language tag are preserved.
+    """
+    fixes: list[tuple[URIRef, URIRef, Literal, Literal]] = []
+    for s, p, o in graph:
+        if isinstance(o, Literal):
+            text = str(o)
+            cleaned = _XML_ILLEGAL_RE.sub("", text)
+            if cleaned != text:
+                fixes.append(
+                    (s, p, o, Literal(cleaned, lang=o.language, datatype=o.datatype))
+                )
+    for s, p, old, new in fixes:
+        graph.remove((s, p, old))
+        graph.add((s, p, new))
+    return len(fixes)
 
 
 def _relabel_entities(g: Graph) -> dict[str, str]:
@@ -83,6 +112,13 @@ def save_ontology(graph: Graph, out_dir: Path, name: str = "merged_ontology") ->
     """Serialize *graph* as OWL (RDF/XML) to *out_dir*/<name>.owl."""
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"{name}.owl"
+    n_sanitized = _strip_xml_illegal_chars(graph)
+    if n_sanitized:
+        log.warning(
+            "Stripped XML-illegal control chars from %d literal(s) before saving %s "
+            "(e.g. a stray NUL from LLM-generated text) so the OWL stays well-formed",
+            n_sanitized, name,
+        )
     graph.serialize(destination=str(out), format="xml")
     log.info("Saved %s to %s (%d triples)", name, out, len(graph))
     return out

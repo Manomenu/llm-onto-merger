@@ -171,6 +171,23 @@ for T in "${TURNS[@]}"; do
       else
         _backfill s3 "$T" "$ds"
       fi
+    else
+      # s3 dir exists but may lack the baseline-method outputs (then OAEI
+      # rejected_correct stays blank for those methods).  Only ever backfill
+      # the ARTICLE-tree dir that already has the LLM output — never a
+      # variance-tree resolution (a full re-run there would cost LLM calls).
+      d="$(_s3_dir "$T" "$ds")"
+      art_d="$ART_OUT/$T/s3/$ds/${ds}_${S3_TAG}"
+      if [ "$d" = "$art_d" ] && [ -f "$d/merged_ontology.owl" ] \
+         && ! { [ -f "$d/applied_alignments.owl" ] && [ -f "$d/boomer_ontology.owl" ] \
+                && [ -f "$d/arom_ontology.owl" ] \
+                && { [ -f "$d/comerger_ontology.owl" ] || [ -f "$d/comerger_timeout.txt" ]; }; }; then
+        if [ "$NO_RUN" = "1" ]; then
+          echo "  [$T] WARNING: s3/$ds baselines incomplete and --no-run set — OAEI rejected_correct stays blank for baseline methods."
+        else
+          _backfill s3 "$T" "$ds"
+        fi
+      fi
     fi
   done
 done
@@ -518,7 +535,7 @@ _grouped "$DIM" adjusted_oaei_rejection_med _agg_oaei \
     --ylabel-for "Rejected Correct" "Rejected correct alignments (log, lower = better)" \
     --ylabel-for "Accepted AML FP" "Accepted AML false-positives (log, lower = better)" \
     --log-for "Rejected Correct" --log-for "Accepted AML FP" \
-    --bar-fmt "%.0f"
+    --vertical --bar-fmt "%.0f"
 # Prepend the deterministic reference_total/aml_total note (written by
 # oaei_to_agg.py) to each dataset's pm CSV, mirroring combine_turns.py's own
 # '# NOTE:' comment convention (e.g. the CoMerger-timeout note).

@@ -69,6 +69,11 @@ fi
 # Display labels as produced by s5.sh / s6.sh.
 CORE_DATASETS=(confOf-ekaw human-mouse swo-acm)
 S6_DATASETS=(confOf-ekaw human-mouse swo-acm)  # reference-input runs (same 3)
+# Execution order for the backfill runs ONLY (cheapest first, human-mouse — the
+# expensive one, ~95% of the API cost — LAST, so early failures cost pennies).
+# Aggregation/chart series order stays CORE_DATASETS for consistency with the
+# gpt-oss figures.
+RUN_ORDER=(confOf-ekaw swo-acm human-mouse)
 
 DATASETS=("${CORE_DATASETS[@]}")
 
@@ -127,7 +132,10 @@ _backfill() {  # scenario (s5|s6), turn, display label
 echo
 echo "--- [1] deepseek side (s5/s6 runs under $OUTROOT/<turn>/) ---"
 for T in "${TURNS[@]}"; do
-  for ds in "${CORE_DATASETS[@]}"; do
+  # One dataset fully (s5 then s6) before the next, so the expensive
+  # human-mouse pair runs entirely last and any pipeline problem surfaces
+  # on the cheap datasets first.
+  for ds in "${RUN_ORDER[@]}"; do
     if ! _s5_report_exists "$T" "$ds"; then
       if [ "$NO_RUN" = "1" ]; then
         echo "  [$T] WARNING: missing deepseek s5 report for '$ds' and --no-run is set — skipping where needed."
@@ -135,8 +143,6 @@ for T in "${TURNS[@]}"; do
         _backfill s5 "$T" "$ds"
       fi
     fi
-  done
-  for ds in "${S6_DATASETS[@]}"; do
     if ! _s6_report_exists "$T" "$ds"; then
       if [ "$NO_RUN" = "1" ]; then
         echo "  [$T] WARNING: missing deepseek s6 report for '$ds' and --no-run is set — skipping where needed."
@@ -290,24 +296,29 @@ for T in "${CORE_TURNS[@]}"; do
   _extract "$T" triple_count_delta "$DIM/work/$T/raw_tcc.csv" "${DATASETS[@]}"
 done
 # Absolute counts → symlog Y so every dataset stays visible (per-dataset).
-_agg_ncrc_nirc() {  # turn, only-dataset, out
+# Chart: NCRC + NIRC (the emergent-relations headline), stacked vertically.
+_agg_kc() {  # turn, only-dataset, out
   uv run python3 ../analiza/aggregate_mean.py \
       --metric "NCRC" "$DIM/work/$1/raw_ncrc.csv" \
       --metric "NIRC" "$DIM/work/$1/raw_nirc.csv" \
       --exclude-method "Naive Union" --only "$2" --output "$3"
 }
-_grouped "$DIM" ncrc_nirc_med _agg_ncrc_nirc \
+_grouped "$DIM" kc_med _agg_kc \
     --ylabel-for "NCRC" "New cross-onto relations (log)" \
     --ylabel-for "NIRC" "New intra-onto relations (log)" \
     --log-for "NCRC" --log-for "NIRC" --bar-fmt "%.0f"
-_agg_tcc() {  # turn, only-dataset, out
-  uv run python3 ../analiza/aggregate_mean.py \
-      --metric "Triples Count Change" "$DIM/work/$1/raw_tcc.csv" \
-      --exclude-method "Naive Union" --only "$2" --output "$3"
-}
-_grouped "$DIM" tcc_med _agg_tcc \
-    --ylabel-for "Triples Count Change" "Triples count change (symlog)" \
-    --log-for "Triples Count Change" --bar-fmt "%+.0f"
+# TCC — reported as numbers only (no chart); per-dataset median[min;max] table.
+for ds in "${DATASETS[@]}"; do
+  TCC_INPUTS=()
+  for T in "${CORE_TURNS[@]}"; do
+    uv run python3 ../analiza/aggregate_mean.py \
+        --metric "Triples Count Change" "$DIM/work/$T/raw_tcc.csv" \
+        --exclude-method "Naive Union" --only "$ds" --output "$DIM/work/$T/tcc_agg_${ds}.csv"
+    TCC_INPUTS+=(--input "$DIM/work/$T/tcc_agg_${ds}.csv")
+  done
+  uv run python3 combine_turns.py "${TCC_INPUTS[@]}" \
+      --output "$DIM/work/tcc_med_${ds}.csv" --pm-output "$DIM/tcc_pm_${ds}.csv"
+done
 
 # ═══════════════════════════════════════════════════════════════════════════
 # hierarchy_integration_quality — average_depth/ARC/average_breadth/max_breadth
@@ -438,7 +449,7 @@ _grouped "$DIM" adjusted_oaei_rejection_med _agg_oaei \
     --ylabel-for "Rejected Correct" "Rejected correct alignments (log, lower = better)" \
     --ylabel-for "Accepted AML FP" "Accepted AML false-positives (log, lower = better)" \
     --log-for "Rejected Correct" --log-for "Accepted AML FP" \
-    --bar-fmt "%.0f"
+    --vertical --bar-fmt "%.0f"
 # Prepend the deterministic reference_total/aml_total note (written by
 # oaei_to_agg.py) to each dataset's pm CSV, mirroring combine_turns.py's own
 # '# NOTE:' comment convention (e.g. the CoMerger-timeout note).
@@ -450,6 +461,32 @@ for ds in "${OAEI_DATASETS[@]}"; do
     rm -f "$NOTE"
   fi
 done
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# cost — DeepSeek-v4-flash USD cost per dataset, read from cost_stats.json in
+# the s5 (AML-input) run dir ONLY — s6 (reference-input) runs are explicitly
+# excluded per the author's decision. MEAN with min/max whiskers across turns
+# — NOT median like every other dimension above — because the author wants
+# the average spend, not the typical-run figure. No method dimension: only
+# the proposed LLM method has a recorded cost (baselines are free/local).
+# ═══════════════════════════════════════════════════════════════════════════
+echo; echo "--- cost ---"
+DIM=cost
+mkdir -p "$DIM"
+for T in "${CORE_TURNS[@]}"; do
+  mkdir -p "$DIM/work/$T"
+  uv run python3 extract_cost.py \
+      --s5-root "$OUTROOT/$T/s5" --tag "$S5_TAG" \
+      --datasets "${CORE_DATASETS[@]}" \
+      --output "$DIM/work/$T/raw_cost.csv"
+done
+COST_INPUTS=()
+for T in "${CORE_TURNS[@]}"; do
+  COST_INPUTS+=(--input "$DIM/work/$T/raw_cost.csv")
+done
+uv run python3 plot_cost.py "${COST_INPUTS[@]}" \
+    --pm-output "$DIM/cost_pm.csv" --jpg-output "$DIM/cost.jpg"
 
 echo
 echo "=== Done. Combined median/min/max outputs under tests/article_analysis_deepseek/<dim>/ ==="

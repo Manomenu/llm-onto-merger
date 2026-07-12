@@ -88,6 +88,9 @@ def main() -> None:
                     metavar=("METRIC", "FMT"))
     ap.add_argument("--log-for", action="append", default=[])
     ap.add_argument("--n-turns", type=int, default=None)
+    ap.add_argument("--vertical", action="store_true",
+                    help="stack subplots in one column (fits a single text "
+                         "column in a double-column article)")
     args = ap.parse_args()
     ylabel_for = dict(args.ylabel_for)
     fmt_for = dict(args.bar_fmt_for)
@@ -122,9 +125,9 @@ def main() -> None:
         return med[method][k], lo[method][k], hi[method][k]
 
     n = len(metrics)
-    cols = 2 if n > 1 else 1
+    cols = 1 if args.vertical else (2 if n > 1 else 1)
     plot_rows = math.ceil(n / cols)
-    fig, axes = plt.subplots(plot_rows, cols, figsize=(7.0 * cols, 4.2 * plot_rows))
+    fig, axes = plt.subplots(plot_rows, cols, figsize=(6.0 * cols, 3.6 * plot_rows))
     axes = axes.flatten() if hasattr(axes, "flatten") else [axes]
 
     n_ds = len(datasets)
