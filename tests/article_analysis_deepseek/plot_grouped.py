@@ -149,6 +149,13 @@ def main() -> None:
                 if v == v:
                     all_finite.append((v, lo, hi))
             plot_vals = [v if v == v else 0.0 for v in vals]
+            # A missing (NaN) cell must NOT read as a genuine zero: mark it.
+            for c, v in zip(centers, vals):
+                if v != v:
+                    ax.annotate("n/a", xy=(c, 0), xytext=(0, 3),
+                                textcoords="offset points", ha="center",
+                                va="bottom", fontsize=6, rotation=90,
+                                color="#8a5000")
             err_lo = [max(v - lo, 0.0) if v == v and lo == lo else 0.0 for v, lo in zip(vals, los)]
             err_hi = [max(hi - v, 0.0) if v == v and hi == hi else 0.0 for v, hi in zip(vals, his)]
             ax.bar(centers, plot_vals, width=bw, yerr=[err_lo, err_hi],

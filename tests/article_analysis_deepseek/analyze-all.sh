@@ -175,6 +175,33 @@ fi
 echo "Core turns (both sides complete): ${CORE_TURNS[*]}"
 N_CORE=${#CORE_TURNS[@]}
 
+# ── CoMerger timeout note ───────────────────────────────────────────────────
+# article_analysis_gptoss/analyze-all.sh computes this too, but step 0 invokes
+# it via `bash` — a separate process — so its `export` never reaches us.  Left
+# unset, plot_grouped.py renders CoMerger's missing bar as an indistinguishable
+# zero-height bar with no disclaimer.  Recompute it here, in OUR process.
+echo
+echo "--- CoMerger timeout check ---"
+TIMEOUT_DS=()
+for ds in "${CORE_DATASETS[@]}"; do
+  found=0
+  for T in "${CORE_TURNS[@]}"; do
+    for sc in s2 s3 s5 s6; do
+      for f in "$OUTROOT/$T/$sc/$ds"/*/comerger_timeout.txt; do
+        [ -f "$f" ] && { found=1; break 3; }
+      done
+    done
+  done
+  [ "$found" = "1" ] && TIMEOUT_DS+=("$ds")
+done
+unset COMERGER_TIMEOUT_NOTE
+if [ ${#TIMEOUT_DS[@]} -gt 0 ]; then
+  export COMERGER_TIMEOUT_NOTE="CoMerger: no data (3-min timeout) for: ${TIMEOUT_DS[*]}."
+  echo "  ${COMERGER_TIMEOUT_NOTE}"
+else
+  echo "  none"
+fi
+
 # Shorthand: combined two-backend extraction for one turn.
 _extract() {  # turn, metric, output csv, datasets...
   local T="$1" metric="$2" out="$3"
@@ -487,6 +514,15 @@ for T in "${CORE_TURNS[@]}"; do
 done
 uv run python3 plot_cost.py "${COST_INPUTS[@]}" \
     --pm-output "$DIM/cost_pm.csv" --jpg-output "$DIM/cost.jpg"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# errors — per-turn LLM error/fallback rate, parsed from each run dir's
+# run.log (pure log parsing; never invokes merging, so it ignores --no-run).
+# Uses the requested TURNS (not CORE_TURNS): missing run.logs are warned
+# about and skipped, not fatal.
+# ═══════════════════════════════════════════════════════════════════════════
+echo; echo "--- errors ---"
+bash errors/analyze.sh "${TURNS[@]}"
 
 echo
 echo "=== Done. Combined median/min/max outputs under tests/article_analysis_deepseek/<dim>/ ==="
